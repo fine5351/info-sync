@@ -5,13 +5,17 @@ import com.google.zxing.EncodeHintType;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class QRCodeGenerator {
 
     public static void generateQRCode(String text, String filePath, int width, int height) throws Exception {
@@ -37,18 +41,23 @@ public class QRCodeGenerator {
             // 2. AES 加密
             SecretKey secretKey = AESUtil.generateAESKey();
             String encryptedData = AESUtil.encryptAES(base64Json, secretKey);
-            System.out.println("Encrypted Data: " + encryptedData);
+            log.info("Encrypted Data: {}", encryptedData);
 
             // 3. 生成 QR Code
             String qrCodePath = "qrcode.png";
             QRCodeGenerator.generateQRCode(encryptedData, qrCodePath, 300, 300);
-            System.out.println("QR Code saved at: " + qrCodePath);
+            log.info("QR Code saved at: {}", qrCodePath);
 
             // 4. 測試解密
             String decryptedData = AESUtil.decryptAES(encryptedData, secretKey);
-            System.out.println("Decrypted Data: " + decryptedData);
+            log.info("Decrypted Data: {}", decryptedData);
+
+//            5. 由 Base64 轉回 JSON
+            byte[] decodedBytes = Base64.getDecoder().decode(decryptedData);
+            String jsonString = new String(decodedBytes, StandardCharsets.UTF_8);
+            log.info("JSON: {}", jsonString);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error: {}", e.getMessage());
         }
     }
 
