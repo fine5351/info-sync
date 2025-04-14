@@ -575,6 +575,48 @@ columns:
 
 ---
 
+你說:
+aes-key-value 注入時, 變數名稱應該是什麼?
+
+在 ShardingSphere Proxy 的 `config-encrypt.yaml` 中使用環境變數注入 `aes-key-value` 時，**變數名稱必須符合 YAML 的替代語法**，預設格式如下：
+
+```yaml
+aes-key-value: ${AES_KEY}
+```
+
+---
+
+## ✅ 對應關係說明
+
+| YAML 配置                    | 對應 Docker 環境變數名 |
+|-----------------------------|--------------------------|
+| `aes-key-value: ${AES_KEY}` | `AES_KEY`               |
+
+因此，若您在 `encrypt-rule.yaml` 或 `config-encrypt.yaml` 中這樣寫：
+
+```yaml
+aes-key-value: ${AES_KEY}
+```
+
+您就**必須在 Docker 環境變數中設定**如下：
+
+```yaml
+environment:
+  - AES_KEY=0123456789abcdef0123456789abcdef
+```
+
+---
+
+## ✅ 注意事項
+
+1. AES-256 的 key 長度須為 **32 個字元（256 bit）**
+2. Proxy 啟動時會讀取環境變數並動態替換 `${AES_KEY}` 為實際密鑰值
+3. 若環境變數未設定，Proxy 啟動會失敗或加解密錯誤
+
+---
+
+是否需要我協助檢查目前 Docker Compose 的環境變數是否正確？或者補充如何使用 Vault 注入這個值？
+
 ## ✅ ShardingSphere Proxy 使用 IV 的流程
 
 | 階段 | 說明 |
@@ -592,7 +634,291 @@ columns:
 
 ---
 
-是否還需要我補充如何自訂 IV 生成邏輯？或者要驗證這個欄位是否正確儲存 IV？
+以下是您目前架構下，**Spring Boot 透過 MyBatis 串接 ShardingSphere Proxy（含加解密）** 的完整範例設定：
+
+---
+
+## ✅ 1. `application.yaml` – SpringBoot 資料庫連線設定
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3307/logic_db
+    username: root
+    password: root
+    driver-class-name: org.mariadb.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.example.model
+```
+
+---
+
+## ✅ 2. Model：`RequestData.java`
+
+```java
+package com.example.model;
+
+public class RequestData {
+    private String name;
+    private String rocId;  // 明文，實際由 Proxy 加密
+    private String address;
+
+    // Getters & Setters
+}
+```
+
+---
+
+## ✅ 3. Mapper 介面：`RequestDataMapper.java`
+
+```java
+package com.example.mapper;
+
+import com.example.model.RequestData;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface RequestDataMapper {
+    void insert(RequestData data);
+}
+```
+
+---
+
+## ✅ 4. Mapper XML：`mapper/RequestDataMapper.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.mapper.RequestDataMapper">
+
+  <insert id="insert" parameterType="com.example.model.RequestData">
+    INSERT INTO request_data (name, roc_id, address)
+    VALUES (#{name}, #{rocId}, #{address})
+  </insert>
+
+</mapper>
+```
+
+---
+
+## ✅ 5. Controller 示範
+
+```java
+@RestController
+@RequestMapping("/api")
+@RequiredArgsConstructor
+public class RequestDataController {
+
+    private final RequestDataMapper mapper;
+
+    @PostMapping("/submit")
+    public ResponseEntity<String> submit(@RequestBody RequestData data) {
+        mapper.insert(data);
+        return ResponseEntity.ok("資料已送出");
+    }
+}
+```
+
+---
+
+## ✅ 資料流程總結
+
+1. 使用者呼叫 `/api/submit` 傳入明文 `rocId`
+2. MyBatis 執行 SQL，透過 JDBC 傳給 ShardingSphere Proxy
+3. Proxy 根據 `config-encrypt.yaml` 自動加密 `rocId` 為 `roc_id_cipher` 並寫入 DB
+
+---
+
+是否還需要我幫您產出一個可運行的 Spring Boot 最小專案骨架？或是加入查詢 API 進行反查驗證？
+
+以下是針對您需求所設計的 **最小可運行 Spring Boot + MyBatis 專案骨架**，已整合：
+
+- ✅ MyBatis 與 ShardingSphere Proxy 串接
+- ✅ `POST /api/submit` API，儲存機敏資料（rocId）
+- ✅ `GET /api/latest` API，用於查詢最新一筆資料（驗證明文解密）
+
+---
+
+## ✅ 專案架構
+
+```
+src/
+├── main/
+│   ├── java/com/example/demo/
+│   │   ├── DemoApplication.java
+│   │   ├── controller/RequestDataController.java
+│   │   ├── mapper/RequestDataMapper.java
+│   │   └── model/RequestData.java
+│   └── resources/
+│       ├── application.yaml
+│       └── mapper/RequestDataMapper.xml
+```
+
+---
+
+## ✅ 1. `application.yaml`
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3307/logic_db
+    username: root
+    password: root
+    driver-class-name: org.mariadb.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.example.demo.model
+
+server:
+  port: 8080
+```
+
+---
+
+## ✅ 2. `DemoApplication.java`
+
+```java
+package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DemoApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+}
+```
+
+---
+
+## ✅ 3. `RequestData.java`
+
+```java
+package com.example.demo.model;
+
+public class RequestData {
+    private Long id;
+    private String name;
+    private String rocId;
+    private String address;
+
+    // Getters and Setters
+}
+```
+
+---
+
+## ✅ 4. `RequestDataMapper.java`
+
+```java
+package com.example.demo.mapper;
+
+import com.example.demo.model.RequestData;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface RequestDataMapper {
+    void insert(RequestData data);
+    RequestData selectLatest();
+}
+```
+
+---
+
+## ✅ 5. `RequestDataMapper.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.mapper.RequestDataMapper">
+
+  <insert id="insert" parameterType="com.example.demo.model.RequestData">
+    INSERT INTO request_data (name, roc_id, address)
+    VALUES (#{name}, #{rocId}, #{address})
+  </insert>
+
+  <select id="selectLatest" resultType="com.example.demo.model.RequestData">
+    SELECT id, name, roc_id, address
+    FROM request_data
+    ORDER BY id DESC
+    LIMIT 1
+  </select>
+
+</mapper>
+```
+
+---
+
+## ✅ 6. `RequestDataController.java`
+
+```java
+package com.example.demo.controller;
+
+import com.example.demo.mapper.RequestDataMapper;
+import com.example.demo.model.RequestData;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api")
+@RequiredArgsConstructor
+public class RequestDataController {
+
+    private final RequestDataMapper mapper;
+
+    @PostMapping("/submit")
+    public ResponseEntity<String> submit(@RequestBody RequestData data) {
+        mapper.insert(data);
+        return ResponseEntity.ok("已寫入");
+    }
+
+    @GetMapping("/latest")
+    public ResponseEntity<RequestData> getLatest() {
+        return ResponseEntity.ok(mapper.selectLatest());
+    }
+}
+```
+
+---
+
+## ✅ 測試流程
+
+1. 啟動 ShardingSphere Proxy + MariaDB
+2. 啟動 Spring Boot 專案
+3. 使用以下 JSON 呼叫 `/api/submit`：
+   ```json
+   {
+     "name": "Alice",
+     "rocId": "A123456789",
+     "address": "Taipei"
+   }
+   ```
+4. 呼叫 `/api/latest`，預期取得：
+   ```json
+   {
+     "id": 1,
+     "name": "Alice",
+     "rocId": "A123456789",  // 明文，已解密
+     "address": "Taipei"
+   }
+   ```
+
+---
+
+如需，我可直接打包成 GitHub 或 ZIP 專案結構提供下載。是否要我產出專案壓縮包或 Git 倉庫模板？
 
 ### 參考資料
 
