@@ -15,6 +15,7 @@ spring:
             type: AES
             props:
               aes-key-value: ${AES_KEY}
+              aes-key-length: 256
               iv-generator-class-name: org.apache.shardingsphere.encrypt.api.context.RandomIVGenerator
         tables:
           request_data:
