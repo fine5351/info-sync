@@ -401,3 +401,66 @@ docker-compose up -d shardingsphere
 ### 其他
 https://cloud.tencent.com/developer/article/2022206
 
+###
+在使用 Spring Boot 搭配 MariaDB 的架構中，若希望將資料加解密的邏輯與應用程式解耦，Apache ShardingSphere 提供了兩種主要的解決方案：**ShardingSphere-JDBC** 和 **ShardingSphere-Proxy**。這兩者都支援資料庫欄位級別的加解密，並能有效地將加解密邏輯從應用層中抽離。
+
+---
+
+## 🔐 ShardingSphere 的加解密功能概覽
+ShardingSphere 的加密模組允許對資料庫中的特定欄位進行加解密操作，支援多種加密算法，並可自訂加密策略，以滿足不同的安全需求其設計目標是提供一套完整、安全、透明化、低改造成本的資料加密整合解決方案 citeturn0search15
+
+---
+
+## 🧩 ShardingSphere-JDBC
+**ShardingSphere-JDBC** 是一個輕量級的 Java 框架，作為應用程式與資料庫之間的中間層，通過 JDBC 連接資料庫，實現資料分片、讀寫分離、加解密等功。
+
+### 優點
+
+- **透明加解密*：在應用程式與資料庫之間自動進行加解密，無需修改業務邏。
+- **靈活配置*：支援 YAML 配置文件，方便管理加密規。
+- **自訂加密器*：可實作自訂的加密器，以滿足特定的安全需。
+
+### 實作步驟
+
+1. **引入依賴*：在 `pom.xml` 中添加 ShardingSphere-JDBC 的相關依。
+2. **配置加密規則*：在 `application.yml` 或 `application.properties` 中設定加密規則，包括加密欄位、加密器。
+3. **自訂加密器（可選）*：若內建加密器無法滿足需求，可實作自訂的加密器，並透過 SPI 機制註。
+
+---
+
+## 🧱 ShardingSphere-Prox
+
+**ShardingSphere-Proxy** 是一個獨立的代理服務，位於應用程式與資料庫之間，提供與資料庫協議兼容的接口，支援多語言應用程式的入。
+
+### 優點
+
+- **語言無關性*：支援多種語言的應用程式，無需修改現有碼。
+- **集中管理*：統一管理加密規則，方便護。
+- **高可用性*：支援分佈式部署，提升系統的可性。
+
+### 實作步驟
+
+1. **部署 ShardingSphere-Proxy*：下載並配置 ShardingSphere-Proxy，確保其能正常行。
+2. **配置加密規則*：在 `server.yaml` 或 `config-xxx.yaml` 中設定加密規則，包括加密欄位、加密等。
+3. **自訂加密器（可選）*：若內建加密器無法滿足需求，可實作自訂的加密器，並將其放置於 `ext-lib` 目錄下，透過 SPI 機制冊。 citeturn0search4
+
+---
+
+## 🧠 選擇建議
+
+| 使用場景 | 建議方案 |
+|----------|----------
+| Java 應用程式，需高度整合且制細節 | ShardingSphere-DBC 
+| 多語言應用程式，需集中管理密規則 | ShardingSphere-Poxy 
+
+若您的應用程式主要使用 Java，且希望在應用層實現透明的欄位加解密，**ShardingSphere-JDBC** 是一個不錯擇。反之，若您的系統包含多種語言的應用程式，且希望統一管理加密規則，**ShardingSphere-Proxy** 將更適合。
+
+--
+
+在實作過程中，請確保妥善管理加密金鑰，並考慮加密對系統效能響。此外，若需對現有資料進行加密，需自行處理資料遷移與轉換工作。
+
+若您有特定的加密需求或遇到實作上的問題，歡迎進一步討論，我將樂意提供協助。 
+
+https://community.sphere-ex.com/t/topic/725?utm_source=chatgpt.com
+
+https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/startup/bin/
