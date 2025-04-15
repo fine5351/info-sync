@@ -1,0 +1,12 @@
+encryptors:
+  my_encryptor:
+    type: MY_ENCRYPT
+    props:
+      key: my-secret-key
+
+tables:
+  t_user:
+    columns:
+      password:
+        cipherColumn: password_cipher
+        encryptorName: my_encryptor
