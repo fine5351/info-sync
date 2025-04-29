@@ -7,18 +7,21 @@
     - [什麼是 Kubernetes](#什麼是-kubernetes)
     - [Kubernetes 的主要功能](#kubernetes-的主要功能)
     - [Kubernetes 的基本架構](#kubernetes-的基本架構)
+   - [kubectl 入門教學](#kubectl-入門教學)
     - [deployment.yml 基礎](#deployment-基礎)
     - [configmap.yml 基礎](#configmap-基礎)
     - [virtualservice.yml 基礎](#virtualservice-基礎)
     - [destination.yml 基礎](#destination-基礎)
     - [入門範例](#入門範例)
 3. [進階教學](#進階教學)
+   - [kubectl 進階教學](#kubectl-進階教學)
     - [deployment.yml 進階設定](#deployment-進階設定)
     - [configmap.yml 進階設定](#configmap-進階設定)
     - [virtualservice.yml 進階設定](#virtualservice-進階設定)
     - [destination.yml 進階設定](#destination-進階設定)
     - [進階範例](#進階範例)
 4. [高級教學](#高級教學)
+   - [kubectl 高級教學](#kubectl-高級教學)
     - [deployment.yml 高級設定](#deployment-高級設定)
     - [configmap.yml 高級設定](#configmap-高級設定)
     - [virtualservice.yml 高級設定](#virtualservice-高級設定)
@@ -100,6 +103,303 @@ Kubernetes 系統由以下主要組件組成：
 6. **Namespace**：將一個 Kubernetes 集群分割成多個虛擬集群。
 
 7. **ConfigMap 和 Secret**：管理應用程序的配置數據和敏感信息。
+
+### kubectl 入門教學
+
+kubectl 是 Kubernetes 的命令行工具，它允許您對 Kubernetes 集群運行命令。您可以使用 kubectl 來部署應用程序、檢查和管理集群資源，以及查看日誌。想像 kubectl 就像是您和 Kubernetes 集群之間的翻譯官，您用它來告訴
+Kubernetes 您想要做什麼。
+
+#### 什麼是 kubectl？
+
+kubectl 是一個命令行工具，它讓您可以：
+
+- 創建、刪除和更新 Kubernetes 資源（如 Pod、Deployment、Service 等）
+- 查看集群中運行的資源
+- 查看應用程序的日誌
+- 在容器內執行命令
+- 將本地端口轉發到集群中的 Pod
+
+#### 安裝 kubectl
+
+在開始使用 kubectl 之前，您需要先安裝它。以下是在不同操作系統上安裝 kubectl 的方法：
+
+**Windows**：
+
+1. 下載最新版本的 kubectl：
+   ```
+   curl -LO https://dl.k8s.io/release/v1.28.0/bin/windows/amd64/kubectl.exe
+   ```
+2. 將 kubectl.exe 添加到您的 PATH 環境變量中
+
+**macOS**：
+
+1. 使用 Homebrew 安裝：
+   ```
+   brew install kubectl
+   ```
+   或者下載二進制文件：
+   ```
+   curl -LO "https://dl.k8s.io/release/v1.28.0/bin/darwin/amd64/kubectl"
+   chmod +x kubectl
+   sudo mv kubectl /usr/local/bin/
+   ```
+
+**Linux**：
+
+1. 下載二進制文件：
+   ```
+   curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+   chmod +x kubectl
+   sudo mv kubectl /usr/local/bin/
+   ```
+
+安裝完成後，您可以運行以下命令來確認 kubectl 已正確安裝：
+
+```
+kubectl version --client
+```
+
+#### 配置 kubectl
+
+安裝 kubectl 後，您需要配置它以連接到 Kubernetes 集群。kubectl 使用一個名為 kubeconfig 的配置文件來存儲集群訪問信息。
+
+通常，如果您使用雲服務提供商的 Kubernetes 服務（如 Google Kubernetes Engine、Amazon EKS 或 Azure AKS），您可以使用他們提供的命令來配置 kubectl：
+
+**Google Kubernetes Engine (GKE)**：
+
+```
+gcloud container clusters get-credentials 集群名稱 --zone 區域 --project 項目ID
+```
+
+**Amazon EKS**：
+
+```
+aws eks update-kubeconfig --name 集群名稱 --region 區域
+```
+
+**Azure AKS**：
+
+```
+az aks get-credentials --resource-group 資源組 --name 集群名稱
+```
+
+如果您在本地運行 Kubernetes（如使用 Minikube 或 kind），這些工具通常會自動配置 kubectl。
+
+#### kubectl 基本命令
+
+現在，讓我們學習一些基本的 kubectl 命令：
+
+**1. 查看集群信息**
+
+```
+kubectl cluster-info
+```
+
+這個命令會顯示集群的基本信息，包括 Kubernetes 控制平面的地址。
+
+**2. 查看節點**
+
+```
+kubectl get nodes
+```
+
+這個命令會列出集群中的所有節點（即運行 Kubernetes 的機器）。
+
+**3. 查看所有命名空間**
+
+```
+kubectl get namespaces
+```
+
+命名空間是 Kubernetes 中用來分隔資源的一種方式，有點像是不同的文件夾。
+
+**4. 查看 Pod**
+
+```
+kubectl get pods
+```
+
+這個命令會列出默認命名空間中的所有 Pod。如果您想查看特定命名空間中的 Pod，可以使用：
+
+```
+kubectl get pods -n 命名空間名稱
+```
+
+**5. 查看 Deployment**
+
+```
+kubectl get deployments
+```
+
+這個命令會列出默認命名空間中的所有 Deployment。
+
+**6. 查看 Service**
+
+```
+kubectl get services
+```
+
+這個命令會列出默認命名空間中的所有 Service。
+
+**7. 查看資源的詳細信息**
+
+```
+kubectl describe pod Pod名稱
+```
+
+這個命令會顯示指定 Pod 的詳細信息，包括它的狀態、事件等。
+
+**8. 查看 Pod 的日誌**
+
+```
+kubectl logs Pod名稱
+```
+
+這個命令會顯示指定 Pod 的日誌輸出。
+
+**9. 在 Pod 中執行命令**
+
+```
+kubectl exec -it Pod名稱 -- 命令
+```
+
+例如，要在名為 "my-pod" 的 Pod 中運行 bash shell，您可以使用：
+
+```
+kubectl exec -it my-pod -- bash
+```
+
+**10. 將本地端口轉發到 Pod**
+
+```
+kubectl port-forward Pod名稱 本地端口:Pod端口
+```
+
+例如，要將本地的 8080 端口轉發到名為 "my-pod" 的 Pod 的 80 端口，您可以使用：
+
+```
+kubectl port-forward my-pod 8080:80
+```
+
+這樣，您就可以通過訪問 http://localhost:8080 來訪問 Pod 中運行的應用程序。
+
+#### kubectl 實用技巧
+
+**1. 使用簡短的資源名稱**
+
+kubectl 支持資源名稱的簡寫，例如：
+
+- `po` 代表 `pods`
+- `deploy` 代表 `deployments`
+- `svc` 代表 `services`
+- `ns` 代表 `namespaces`
+
+所以，您可以使用 `kubectl get po` 而不是 `kubectl get pods`。
+
+**2. 使用 kubectl 自動補全**
+
+您可以設置 kubectl 命令的自動補全功能，這樣當您按 Tab 鍵時，它會自動補全命令或資源名稱。
+
+對於 Bash：
+
+```
+source <(kubectl completion bash)
+```
+
+對於 Zsh：
+
+```
+source <(kubectl completion zsh)
+```
+
+**3. 使用 kubectl 別名**
+
+您可以為常用的 kubectl 命令創建別名，以節省輸入時間。例如：
+
+```
+alias k=kubectl
+alias kgp='kubectl get pods'
+alias kgd='kubectl get deployments'
+```
+
+#### kubectl 入門範例
+
+讓我們通過一個簡單的例子來學習如何使用 kubectl 部署和管理一個應用程序：
+
+**1. 創建一個 Deployment**
+
+首先，我們將創建一個運行 Nginx 網頁服務器的 Deployment：
+
+```
+kubectl create deployment my-nginx --image=nginx
+```
+
+這個命令會創建一個名為 "my-nginx" 的 Deployment，它運行 Nginx 映像。
+
+**2. 查看 Deployment**
+
+```
+kubectl get deployments
+```
+
+您應該會看到 "my-nginx" Deployment 已經創建。
+
+**3. 查看 Pod**
+
+```
+kubectl get pods
+```
+
+您應該會看到一個由 "my-nginx" Deployment 創建的 Pod。
+
+**4. 創建一個 Service**
+
+現在，我們將創建一個 Service 來暴露 Nginx 服務器：
+
+```
+kubectl expose deployment my-nginx --port=80 --type=LoadBalancer
+```
+
+這個命令會創建一個名為 "my-nginx" 的 Service，它將流量轉發到 "my-nginx" Deployment 的 Pod 上。
+
+**5. 查看 Service**
+
+```
+kubectl get services
+```
+
+您應該會看到 "my-nginx" Service 已經創建。如果您在雲環境中運行，LoadBalancer 類型的 Service 會獲得一個外部 IP 地址，您可以使用這個 IP 地址來訪問 Nginx 服務器。
+
+**6. 擴展 Deployment**
+
+如果您想運行更多的 Nginx 實例，您可以擴展 Deployment：
+
+```
+kubectl scale deployment my-nginx --replicas=3
+```
+
+這個命令會將 "my-nginx" Deployment 的副本數量增加到 3。
+
+**7. 查看 Pod**
+
+```
+kubectl get pods
+```
+
+現在，您應該會看到有 3 個 Pod 在運行。
+
+**8. 刪除資源**
+
+當您不再需要這些資源時，您可以刪除它們：
+
+```
+kubectl delete service my-nginx
+kubectl delete deployment my-nginx
+```
+
+這些命令會刪除 "my-nginx" Service 和 Deployment，以及它們創建的所有 Pod。
+
+通過這個簡單的例子，您已經學會了如何使用 kubectl 來部署、查看、擴展和刪除 Kubernetes 資源。隨著您對 Kubernetes 的了解加深，您將能夠使用 kubectl 執行更複雜的操作。
 
 ### deployment.yml 基礎
 
@@ -380,6 +680,534 @@ spec:
 ## 進階教學
 
 本節適合已經了解 Kubernetes 基礎知識的學習者。我們將深入探討更複雜的配置和功能。
+
+### kubectl 進階教學
+
+在掌握了 kubectl 的基本命令後，我們可以學習一些更進階的功能和技巧，這些將幫助您更有效地管理 Kubernetes 集群和應用程序。
+
+#### 使用 YAML 文件管理資源
+
+在實際工作中，我們通常不會直接使用命令行創建資源，而是使用 YAML 文件來定義資源，然後使用 `kubectl apply` 命令來應用這些文件。這種方法有以下優點：
+
+1. **版本控制**：YAML 文件可以存儲在版本控制系統中，如 Git。
+2. **可重複性**：您可以多次應用相同的 YAML 文件，得到相同的結果。
+3. **文檔化**：YAML 文件本身就是文檔，描述了資源的配置。
+
+**創建和應用 YAML 文件**：
+
+1. 創建一個名為 `nginx-deployment.yaml` 的文件，內容如下：
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: nginx-deployment
+   labels:
+      app: nginx
+spec:
+   replicas: 3
+   selector:
+      matchLabels:
+         app: nginx
+   template:
+      metadata:
+         labels:
+            app: nginx
+      spec:
+         containers:
+            - name: nginx
+              image: nginx:1.14.2
+              ports:
+                 - containerPort: 80
+```
+
+2. 使用 `kubectl apply` 命令應用這個文件：
+
+```
+kubectl apply -f nginx-deployment.yaml
+```
+
+3. 您也可以一次應用多個文件：
+
+```
+kubectl apply -f nginx-deployment.yaml -f nginx-service.yaml
+```
+
+4. 或者應用整個目錄中的所有 YAML 文件：
+
+```
+kubectl apply -f k8s/
+```
+
+#### 使用標籤和選擇器
+
+標籤（Labels）是 Kubernetes 中用於組織和選擇資源的關鍵功能。您可以使用標籤來分類資源，然後使用選擇器（Selectors）來選擇特定的資源。
+
+**添加和修改標籤**：
+
+1. 為 Pod 添加標籤：
+
+```
+kubectl label pod my-pod environment=production
+```
+
+2. 修改現有標籤：
+
+```
+kubectl label pod my-pod environment=staging --overwrite
+```
+
+3. 刪除標籤：
+
+```
+kubectl label pod my-pod environment-
+```
+
+**使用選擇器**：
+
+1. 使用標籤選擇器列出資源：
+
+```
+kubectl get pods -l environment=production
+```
+
+2. 使用多個標籤選擇器：
+
+```
+kubectl get pods -l environment=production,app=nginx
+```
+
+3. 使用 `in` 運算符：
+
+```
+kubectl get pods -l 'environment in (production,staging)'
+```
+
+#### 使用命名空間
+
+命名空間（Namespaces）是 Kubernetes 中用於隔離資源的一種方式。它們允許您在同一個集群中運行多個環境或應用程序，而不會相互干擾。
+
+**創建和管理命名空間**：
+
+1. 創建一個新的命名空間：
+
+```
+kubectl create namespace my-namespace
+```
+
+2. 在特定命名空間中創建資源：
+
+```
+kubectl apply -f nginx-deployment.yaml -n my-namespace
+```
+
+3. 列出特定命名空間中的資源：
+
+```
+kubectl get pods -n my-namespace
+```
+
+4. 設置默認命名空間：
+
+```
+kubectl config set-context --current --namespace=my-namespace
+```
+
+5. 查看所有命名空間中的資源：
+
+```
+kubectl get pods --all-namespaces
+```
+
+#### 使用 kubectl 進行故障排除
+
+當您的應用程序出現問題時，kubectl 提供了多種工具來幫助您診斷和解決問題。
+
+**查看 Pod 狀態和事件**：
+
+1. 查看 Pod 的詳細信息：
+
+```
+kubectl describe pod my-pod
+```
+
+這個命令會顯示 Pod 的詳細信息，包括它的狀態、事件、容器信息等。特別注意 "Events" 部分，它通常包含有關 Pod 啟動或失敗的重要信息。
+
+2. 查看 Pod 的日誌：
+
+```
+kubectl logs my-pod
+```
+
+如果 Pod 中有多個容器，您需要指定容器名稱：
+
+```
+kubectl logs my-pod -c my-container
+```
+
+3. 查看之前的容器日誌（如果容器已重啟）：
+
+```
+kubectl logs my-pod -c my-container -p
+```
+
+4. 持續查看日誌：
+
+```
+kubectl logs -f my-pod
+```
+
+**進入容器進行調試**：
+
+1. 在容器中執行命令：
+
+```
+kubectl exec my-pod -- ls /app
+```
+
+2. 獲取交互式 shell：
+
+```
+kubectl exec -it my-pod -- /bin/bash
+```
+
+如果 Pod 中有多個容器，您需要指定容器名稱：
+
+```
+kubectl exec -it my-pod -c my-container -- /bin/bash
+```
+
+**複製文件**：
+
+1. 從容器複製文件到本地：
+
+```
+kubectl cp my-pod:/path/to/file.txt ./local-file.txt
+```
+
+2. 從本地複製文件到容器：
+
+```
+kubectl cp ./local-file.txt my-pod:/path/to/file.txt
+```
+
+#### 使用 kubectl 進行資源管理
+
+**擴展應用程序**：
+
+1. 擴展 Deployment：
+
+```
+kubectl scale deployment my-deployment --replicas=5
+```
+
+2. 自動擴展 Deployment（需要安裝 Metrics Server）：
+
+```
+kubectl autoscale deployment my-deployment --min=2 --max=5 --cpu-percent=80
+```
+
+**更新應用程序**：
+
+1. 更新容器映像：
+
+```
+kubectl set image deployment/my-deployment my-container=my-image:v2
+```
+
+2. 編輯資源：
+
+```
+kubectl edit deployment my-deployment
+```
+
+這會打開一個編輯器，您可以直接編輯 Deployment 的 YAML 定義。
+
+3. 回滾更新：
+
+```
+kubectl rollout undo deployment my-deployment
+```
+
+4. 回滾到特定版本：
+
+```
+kubectl rollout undo deployment my-deployment --to-revision=2
+```
+
+5. 查看更新歷史：
+
+```
+kubectl rollout history deployment my-deployment
+```
+
+6. 暫停和恢復更新：
+
+```
+kubectl rollout pause deployment my-deployment
+kubectl rollout resume deployment my-deployment
+```
+
+#### 使用 kubectl 插件
+
+kubectl 支持插件系統，您可以安裝各種插件來擴展其功能。
+
+**安裝 krew 插件管理器**：
+
+Krew 是 kubectl 的插件管理器，類似於 apt 或 brew。
+
+1. 安裝 krew：
+
+```
+(
+  set -x; cd "$(mktemp -d)" &&
+  OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+  KREW="krew-${OS}_${ARCH}" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+  tar zxvf "${KREW}.tar.gz" &&
+  ./"${KREW}" install krew
+)
+```
+
+2. 將 krew 添加到您的 PATH：
+
+```
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+```
+
+**安裝和使用插件**：
+
+1. 查看可用插件：
+
+```
+kubectl krew search
+```
+
+2. 安裝插件：
+
+```
+kubectl krew install ctx
+kubectl krew install ns
+```
+
+3. 使用插件：
+
+```
+kubectl ctx  # 切換集群上下文
+kubectl ns   # 切換命名空間
+```
+
+#### 進階範例：使用 kubectl 部署多層應用程序
+
+讓我們通過一個更複雜的例子來學習如何使用 kubectl 部署一個包含前端、後端和數據庫的多層應用程序：
+
+**1. 創建命名空間**
+
+首先，我們將創建一個專用的命名空間來部署我們的應用程序：
+
+```
+kubectl create namespace multi-tier-app
+```
+
+**2. 部署數據庫**
+
+創建一個 MySQL 數據庫的 Deployment 和 Service：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: multi-tier-app
+type: Opaque
+data:
+  password: cGFzc3dvcmQ=  # "password" 的 base64 編碼
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: multi-tier-app
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - image: mysql:5.7
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: multi-tier-app
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+  clusterIP: None
+EOF
+```
+
+**3. 部署後端 API**
+
+創建一個後端 API 的 Deployment 和 Service：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: multi-tier-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+    spec:
+      containers:
+      - name: backend-api
+        image: my-backend-api:v1
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: mysql
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-api
+  namespace: multi-tier-app
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: backend-api
+EOF
+```
+
+**4. 部署前端**
+
+創建一個前端應用程序的 Deployment 和 Service：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: multi-tier-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: my-frontend:v1
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_URL
+          value: http://backend-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: multi-tier-app
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: frontend
+EOF
+```
+
+**5. 檢查部署狀態**
+
+```
+kubectl get all -n multi-tier-app
+```
+
+**6. 查看前端服務的外部 IP**
+
+```
+kubectl get service frontend -n multi-tier-app
+```
+
+**7. 擴展後端 API**
+
+如果需要處理更多請求，我們可以擴展後端 API：
+
+```
+kubectl scale deployment backend-api -n multi-tier-app --replicas=5
+```
+
+**8. 更新前端映像**
+
+如果我們有一個新版本的前端應用程序，我們可以更新它：
+
+```
+kubectl set image deployment/frontend frontend=my-frontend:v2 -n multi-tier-app
+```
+
+**9. 查看更新狀態**
+
+```
+kubectl rollout status deployment/frontend -n multi-tier-app
+```
+
+**10. 如果新版本有問題，回滾更新**
+
+```
+kubectl rollout undo deployment/frontend -n multi-tier-app
+```
+
+通過這個例子，您可以看到如何使用 kubectl 來部署和管理一個完整的多層應用程序，包括數據庫、後端 API 和前端。這種方法可以應用於各種類型的應用程序，從簡單的網站到複雜的微服務架構。
 
 ### deployment.yml 進階設定
 
@@ -800,6 +1628,536 @@ spec:
 ## 高級教學
 
 本節適合已經熟悉 Kubernetes 進階功能的學習者。我們將探討更複雜的配置和高級功能。
+
+### kubectl 高級教學
+
+在掌握了 kubectl 的基本和進階功能後，我們可以學習一些高級技巧，這些技巧對於故障排除、效能優化和管理大型 Kubernetes 集群非常有用。
+
+#### 高級故障排除技巧
+
+當您在 Kubernetes 集群中遇到複雜問題時，以下技巧可以幫助您更有效地進行故障排除：
+
+**1. 使用 kubectl 調試暫時性 Pod**
+
+有時，您需要在集群中創建一個臨時的 Pod 來調試網絡或其他問題：
+
+```
+kubectl run debug-pod --rm -it --image=nicolaka/netshoot -- bash
+```
+
+這個命令會創建一個包含各種網絡調試工具的 Pod，並在您退出 shell 時自動刪除它。
+
+**2. 使用 kubectl debug 命令**
+
+Kubernetes 1.18+ 版本引入了 `kubectl debug` 命令，它可以幫助您調試運行中的 Pod：
+
+```
+kubectl debug mypod -it --image=busybox --target=mypod
+```
+
+這個命令會創建一個新的容器，它與目標 Pod 共享相同的命名空間，讓您可以檢查 Pod 的環境。
+
+**3. 使用 kubectl events 查看集群事件**
+
+集群事件可以提供有關問題的重要線索：
+
+```
+kubectl get events --sort-by='.lastTimestamp'
+```
+
+這個命令會按時間順序顯示集群中的所有事件。
+
+**4. 檢查 Pod 的狀態和條件**
+
+```
+kubectl get pod mypod -o jsonpath='{.status.conditions}'
+```
+
+這個命令會顯示 Pod 的所有條件，如 Ready、PodScheduled 等，幫助您了解 Pod 的當前狀態。
+
+**5. 檢查 Pod 的資源使用情況**
+
+如果您安裝了 Metrics Server，可以使用以下命令查看 Pod 的 CPU 和內存使用情況：
+
+```
+kubectl top pod
+```
+
+**6. 使用 kubectl explain 了解資源定義**
+
+```
+kubectl explain deployment.spec.strategy
+```
+
+這個命令會顯示 Deployment 的 strategy 字段的詳細說明，幫助您了解如何正確配置資源。
+
+#### 效能優化技巧
+
+以下技巧可以幫助您優化 Kubernetes 集群和應用程序的效能：
+
+**1. 使用 kubectl 設置資源請求和限制**
+
+為 Pod 設置適當的資源請求和限制可以提高集群的效能和穩定性：
+
+```
+kubectl set resources deployment myapp --requests=cpu=200m,memory=512Mi --limits=cpu=500m,memory=1Gi
+```
+
+**2. 使用 kubectl 進行水平自動擴展**
+
+```
+kubectl autoscale deployment myapp --min=2 --max=10 --cpu-percent=80
+```
+
+這個命令會創建一個 HorizontalPodAutoscaler，當 CPU 使用率超過 80% 時自動擴展 Deployment。
+
+**3. 使用 kubectl 進行垂直自動擴展**
+
+如果您安裝了 Vertical Pod Autoscaler (VPA)，可以使用以下命令創建一個 VPA 資源：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: myapp-vpa
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: myapp
+  updatePolicy:
+    updateMode: "Auto"
+EOF
+```
+
+VPA 會自動調整 Pod 的資源請求，以優化資源使用。
+
+**4. 使用 kubectl 進行節點親和性設置**
+
+您可以使用節點親和性將 Pod 調度到特定的節點上，以優化效能：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/e2e-az-name
+                operator: In
+                values:
+                - e2e-az1
+                - e2e-az2
+EOF
+```
+
+**5. 使用 kubectl 進行 Pod 拓撲分佈約束**
+
+您可以使用 Pod 拓撲分佈約束來確保 Pod 在不同的節點、可用區或區域中均勻分佈：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+spec:
+  template:
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: myapp
+EOF
+```
+
+#### 高級集群管理技巧
+
+以下技巧可以幫助您更有效地管理 Kubernetes 集群：
+
+**1. 使用 kubectl 進行多集群管理**
+
+您可以使用 kubectl 的上下文功能來管理多個集群：
+
+```
+# 列出所有上下文
+kubectl config get-contexts
+
+# 切換上下文
+kubectl config use-context my-cluster
+
+# 在特定上下文中執行命令
+kubectl --context=my-cluster get pods
+```
+
+**2. 使用 kubectl 進行 RBAC 管理**
+
+您可以使用 kubectl 來管理角色和角色綁定，控制用戶對集群資源的訪問權限：
+
+```
+# 創建一個角色
+kubectl create role pod-reader --verb=get,list,watch --resource=pods
+
+# 創建一個角色綁定
+kubectl create rolebinding bob-pod-reader --role=pod-reader --user=bob
+
+# 檢查用戶權限
+kubectl auth can-i list pods --as=bob
+```
+
+**3. 使用 kubectl 進行資源配額管理**
+
+您可以使用 ResourceQuota 來限制命名空間中的資源使用：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute-quota
+  namespace: my-namespace
+spec:
+  hard:
+    pods: "10"
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+EOF
+```
+
+**4. 使用 kubectl 進行網絡策略管理**
+
+您可以使用 NetworkPolicy 來控制 Pod 之間的網絡流量：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  namespace: my-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - protocol: TCP
+      port: 80
+EOF
+```
+
+**5. 使用 kubectl 進行集群升級**
+
+在升級集群之前，您可以使用 kubectl 來檢查集群的狀態：
+
+```
+# 檢查節點版本
+kubectl get nodes -o wide
+
+# 檢查 Pod 的就緒狀態
+kubectl get pods --all-namespaces -o wide
+
+# 驅逐節點上的 Pod
+kubectl drain node-1 --ignore-daemonsets
+```
+
+#### 高級 kubectl 命令和技巧
+
+**1. 使用 kubectl 進行 JSON 路徑查詢**
+
+您可以使用 JSONPath 表達式從 kubectl 輸出中提取特定信息：
+
+```
+# 獲取所有節點的 IP 地址
+kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'
+
+# 獲取所有 Pod 的容器映像
+kubectl get pods -o jsonpath='{.items[*].spec.containers[*].image}'
+
+# 獲取所有 Pod 的名稱和狀態
+kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}'
+```
+
+**2. 使用 kubectl 進行自定義列輸出**
+
+您可以使用 custom-columns 選項來自定義 kubectl 輸出的列：
+
+```
+kubectl get pods -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName
+```
+
+**3. 使用 kubectl 進行排序**
+
+您可以使用 --sort-by 選項來對 kubectl 輸出進行排序：
+
+```
+kubectl get pods --sort-by=.metadata.creationTimestamp
+```
+
+**4. 使用 kubectl 進行過濾**
+
+您可以使用 --field-selector 選項來過濾 kubectl 輸出：
+
+```
+kubectl get pods --field-selector=status.phase=Running
+```
+
+**5. 使用 kubectl 進行批量操作**
+
+您可以使用 kubectl 的標籤選擇器來對多個資源進行批量操作：
+
+```
+# 刪除所有標籤為 app=old-app 的 Pod
+kubectl delete pods -l app=old-app
+
+# 重啟所有 Deployment
+kubectl rollout restart deployment
+```
+
+#### 高級範例：使用 kubectl 進行藍綠部署和金絲雀發布
+
+讓我們通過一個高級例子來學習如何使用 kubectl 進行藍綠部署和金絲雀發布：
+
+**藍綠部署**
+
+藍綠部署是一種將新版本應用程序部署到生產環境的策略，它通過創建兩個相同但版本不同的環境（藍色和綠色）來實現零停機時間的部署。
+
+**1. 部署藍色版本（當前版本）**
+
+```
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-blue
+  labels:
+    app: myapp
+    version: blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: blue
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:v1
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp
+spec:
+  selector:
+    app: myapp
+    version: blue
+  ports:
+  - port: 80
+    targetPort: 80
+EOF
+```
+
+**2. 部署綠色版本（新版本）**
+
+```
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-green
+  labels:
+    app: myapp
+    version: green
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+      version: green
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: green
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:v2
+        ports:
+        - containerPort: 80
+EOF
+```
+
+**3. 測試綠色版本**
+
+您可以創建一個臨時服務來測試綠色版本：
+
+```
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-green
+spec:
+  selector:
+    app: myapp
+    version: green
+  ports:
+  - port: 80
+    targetPort: 80
+EOF
+```
+
+**4. 切換流量到綠色版本**
+
+一旦您確認綠色版本正常工作，您可以更新主服務以指向綠色版本：
+
+```
+kubectl patch service myapp -p '{"spec":{"selector":{"version":"green"}}}'
+```
+
+**5. 刪除藍色版本**
+
+當您確認綠色版本穩定後，可以刪除藍色版本：
+
+```
+kubectl delete deployment myapp-blue
+```
+
+**金絲雀發布**
+
+金絲雀發布是一種將新版本應用程序逐步部署到生產環境的策略，它通過將少量流量路由到新版本來測試其穩定性。
+
+**1. 部署當前版本**
+
+```
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-v1
+  labels:
+    app: myapp
+    version: v1
+spec:
+  replicas: 9
+  selector:
+    matchLabels:
+      app: myapp
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: v1
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:v1
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp
+spec:
+  selector:
+    app: myapp
+  ports:
+  - port: 80
+    targetPort: 80
+EOF
+```
+
+**2. 部署新版本（金絲雀）**
+
+```
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-v2
+  labels:
+    app: myapp
+    version: v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: v2
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:v2
+        ports:
+        - containerPort: 80
+EOF
+```
+
+**3. 監控新版本的效能和穩定性**
+
+您可以使用各種工具來監控新版本的效能和穩定性，如 Prometheus、Grafana 等。
+
+**4. 逐步增加新版本的流量**
+
+如果新版本表現良好，您可以逐步增加其副本數量，同時減少舊版本的副本數量：
+
+```
+kubectl scale deployment myapp-v1 --replicas=8
+kubectl scale deployment myapp-v2 --replicas=2
+```
+
+繼續這個過程，直到完全遷移到新版本：
+
+```
+kubectl scale deployment myapp-v1 --replicas=5
+kubectl scale deployment myapp-v2 --replicas=5
+
+kubectl scale deployment myapp-v1 --replicas=0
+kubectl scale deployment myapp-v2 --replicas=10
+```
+
+**5. 刪除舊版本**
+
+當您確認新版本穩定後，可以刪除舊版本：
+
+```
+kubectl delete deployment myapp-v1
+```
+
+通過這些高級例子，您可以看到如何使用 kubectl 來實現複雜的部署策略，如藍綠部署和金絲雀發布。這些策略可以幫助您在不影響用戶體驗的情況下安全地部署新版本的應用程序。
 
 ### deployment.yml 高級設定
 
