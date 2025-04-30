@@ -79,6 +79,7 @@ ShardingSphere 是一個用來處理大量資料的工具。當您的資料庫�
 6. **實際表（Actual Table）**：在資料庫中實際存在的表，每個分片對應一個實際表。
 
 7. **讀寫分離（Read-Write Splitting）**：將讀取操作和寫入操作分別發送到不同的資料庫，以提高系統效能。
+8. **被代理的 database 中的 table 要能被查詢到, 就必須在 rule 中一個個設定, 沒設定是查不到的**
 
 ### 環境準備
 
@@ -130,13 +131,13 @@ dataSources:
   ds0:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds_0
+    url: jdbc:mysql://localhost:3306/demo_ds_0
     username: root
     password:
   ds1:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds_1
+    url: jdbc:mysql://localhost:3306/demo_ds_1
     username: root
     password:
 
@@ -271,19 +272,19 @@ dataSources:
   primary_ds:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_primary
+    url: jdbc:mysql://localhost:3306/demo_primary
     username: root
     password:
   replica_ds_0:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_replica_0
+    url: jdbc:mysql://localhost:3306/demo_replica_0
     username: root
     password:
   replica_ds_1:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_replica_1
+    url: jdbc:mysql://localhost:3306/demo_replica_1
     username: root
     password:
 
@@ -404,13 +405,13 @@ dataSources:
   ds0:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds_0
+    url: jdbc:mysql://localhost:3306/demo_ds_0
     username: root
     password:
   ds1:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds_1
+    url: jdbc:mysql://localhost:3306/demo_ds_1
     username: root
     password:
 
@@ -662,25 +663,25 @@ dataSources:
   ds0_primary:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://cluster1-primary:3306/demo_ds
+    url: jdbc:mysql://cluster1-primary:3306/demo_ds
     username: root
     password:
   ds0_replica:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://cluster1-replica:3306/demo_ds
+    url: jdbc:mysql://cluster1-replica:3306/demo_ds
     username: root
     password:
   ds1_primary:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://cluster2-primary:3306/demo_ds
+    url: jdbc:mysql://cluster2-primary:3306/demo_ds
     username: root
     password:
   ds1_replica:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://cluster2-replica:3306/demo_ds
+    url: jdbc:mysql://cluster2-replica:3306/demo_ds
     username: root
     password:
 
@@ -977,25 +978,25 @@ dataSources:
   ds0_primary:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds_0_primary
+    url: jdbc:mysql://localhost:3306/demo_ds_0_primary
     username: root
     password:
   ds0_replica:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds_0_replica
+    url: jdbc:mysql://localhost:3306/demo_ds_0_replica
     username: root
     password:
   ds1_primary:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds_1_primary
+    url: jdbc:mysql://localhost:3306/demo_ds_1_primary
     username: root
     password:
   ds1_replica:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/demo_ds_1_replica
+    url: jdbc:mysql://localhost:3306/demo_ds_1_replica
     username: root
     password:
 
