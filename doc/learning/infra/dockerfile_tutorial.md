@@ -67,7 +67,7 @@ FROM ubuntu:20.04
 WORKDIR /app
 
 # 複製應用程式檔案
-COPY . /app
+COPY ../.. /app
 
 # 安裝 Python
 RUN apt-get update && apt-get install -y python3 python3-pip
