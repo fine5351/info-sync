@@ -1,154 +1,360 @@
-# Spring Boot 操作 NATS 教學
+# Spring NATS 教學
 
-本教學將從初學者到高階開發者分三階段講解如何使用 Spring Boot 與 NATS（高效能訊息系統）整合。
+## 初級（Beginner）層級
 
----
+### 1. 概念說明
+Spring NATS 就像是一個班級的廣播系統，可以讓同學們即時傳遞訊息。初級學習者需要了解：
+- 什麼是訊息佇列
+- 為什麼需要訊息佇列
+- 基本的訊息收發操作
 
-## 🟢 初級階段：什麼是 NATS？如何與 Spring 整合？
-
-### ✅ NATS 是什麼？
-
-NATS 是一個超輕量級、高效能的訊息傳遞系統，常用於服務之間的即時通訊、事件通知、非同步處理等場景。
-
-### ✅ 建立 NATS 環境（使用 Docker）
-
-```bash
-docker run -d --name nats-server -p 4222:4222 nats:latest
-```
-
-### ✅ 建立 Spring Boot 專案
-
-使用 [https://start.spring.io](https://start.spring.io) 建立專案：
-
-* Dependencies 加上：Spring Web、Spring Boot DevTools
-
-### ✅ 加入 NATS Java 客戶端依賴
-
-在 `pom.xml` 中加入：
-
-```xml
-
-<dependency>
-  <groupId>io.nats</groupId>
-  <artifactId>jnats</artifactId>
-  <version>2.16.12</version>
-</dependency>
-```
-
-### ✅ 最簡單的 NATS 發送與接收訊息範例
-
-```java
-@Component
-public class NatsClient implements CommandLineRunner {
-    @Override
-    public void run(String... args) throws Exception {
-        Connection nc = Nats.connect("nats://localhost:4222");
-
-        // 訂閱
-        Dispatcher d = nc.createDispatcher(msg -> {
-            System.out.println("收到訊息：" + new String(msg.getData()));
-        });
-        d.subscribe("demo.topic");
-
-        // 發送
-        nc.publish("demo.topic", "哈囉 NATS".getBytes());
-
-        Thread.sleep(2000);
-        nc.close();
-    }
+### 2. PlantUML 圖解
+```plantuml
+@startuml
+class NATSClient {
+    - connection: Connection
+    - subjects: List<String>
+    + connect()
+    + publish()
+    + subscribe()
 }
+
+class Message {
+    - subject: String
+    - data: byte[]
+    + getSubject()
+    + getData()
+}
+
+class Subscription {
+    - subject: String
+    - handler: MessageHandler
+    + receive()
+    + process()
+}
+
+NATSClient --> Message
+NATSClient --> Subscription
+@enduml
 ```
 
----
+### 3. 分段教學步驟
 
-## 🟡 中級階段：進階操作與自訂功能
+#### 步驟 1：基本專案設定
+```xml
+<!-- pom.xml -->
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+        <version>3.3.10</version>
+    </dependency>
+    <dependency>
+        <groupId>io.nats</groupId>
+        <artifactId>jnats</artifactId>
+        <version>2.16.14</version>
+    </dependency>
+</dependencies>
+```
 
-### ✅ 重構為發送端與接收端分離
+#### 步驟 2：基本配置
+```yaml
+# application.yml
+nats:
+  server: nats://localhost:4222
+  subject: class-messages
+```
 
-#### 發送端
-
+#### 步驟 3：簡單範例
 ```java
+import io.nats.client.*;
+import org.springframework.stereotype.*;
+
 @Service
-public class NatsPublisher {
+public class ClassMessageService {
+    
     private final Connection natsConnection;
-
-    public NatsPublisher() throws IOException, InterruptedException {
-        this.natsConnection = Nats.connect("nats://localhost:4222");
+    private final String subject;
+    
+    public ClassMessageService(Connection natsConnection,
+                             @Value("${nats.subject}") String subject) {
+        this.natsConnection = natsConnection;
+        this.subject = subject;
     }
-
-    public void sendMessage(String subject, String message) {
+    
+    public void sendMessage(String message) throws Exception {
         natsConnection.publish(subject, message.getBytes());
     }
-}
-```
-
-#### 接收端
-
-```java
-@Component
-public class NatsSubscriber {
-    public NatsSubscriber() throws IOException, InterruptedException {
-        Connection nc = Nats.connect("nats://localhost:4222");
-        Dispatcher d = nc.createDispatcher(msg -> {
-            System.out.println("接收到：" + new String(msg.getData()));
+    
+    public void receiveMessages() throws Exception {
+        Dispatcher dispatcher = natsConnection.createDispatcher((msg) -> {
+            String message = new String(msg.getData());
+            System.out.println("收到訊息: " + message);
         });
-        d.subscribe("demo.topic");
+        
+        dispatcher.subscribe(subject);
     }
 }
 ```
 
-### ✅ 支援 JSON 資料格式傳輸
+## 中級（Intermediate）層級
 
-使用 `Jackson` 序列化與反序列化：
+### 1. 概念說明
+中級學習者需要理解：
+- 主題訂閱
+- 訊息佇列
+- 錯誤處理
+- 連線管理
 
-```java
-ObjectMapper mapper = new ObjectMapper();
-String json = mapper.writeValueAsString(myObject);
-nc.
+### 2. PlantUML 圖解
+```plantuml
+@startuml
+class TopicManager {
+    - topics: List<Topic>
+    + createTopic()
+    + deleteTopic()
+    + listTopics()
+}
 
-publish("json.topic",json.getBytes());
+class QueueManager {
+    - queues: List<Queue>
+    + createQueue()
+    + deleteQueue()
+    + process()
+}
+
+class ErrorHandler {
+    - errors: List<Error>
+    + handle()
+    + recover()
+}
+
+class ConnectionManager {
+    - connections: List<Connection>
+    + connect()
+    + disconnect()
+    + reconnect()
+}
+
+TopicManager --> QueueManager
+QueueManager --> ErrorHandler
+ErrorHandler --> ConnectionManager
+@enduml
 ```
 
-### ✅ 實作回應式通訊（Request-Reply）
+### 3. 分段教學步驟
 
+#### 步驟 1：主題訂閱
 ```java
-Message reply = nc.request("demo.topic", "請問現在幾點".getBytes(), Duration.ofSeconds(2));
-System.out.
+import io.nats.client.*;
+import org.springframework.stereotype.*;
 
-println("回應內容："+new String(reply.getData()));
+@Service
+public class ClassTopicService {
+    
+    private final Connection natsConnection;
+    
+    public void subscribeToTopic(String topic) throws Exception {
+        Dispatcher dispatcher = natsConnection.createDispatcher((msg) -> {
+            String message = new String(msg.getData());
+            System.out.println("收到主題 " + topic + " 的訊息: " + message);
+        });
+        
+        dispatcher.subscribe(topic);
+    }
+    
+    public void publishToTopic(String topic, String message) throws Exception {
+        natsConnection.publish(topic, message.getBytes());
+    }
+}
 ```
 
----
-
-## 🔴 高級階段：錯誤處理與效能最佳化
-
-### ✅ 錯誤處理與連線重試
-
+#### 步驟 2：訊息佇列
 ```java
-Options options = new Options.Builder()
-    .server("nats://localhost:4222")
-    .connectionListener((conn, type) -> System.out.println("連線狀態改變：" + type))
-    .errorListener(new ErrorListener() {
-        public void errorOccurred(Connection conn, String subject, Exception e) {
-            System.err.println("錯誤發生：" + e.getMessage());
+import io.nats.client.*;
+import org.springframework.stereotype.*;
+
+@Service
+public class ClassQueueService {
+    
+    private final Connection natsConnection;
+    
+    public void createQueue(String queueName, String subject) throws Exception {
+        Dispatcher dispatcher = natsConnection.createDispatcher((msg) -> {
+            String message = new String(msg.getData());
+            System.out.println("佇列 " + queueName + " 收到訊息: " + message);
+        });
+        
+        dispatcher.subscribe(subject, queueName);
+    }
+    
+    public void sendToQueue(String queueName, String message) throws Exception {
+        natsConnection.publish(queueName, message.getBytes());
+    }
+}
+```
+
+#### 步驟 3：錯誤處理
+```java
+import io.nats.client.*;
+import org.springframework.stereotype.*;
+
+@Service
+public class ClassErrorHandler {
+    
+    private final Connection natsConnection;
+    
+    public void handleConnectionError() {
+        natsConnection.setClosedCallback((conn) -> {
+            System.out.println("連線已關閉，嘗試重新連線...");
+            try {
+                conn.reconnect();
+            } catch (Exception e) {
+                System.out.println("重新連線失敗: " + e.getMessage());
+            }
+        });
+        
+        natsConnection.setDisconnectedCallback((conn) -> {
+            System.out.println("連線已斷開，等待重新連線...");
+        });
+    }
+}
+```
+
+## 高級（Advanced）層級
+
+### 1. 概念說明
+高級學習者需要掌握：
+- 分散式處理
+- 訊息持久化
+- 效能監控
+- 安全認證
+
+### 2. PlantUML 圖解
+```plantuml
+@startuml
+package "進階 NATS 系統" {
+    class DistributedProcessor {
+        - nodes: List<Node>
+        + distribute()
+        + process()
+    }
+    
+    class MessagePersistence {
+        - storage: Storage
+        + save()
+        + load()
+        + recover()
+    }
+    
+    class Performance {
+        - metrics: Metrics
+        + monitor()
+        + optimize()
+    }
+    
+    class Security {
+        - authentication: Authentication
+        - authorization: Authorization
+        + authenticate()
+        + authorize()
+    }
+}
+
+DistributedProcessor --> MessagePersistence
+MessagePersistence --> Performance
+Performance --> Security
+@enduml
+```
+
+### 3. 分段教學步驟
+
+#### 步驟 1：分散式處理
+```java
+import io.nats.client.*;
+import org.springframework.stereotype.*;
+
+@Service
+public class ClassDistributedService {
+    
+    private final List<Connection> connections;
+    
+    public void distributeMessage(String subject, String message) throws Exception {
+        for (Connection conn : connections) {
+            conn.publish(subject, message.getBytes());
         }
-    })
-    .reconnectWait(Duration.ofSeconds(2))
-    .maxReconnects(5)
-    .build();
-Connection nc = Nats.connect(options);
+    }
+    
+    public void processDistributedMessage(String subject) throws Exception {
+        for (Connection conn : connections) {
+            Dispatcher dispatcher = conn.createDispatcher((msg) -> {
+                String receivedMessage = new String(msg.getData());
+                System.out.println("節點 " + conn.getServerInfo() + 
+                                 " 收到訊息: " + receivedMessage);
+            });
+            
+            dispatcher.subscribe(subject);
+        }
+    }
+}
 ```
 
-### ✅ 測試效能
+#### 步驟 2：訊息持久化
+```java
+import io.nats.client.*;
+import org.springframework.stereotype.*;
 
-使用 JMH 或寫多執行緒模擬並發發送接收，測試吞吐量（TPS）與延遲（Latency）。
+@Service
+public class ClassPersistenceService {
+    
+    private final Connection natsConnection;
+    private final StorageService storageService;
+    
+    public void persistMessage(String subject, String message) throws Exception {
+        // 儲存訊息
+        storageService.saveMessage(subject, message);
+        
+        // 發送訊息
+        natsConnection.publish(subject, message.getBytes());
+    }
+    
+    public void recoverMessages(String subject) throws Exception {
+        List<String> messages = storageService.loadMessages(subject);
+        for (String message : messages) {
+            natsConnection.publish(subject, message.getBytes());
+        }
+    }
+}
+```
 
-### ✅ NATS Streaming / JetStream 升級（持久化、ACK）
+#### 步驟 3：效能監控
+```java
+import io.nats.client.*;
+import org.springframework.stereotype.*;
 
-若要支持訊息持久化或保證送達可考慮升級至 JetStream：
+@Service
+public class ClassPerformanceService {
+    
+    private final Connection natsConnection;
+    
+    public void monitorPerformance() {
+        natsConnection.setStatisticsCollector((stats) -> {
+            System.out.println("訊息發送數: " + stats.getOutMsgs());
+            System.out.println("訊息接收數: " + stats.getInMsgs());
+            System.out.println("連線時間: " + stats.getConnectionTime());
+        });
+    }
+    
+    public void optimizeConnection() {
+        Options options = new Options.Builder()
+            .server("nats://localhost:4222")
+            .maxReconnects(5)
+            .reconnectWait(Duration.ofSeconds(1))
+            .build();
+        
+        natsConnection.setOptions(options);
+    }
+}
+```
 
-* 需要特殊配置與額外指令參考官方文件：[https://docs.nats.io/jetstream](https://docs.nats.io/jetstream)
-
----
-
-以上即為 Spring Boot 與 NATS 的整合教學，從安裝到自訂與效能最佳化，循序漸進掌握這套高效能訊息系統。
+這個教學文件提供了從基礎到進階的 Spring NATS 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的訊息收發開始，中級學習者可以學習更複雜的主題訂閱和訊息佇列，而高級學習者則可以掌握分散式處理和訊息持久化等進階功能。

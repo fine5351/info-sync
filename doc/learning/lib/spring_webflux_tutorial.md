@@ -3,33 +3,35 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-Spring WebFlux 就像是一個班級的即時通訊系統，可以讓同學們快速交換訊息。初級學習者需要了解：
-- 什麼是反應式編程
-- 為什麼需要反應式編程
-- 基本的反應式操作
+Spring WebFlux 就像是一個班級的即時通知系統，可以讓同學們即時收到最新的班級消息。初級學習者需要了解：
+- 什麼是響應式編程
+- 為什麼需要響應式編程
+- 基本的 WebFlux 操作
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class Publisher {
-    - subscribers: List<Subscriber>
+class WebFluxController {
+    - publisher: Publisher
+    - subscriber: Subscriber
+    + handleRequest()
+    + sendResponse()
+}
+
+class ReactiveStream {
+    - data: Flux<Data>
     + subscribe()
     + publish()
 }
 
-class Subscriber {
-    - onNext()
-    - onError()
-    - onComplete()
+class ReactiveModel {
+    - data: Mono<Data>
+    + getData()
+    + setData()
 }
 
-class Subscription {
-    - request()
-    - cancel()
-}
-
-Publisher --> Subscriber
-Subscriber --> Subscription
+WebFluxController --> ReactiveStream
+ReactiveStream --> ReactiveModel
 @enduml
 ```
 
@@ -44,6 +46,11 @@ Subscriber --> Subscription
         <artifactId>spring-boot-starter-webflux</artifactId>
         <version>3.3.10</version>
     </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-r2dbc</artifactId>
+        <version>3.3.10</version>
+    </dependency>
 </dependencies>
 ```
 
@@ -51,8 +58,10 @@ Subscriber --> Subscription
 ```yaml
 # application.yml
 spring:
-  webflux:
-    base-path: /api
+  r2dbc:
+    url: r2dbc:h2:mem:///classdb
+    username: sa
+    password: 
 ```
 
 #### 步驟 3：簡單範例
@@ -62,20 +71,16 @@ import org.springframework.http.*;
 import reactor.core.publisher.*;
 
 @RestController
-@RequestMapping("/api/messages")
-public class MessageController {
+public class ClassController {
     
-    @GetMapping
-    public Flux<Message> getAllMessages() {
-        return Flux.just(
-            new Message("小明", "大家好！"),
-            new Message("小華", "今天天氣真好！")
-        );
+    @GetMapping("/welcome")
+    public Mono<String> welcome() {
+        return Mono.just("歡迎來到班級通知系統！");
     }
     
-    @PostMapping
-    public Mono<Message> createMessage(@RequestBody Message message) {
-        return Mono.just(message);
+    @GetMapping("/notices")
+    public Flux<Notice> listNotices() {
+        return noticeService.getAllNotices();
     }
 }
 ```
@@ -84,68 +89,70 @@ public class MessageController {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 反應式流
+- 響應式流處理
 - 背壓處理
 - 錯誤處理
-- 調度器
+- 響應式數據庫
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class ReactiveStream {
-    - publisher: Publisher
-    - subscriber: Subscriber
-    + subscribe()
-    + onNext()
-}
-
-class Backpressure {
-    - buffer: Queue
-    + request()
-    + onBackpressureDrop()
+class StreamProcessor {
+    - stream: Flux<Data>
+    - backpressure: Backpressure
+    + process()
+    + handle()
 }
 
 class ErrorHandler {
-    - error: Throwable
-    + onError()
-    + retry()
+    - errors: Flux<Error>
+    + handle()
+    + recover()
 }
 
-class Scheduler {
-    - workers: List<Worker>
-    + schedule()
-    + dispose()
+class Database {
+    - connection: Connection
+    + query()
+    + execute()
 }
 
-ReactiveStream --> Backpressure
-Backpressure --> ErrorHandler
-ErrorHandler --> Scheduler
+class Backpressure {
+    - strategy: Strategy
+    + apply()
+    + adjust()
+}
+
+StreamProcessor --> ErrorHandler
+ErrorHandler --> Database
+Database --> Backpressure
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：反應式流
+#### 步驟 1：響應式流處理
 ```java
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import reactor.core.publisher.*;
-import java.time.Duration;
 
 @RestController
-@RequestMapping("/api/stream")
-public class StreamController {
-    
-    @GetMapping("/numbers")
-    public Flux<Integer> getNumbers() {
-        return Flux.range(1, 10)
-            .delayElements(Duration.ofSeconds(1));
-    }
+@RequestMapping("/api/class")
+public class ClassController {
     
     @GetMapping("/events")
-    public Flux<Event> getEvents() {
-        return Flux.interval(Duration.ofSeconds(1))
-            .map(i -> new Event("事件 " + i, System.currentTimeMillis()));
+    public Flux<Event> streamEvents() {
+        return eventService.getEventStream()
+            .map(event -> {
+                event.setProcessed(true);
+                return event;
+            })
+            .log();
+    }
+    
+    @PostMapping("/events")
+    public Mono<Event> createEvent(@RequestBody Event event) {
+        return eventService.saveEvent(event);
     }
 }
 ```
@@ -155,26 +162,18 @@ public class StreamController {
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import reactor.core.publisher.*;
-import reactor.core.scheduler.*;
 
 @RestController
-@RequestMapping("/api/backpressure")
-public class BackpressureController {
+@RequestMapping("/api/stream")
+public class StreamController {
     
     @GetMapping("/data")
-    public Flux<Data> getData() {
-        return Flux.range(1, 1000)
-            .onBackpressureBuffer(100)
-            .map(i -> new Data("數據 " + i))
-            .subscribeOn(Schedulers.boundedElastic());
-    }
-    
-    @GetMapping("/limited")
-    public Flux<Data> getLimitedData() {
-        return Flux.range(1, 1000)
-            .onBackpressureDrop()
-            .map(i -> new Data("數據 " + i))
-            .limitRate(10);
+    public Flux<Data> streamData() {
+        return dataService.getDataStream()
+            .onBackpressureBuffer(100) // 緩衝區大小
+            .onBackpressureDrop() // 丟棄策略
+            .onBackpressureLatest() // 最新策略
+            .log();
     }
 }
 ```
@@ -184,31 +183,24 @@ public class BackpressureController {
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import reactor.core.publisher.*;
-import java.time.Duration;
 
-@RestController
-@RequestMapping("/api/error")
-public class ErrorController {
+@RestControllerAdvice
+public class GlobalErrorHandler {
     
-    @GetMapping("/retry")
-    public Mono<String> getWithRetry() {
-        return Mono.fromCallable(() -> {
-                if (Math.random() > 0.5) {
-                    throw new RuntimeException("隨機錯誤");
-                }
-                return "成功！";
-            })
-            .retry(3)
-            .onErrorResume(e -> Mono.just("重試失敗"));
+    @ExceptionHandler(RuntimeException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleError(
+            RuntimeException ex) {
+        return Mono.just(ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(new ErrorResponse("錯誤發生", ex.getMessage())));
     }
     
-    @GetMapping("/timeout")
-    public Mono<String> getWithTimeout() {
-        return Mono.delay(Duration.ofSeconds(2))
-            .timeout(Duration.ofSeconds(1))
-            .map(i -> "成功！")
-            .onErrorResume(TimeoutException.class, 
-                e -> Mono.just("超時！"));
+    @ExceptionHandler(DataAccessException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleDataError(
+            DataAccessException ex) {
+        return Mono.just(ResponseEntity
+            .status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(new ErrorResponse("數據庫錯誤", ex.getMessage())));
     }
 }
 ```
@@ -217,99 +209,53 @@ public class ErrorController {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 反應式數據庫
-- WebSocket
-- 反應式安全
+- 響應式安全
+- 響應式測試
+- 響應式監控
 - 效能優化
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階反應式系統" {
-    class ReactiveDatabase {
-        - connection: Connection
-        + query()
-        + execute()
-    }
-    
-    class WebSocket {
-        - session: Session
-        + send()
-        + receive()
-    }
-    
-    class ReactiveSecurity {
+package "進階 WebFlux 系統" {
+    class Security {
         - authentication: Authentication
-        + authorize()
+        - authorization: Authorization
         + authenticate()
+        + authorize()
+    }
+    
+    class Testing {
+        - testCases: List<TestCase>
+        + test()
+        + verify()
+    }
+    
+    class Monitoring {
+        - metrics: Metrics
+        + monitor()
+        + alert()
     }
     
     class Performance {
-        - metrics: Metrics
-        + monitor()
+        - optimization: Optimization
         + optimize()
+        + tune()
     }
 }
 
-ReactiveDatabase --> WebSocket
-WebSocket --> ReactiveSecurity
-ReactiveSecurity --> Performance
+Security --> Testing
+Testing --> Monitoring
+Monitoring --> Performance
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：反應式數據庫
+#### 步驟 1：響應式安全
 ```java
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.*;
-import org.springframework.data.r2dbc.core.*;
-import reactor.core.publisher.*;
-
-@RestController
-@RequestMapping("/api/database")
-public class DatabaseController {
-    
-    @Autowired
-    private R2dbcEntityTemplate template;
-    
-    @GetMapping("/students")
-    public Flux<Student> getAllStudents() {
-        return template.select(Student.class)
-            .all();
-    }
-    
-    @PostMapping("/students")
-    public Mono<Student> createStudent(@RequestBody Student student) {
-        return template.insert(student);
-    }
-}
-```
-
-#### 步驟 2：WebSocket
-```java
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.reactive.socket.*;
-import reactor.core.publisher.*;
-
-@RestController
-public class WebSocketController {
-    
-    @GetMapping("/ws")
-    public Mono<Void> handleWebSocket(WebSocketSession session) {
-        return session.send(
-            Flux.interval(Duration.ofSeconds(1))
-                .map(i -> session.textMessage("訊息 " + i))
-        );
-    }
-}
-```
-
-#### 步驟 3：反應式安全
-```java
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.*;
 import org.springframework.security.core.annotation.*;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.*;
 
 @RestController
@@ -317,19 +263,81 @@ import reactor.core.publisher.*;
 public class SecureController {
     
     @GetMapping("/user")
-    public Mono<String> getUserInfo(@AuthenticationPrincipal Mono<User> user) {
-        return user.map(u -> "歡迎, " + u.getUsername());
+    public Mono<User> getUser(@AuthenticationPrincipal User user) {
+        return userService.getUserDetails(user.getUsername());
     }
     
     @PostMapping("/message")
-    public Mono<Message> sendMessage(@RequestBody Message message,
-                                   @AuthenticationPrincipal Mono<User> user) {
-        return user.flatMap(u -> {
-            message.setSender(u.getUsername());
-            return Mono.just(message);
-        });
+    public Mono<Message> sendMessage(
+            @AuthenticationPrincipal User user,
+            @RequestBody Message message) {
+        return messageService.sendMessage(user, message);
     }
 }
 ```
 
-這個教學文件提供了從基礎到進階的 Spring WebFlux 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的反應式編程開始，中級學習者可以學習更複雜的反應式流和背壓處理，而高級學習者則可以掌握反應式數據庫和 WebSocket 等進階功能。 
+#### 步驟 2：響應式測試
+```java
+import org.springframework.boot.test.context.*;
+import org.springframework.test.web.reactive.server.*;
+import reactor.test.*;
+
+@SpringBootTest
+@AutoConfigureWebTestClient
+public class ClassControllerTest {
+    
+    @Autowired
+    private WebTestClient webClient;
+    
+    @Test
+    public void testGetNotices() {
+        webClient.get()
+            .uri("/notices")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBodyList(Notice.class)
+            .hasSize(2);
+    }
+    
+    @Test
+    public void testStreamEvents() {
+        StepVerifier.create(eventService.getEventStream())
+            .expectNextMatches(event -> event.getType().equals("notice"))
+            .expectNextMatches(event -> event.getType().equals("alert"))
+            .thenCancel()
+            .verify();
+    }
+}
+```
+
+#### 步驟 3：響應式監控
+```java
+import org.springframework.boot.actuate.metrics.*;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.*;
+
+@RestController
+@RequestMapping("/api/monitor")
+public class MonitorController {
+    
+    @Autowired
+    private MeterRegistry registry;
+    
+    @GetMapping("/metrics")
+    public Flux<Metric> getMetrics() {
+        return Flux.fromIterable(registry.getMeters())
+            .map(meter -> new Metric(
+                meter.getId().getName(),
+                meter.measure()
+            ));
+    }
+    
+    @GetMapping("/health")
+    public Mono<Health> checkHealth() {
+        return healthService.checkSystemHealth()
+            .map(status -> new Health(status));
+    }
+}
+```
+
+這個教學文件提供了從基礎到進階的 Spring WebFlux 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的響應式編程開始，中級學習者可以學習更複雜的流處理和背壓處理，而高級學習者則可以掌握響應式安全和監控等進階功能。 

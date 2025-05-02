@@ -3,7 +3,7 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-Spring WebSocket 就像是一個班級的即時聊天室，可以讓同學們即時交流。初級學習者需要了解：
+Spring WebSocket 就像是一個班級的即時聊天室，讓同學們可以即時交流。初級學習者需要了解：
 - 什麼是 WebSocket
 - 為什麼需要 WebSocket
 - 基本的 WebSocket 操作
@@ -22,17 +22,16 @@ class WebSocketClient {
     - connection: Connection
     + connect()
     + send()
-    + close()
+    + receive()
 }
 
 class Message {
     - content: String
     - sender: String
-    + getContent()
-    + getSender()
+    - timestamp: Date
 }
 
-WebSocketServer --> Message
+WebSocketServer --> WebSocketClient
 WebSocketClient --> Message
 @enduml
 ```
@@ -52,17 +51,9 @@ WebSocketClient --> Message
 ```
 
 #### 步驟 2：基本配置
-```yaml
-# application.yml
-spring:
-  websocket:
-    path: /chat
-```
-
-#### 步驟 3：簡單範例
 ```java
-import org.springframework.web.socket.*;
-import org.springframework.web.socket.handler.*;
+import org.springframework.web.socket.config.annotation.*;
+import org.springframework.context.annotation.*;
 
 @Configuration
 @EnableWebSocket
@@ -70,19 +61,51 @@ public class WebSocketConfig implements WebSocketConfigurer {
     
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new ChatHandler(), "/chat")
+        registry.addHandler(classChatHandler(), "/chat")
             .setAllowedOrigins("*");
     }
+    
+    @Bean
+    public WebSocketHandler classChatHandler() {
+        return new ClassChatHandler();
+    }
 }
+```
 
-public class ChatHandler extends TextWebSocketHandler {
+#### 步驟 3：簡單範例
+```java
+import org.springframework.web.socket.*;
+import org.springframework.web.socket.handler.*;
+
+public class ClassChatHandler extends TextWebSocketHandler {
+    
+    private final List<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
     
     @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage message) {
-        try {
-            session.sendMessage(new TextMessage("收到訊息: " + message.getPayload()));
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void afterConnectionEstablished(WebSocketSession session) {
+        sessions.add(session);
+        broadcast("新同學加入聊天室！");
+    }
+    
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+        String sender = session.getAttributes().get("username").toString();
+        broadcast(sender + ": " + message.getPayload());
+    }
+    
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        sessions.remove(session);
+        broadcast("有同學離開聊天室！");
+    }
+    
+    private void broadcast(String message) {
+        for (WebSocketSession session : sessions) {
+            try {
+                session.sendMessage(new TextMessage(message));
+            } catch (IOException e) {
+                // 處理發送失敗的情況
+            }
         }
     }
 }
@@ -94,8 +117,8 @@ public class ChatHandler extends TextWebSocketHandler {
 中級學習者需要理解：
 - 會話管理
 - 訊息廣播
-- 錯誤處理
 - 心跳檢測
+- STOMP 協議
 
 ### 2. PlantUML 圖解
 ```plantuml
@@ -104,183 +127,42 @@ class SessionManager {
     - sessions: Map<String, Session>
     + addSession()
     + removeSession()
-    + broadcast()
+    + getSession()
 }
 
 class MessageBroker {
     - subscribers: List<Subscriber>
     + subscribe()
-    + publish()
-}
-
-class ErrorHandler {
-    - errors: List<Error>
-    + handleError()
-    + recover()
+    + unsubscribe()
+    + broadcast()
 }
 
 class Heartbeat {
-    - interval: Duration
+    - interval: long
+    - timeout: long
     + check()
     + reset()
 }
 
+class STOMP {
+    - protocol: String
+    - commands: List<Command>
+    + handle()
+    + process()
+}
+
 SessionManager --> MessageBroker
-MessageBroker --> ErrorHandler
-ErrorHandler --> Heartbeat
+MessageBroker --> Heartbeat
+Heartbeat --> STOMP
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：會話管理
-```java
-import org.springframework.web.socket.*;
-import org.springframework.web.socket.handler.*;
-import java.util.concurrent.*;
-
-@Configuration
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
-    
-    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
-    
-    @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new ChatHandler(sessions), "/chat")
-            .setAllowedOrigins("*");
-    }
-}
-
-public class ChatHandler extends TextWebSocketHandler {
-    
-    private final Map<String, WebSocketSession> sessions;
-    
-    public ChatHandler(Map<String, WebSocketSession> sessions) {
-        this.sessions = sessions;
-    }
-    
-    @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
-        sessions.put(session.getId(), session);
-    }
-    
-    @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        sessions.remove(session.getId());
-    }
-}
-```
-
-#### 步驟 2：訊息廣播
-```java
-import org.springframework.web.socket.*;
-import org.springframework.web.socket.handler.*;
-import java.util.concurrent.*;
-
-public class ChatHandler extends TextWebSocketHandler {
-    
-    private final Map<String, WebSocketSession> sessions;
-    
-    @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage message) {
-        String payload = message.getPayload();
-        String response = "[" + session.getId() + "]: " + payload;
-        
-        sessions.values().forEach(s -> {
-            try {
-                s.sendMessage(new TextMessage(response));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-    }
-}
-```
-
-#### 步驟 3：心跳檢測
-```java
-import org.springframework.web.socket.*;
-import org.springframework.web.socket.handler.*;
-import java.util.concurrent.*;
-
-public class ChatHandler extends TextWebSocketHandler {
-    
-    private final Map<String, Long> lastHeartbeat = new ConcurrentHashMap<>();
-    
-    @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage message) {
-        if ("PING".equals(message.getPayload())) {
-            lastHeartbeat.put(session.getId(), System.currentTimeMillis());
-            try {
-                session.sendMessage(new TextMessage("PONG"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    
-    public void checkHeartbeats() {
-        long now = System.currentTimeMillis();
-        sessions.entrySet().removeIf(entry -> {
-            Long last = lastHeartbeat.get(entry.getKey());
-            return last != null && (now - last) > 30000; // 30秒超時
-        });
-    }
-}
-```
-
-## 高級（Advanced）層級
-
-### 1. 概念說明
-高級學習者需要掌握：
-- STOMP 協議
-- 訊息佇列
-- 安全認證
-- 效能優化
-
-### 2. PlantUML 圖解
-```plantuml
-@startuml
-package "進階 WebSocket 系統" {
-    class StompProtocol {
-        - commands: List<Command>
-        + connect()
-        + subscribe()
-        + send()
-    }
-    
-    class MessageQueue {
-        - queue: Queue<Message>
-        + enqueue()
-        + dequeue()
-    }
-    
-    class Security {
-        - authentication: Authentication
-        + authenticate()
-        + authorize()
-    }
-    
-    class Performance {
-        - metrics: Metrics
-        + monitor()
-        + optimize()
-    }
-}
-
-StompProtocol --> MessageQueue
-MessageQueue --> Security
-Security --> Performance
-@enduml
-```
-
-### 3. 分段教學步驟
-
-#### 步驟 1：STOMP 協議
+#### 步驟 1：STOMP 配置
 ```java
 import org.springframework.messaging.simp.config.*;
-import org.springframework.web.socket.config.annotation.*;
+import org.springframework.context.annotation.*;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -295,39 +177,190 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/chat")
-            .setAllowedOrigins("*");
+            .setAllowedOrigins("*")
+            .withSockJS();
     }
 }
+```
+
+#### 步驟 2：訊息處理
+```java
+import org.springframework.messaging.handler.annotation.*;
+import org.springframework.messaging.simp.*;
 
 @Controller
 public class ChatController {
     
     @MessageMapping("/chat.send")
     @SendTo("/topic/public")
-    public ChatMessage sendMessage(ChatMessage message) {
-        return message;
+    public ChatMessage sendMessage(@Payload ChatMessage chatMessage) {
+        return chatMessage;
+    }
+    
+    @MessageMapping("/chat.addUser")
+    @SendTo("/topic/public")
+    public ChatMessage addUser(@Payload ChatMessage chatMessage,
+                             SimpMessageHeaderAccessor headerAccessor) {
+        headerAccessor.getSessionAttributes()
+            .put("username", chatMessage.getSender());
+        return chatMessage;
     }
 }
 ```
 
-#### 步驟 2：訊息佇列
+#### 步驟 3：心跳檢測
 ```java
-import org.springframework.messaging.simp.*;
-import org.springframework.messaging.simp.stomp.*;
-import org.springframework.stereotype.*;
+import org.springframework.web.socket.config.annotation.*;
+import org.springframework.context.annotation.*;
 
-@Component
-public class ChatMessageListener implements StompCommandListener {
+@Configuration
+public class WebSocketConfig {
     
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    @Bean
+    public WebSocketHandlerDecoratorFactory heartbeatDecorator() {
+        return new WebSocketHandlerDecoratorFactory() {
+            @Override
+            public WebSocketHandler decorate(WebSocketHandler handler) {
+                return new HeartbeatWebSocketHandler(handler);
+            }
+        };
+    }
+}
+
+public class HeartbeatWebSocketHandler extends WebSocketHandlerDecorator {
+    
+    private static final long HEARTBEAT_INTERVAL = 30000;
+    private static final long HEARTBEAT_TIMEOUT = 60000;
+    
+    private ScheduledExecutorService scheduler;
+    private ScheduledFuture<?> heartbeatFuture;
+    
+    public HeartbeatWebSocketHandler(WebSocketHandler delegate) {
+        super(delegate);
+        this.scheduler = Executors.newSingleThreadScheduledExecutor();
+    }
     
     @Override
-    public void handleMessage(StompHeaderAccessor headers, Object payload) {
-        if (payload instanceof ChatMessage) {
-            ChatMessage message = (ChatMessage) payload;
-            messagingTemplate.convertAndSend("/topic/queue", message);
-        }
+    public void afterConnectionEstablished(WebSocketSession session) {
+        startHeartbeat(session);
+        super.afterConnectionEstablished(session);
+    }
+    
+    private void startHeartbeat(WebSocketSession session) {
+        heartbeatFuture = scheduler.scheduleAtFixedRate(() -> {
+            try {
+                if (session.isOpen()) {
+                    session.sendMessage(new PingMessage());
+                }
+            } catch (IOException e) {
+                // 處理心跳失敗
+            }
+        }, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, TimeUnit.MILLISECONDS);
+    }
+}
+```
+
+## 高級（Advanced）層級
+
+### 1. 概念說明
+高級學習者需要掌握：
+- 訊息佇列
+- 分散式會話
+- 安全認證
+- 效能監控
+
+### 2. PlantUML 圖解
+```plantuml
+@startuml
+package "進階 WebSocket 系統" {
+    class MessageQueue {
+        - queue: Queue<Message>
+        + enqueue()
+        + dequeue()
+        + process()
+    }
+    
+    class DistributedSession {
+        - sessions: Map<String, Session>
+        + sync()
+        + replicate()
+    }
+    
+    class Security {
+        - authentication: Authentication
+        - authorization: Authorization
+        + authenticate()
+        + authorize()
+    }
+    
+    class Performance {
+        - metrics: Metrics
+        + monitor()
+        + optimize()
+    }
+}
+
+MessageQueue --> DistributedSession
+DistributedSession --> Security
+Security --> Performance
+@enduml
+```
+
+### 3. 分段教學步驟
+
+#### 步驟 1：訊息佇列
+```java
+import org.springframework.messaging.simp.config.*;
+import org.springframework.context.annotation.*;
+
+@Configuration
+public class MessageQueueConfig {
+    
+    @Bean
+    public MessageChannel clientInboundChannel() {
+        return new ExecutorSubscribableChannel(
+            Executors.newFixedThreadPool(10)
+        );
+    }
+    
+    @Bean
+    public MessageChannel clientOutboundChannel() {
+        return new ExecutorSubscribableChannel(
+            Executors.newFixedThreadPool(10)
+        );
+    }
+    
+    @Bean
+    public MessageBroker messageBroker() {
+        SimpleBrokerMessageHandler broker = new SimpleBrokerMessageHandler(
+            clientInboundChannel(),
+            clientOutboundChannel(),
+            "/topic"
+        );
+        broker.setHeartbeatValue(new long[] {10000, 10000});
+        return broker;
+    }
+}
+```
+
+#### 步驟 2：分散式會話
+```java
+import org.springframework.session.web.socket.config.annotation.*;
+import org.springframework.session.web.socket.server.*;
+import org.springframework.session.*;
+
+@Configuration
+@EnableRedisWebSocketSession
+public class SessionConfig {
+    
+    @Bean
+    public WebSocketSessionRepository webSocketSessionRepository() {
+        return new MapSessionRepository();
+    }
+    
+    @Bean
+    public WebSocketSessionMessageBrokerConfigurer webSocketSessionMessageBrokerConfigurer() {
+        return new WebSocketSessionMessageBrokerConfigurer();
     }
 }
 ```
@@ -336,20 +369,35 @@ public class ChatMessageListener implements StompCommandListener {
 ```java
 import org.springframework.messaging.handler.annotation.*;
 import org.springframework.security.core.annotation.*;
-import org.springframework.stereotype.*;
+import org.springframework.security.core.userdetails.*;
 
 @Controller
 public class SecureChatController {
     
-    @MessageMapping("/secure/chat")
-    @SendTo("/topic/secure")
-    public ChatMessage sendSecureMessage(
-            @Payload ChatMessage message,
-            @AuthenticationPrincipal User user) {
-        message.setSender(user.getUsername());
-        return message;
+    @MessageMapping("/chat.private")
+    @SendToUser("/queue/private")
+    public ChatMessage sendPrivateMessage(
+            @Payload ChatMessage chatMessage,
+            @AuthenticationPrincipal UserDetails user) {
+        // 驗證發送者身份
+        if (!user.getUsername().equals(chatMessage.getSender())) {
+            throw new SecurityException("無權發送訊息");
+        }
+        return chatMessage;
+    }
+    
+    @MessageMapping("/chat.group")
+    @SendTo("/topic/group")
+    public ChatMessage sendGroupMessage(
+            @Payload ChatMessage chatMessage,
+            @AuthenticationPrincipal UserDetails user) {
+        // 驗證群組權限
+        if (!hasGroupPermission(user, chatMessage.getGroupId())) {
+            throw new SecurityException("無權發送群組訊息");
+        }
+        return chatMessage;
     }
 }
 ```
 
-這個教學文件提供了從基礎到進階的 Spring WebSocket 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的 WebSocket 操作開始，中級學習者可以學習更複雜的會話管理和訊息廣播，而高級學習者則可以掌握 STOMP 協議和安全認證等進階功能。 
+這個教學文件提供了從基礎到進階的 Spring WebSocket 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的 WebSocket 操作開始，中級學習者可以學習更複雜的會話管理和訊息廣播，而高級學習者則可以掌握訊息佇列和安全認證等進階功能。 

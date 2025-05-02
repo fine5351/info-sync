@@ -1,278 +1,447 @@
-# Spring 操作 Minio 教學（初級、中級、高級）
+# Spring MinIO 教學
 
----
+## 初級（Beginner）層級
 
-## 初級階段：第一次接觸 Minio 的小白
+### 1. 概念說明
+Spring MinIO 就像是一個班級的雲端儲存空間，可以讓同學們安全地儲存和分享文件。初級學習者需要了解：
+- 什麼是物件儲存
+- 為什麼需要物件儲存
+- 基本的檔案操作
 
-### 目標
-
-完全沒碰過 Minio 的人，學會基礎文件上傳下載。
-
----
-
-### 1. 什麼是 Minio？
-
-- Minio 是一個免費的「開源對象存儲服務」，可以當作自己的私人網盤（類似 AWS S3）
-- 例如：存圖片、影片、文件，並用程式控制存取
-
-### 2. 環境準備
-
-#### 步驟 1：安裝 Minio
-
-```bash
-# 下載 Minio 執行檔（Windows 範例）
-wget https://dl.min.io/server/minio/release/windows-amd64/minio.exe
-
-# 啟動 Minio（資料存在 D:\minio-data）
-minio.exe server D:\minio-data --console-address :9090
-```
-
-打開瀏覽器訪問 http://localhost:9090，帳號密碼預設為 minioadmin/minioadmin
-
-#### 步驟 2：創建 Spring Boot 專案
-
-訪問 Spring Initializr
-選擇依賴：
-Spring Web
-Lombok（簡化程式碼）
-
-#### 步驟 3：添加 Minio 依賴
-
-<!-- pom.xml -->
-
-```xml
-
-<dependency>
-  <groupId>io.minio</groupId>
-  <artifactId>minio</artifactId>
-  <version>8.5.2</version>
-</dependency>
-```
-
-### 3. 基礎操作：上傳文件
-
-#### 步驟 1：設定連線資訊
-
-properties
-
-```yml
-# application.properties
-minio.endpoint=http://localhost:9000
-minio.access-key=minioadmin
-minio.secret-key=minioadmin
-minio.bucket-name=my-bucket
-```
-
-#### 步驟 2：編寫上傳程式
-
-```java
-
-@Configuration
-public class MinioConfig {
-    @Value("${minio.endpoint}")
-    private String endpoint;
-
-    @Value("${minio.access-key}")
-    private String accessKey;
-
-    @Value("${minio.secret-key}")
-    private String secretKey;
-
-    @Bean
-    public MinioClient minioClient() {
-        return MinioClient.builder()
-                .endpoint(endpoint)
-                .credentials(accessKey, secretKey)
-                .build();
-    }
+### 2. PlantUML 圖解
+```plantuml
+@startuml
+class MinIOClient {
+    - endpoint: String
+    - credentials: Credentials
+    + uploadFile()
+    + downloadFile()
+    + listFiles()
 }
+
+class Bucket {
+    - name: String
+    - files: List<File>
+    + create()
+    + delete()
+    + list()
+}
+
+class File {
+    - name: String
+    - size: long
+    - type: String
+    + upload()
+    + download()
+    + delete()
+}
+
+MinIOClient --> Bucket
+Bucket --> File
+@enduml
+```
+
+### 3. 分段教學步驟
+
+#### 步驟 1：基本專案設定
+```xml
+<!-- pom.xml -->
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+        <version>3.3.10</version>
+    </dependency>
+    <dependency>
+        <groupId>io.minio</groupId>
+        <artifactId>minio</artifactId>
+        <version>8.5.7</version>
+    </dependency>
+</dependencies>
+```
+
+#### 步驟 2：基本配置
+```yaml
+# application.yml
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket: class-files
+```
+
+#### 步驟 3：簡單範例
+```java
+import io.minio.*;
+import org.springframework.stereotype.*;
+import org.springframework.web.multipart.*;
 
 @Service
-@RequiredArgsConstructor
-public class FileService {
+public class ClassFileService {
+    
     private final MinioClient minioClient;
-
-    @Value("${minio.bucket-name}")
-    private String bucketName;
-
-    public void uploadFile(String objectName, InputStream stream) throws Exception {
-        // 檢查存儲桶是否存在
-        boolean exists = minioClient.bucketExists(
-                BucketExistsArgs.builder().bucket(bucketName).build()
+    private final String bucketName;
+    
+    public ClassFileService(MinioClient minioClient,
+                          @Value("${minio.bucket}") String bucketName) {
+        this.minioClient = minioClient;
+        this.bucketName = bucketName;
+    }
+    
+    public void uploadFile(MultipartFile file) throws Exception {
+        minioClient.putObject(
+            PutObjectArgs.builder()
+                .bucket(bucketName)
+                .object(file.getOriginalFilename())
+                .stream(file.getInputStream(), file.getSize(), -1)
+                .contentType(file.getContentType())
+                .build()
         );
+    }
+    
+    public byte[] downloadFile(String filename) throws Exception {
+        try (InputStream stream = minioClient.getObject(
+            GetObjectArgs.builder()
+                .bucket(bucketName)
+                .object(filename)
+                .build()
+        )) {
+            return stream.readAllBytes();
+        }
+    }
+}
+```
 
+## 中級（Intermediate）層級
+
+### 1. 概念說明
+中級學習者需要理解：
+- 儲存桶管理
+- 檔案權限
+- 檔案預覽
+- 錯誤處理
+
+### 2. PlantUML 圖解
+```plantuml
+@startuml
+class BucketManager {
+    - buckets: List<Bucket>
+    + createBucket()
+    + deleteBucket()
+    + listBuckets()
+}
+
+class FilePermission {
+    - access: AccessLevel
+    - users: List<User>
+    + grant()
+    + revoke()
+    + check()
+}
+
+class FilePreview {
+    - file: File
+    - type: PreviewType
+    + generate()
+    + display()
+}
+
+class ErrorHandler {
+    - errors: List<Error>
+    + handle()
+    + recover()
+}
+
+BucketManager --> FilePermission
+FilePermission --> FilePreview
+FilePreview --> ErrorHandler
+@enduml
+```
+
+### 3. 分段教學步驟
+
+#### 步驟 1：儲存桶管理
+```java
+import io.minio.*;
+import org.springframework.stereotype.*;
+
+@Service
+public class ClassBucketService {
+    
+    private final MinioClient minioClient;
+    
+    public ClassBucketService(MinioClient minioClient) {
+        this.minioClient = minioClient;
+    }
+    
+    public void createBucket(String bucketName) throws Exception {
+        boolean exists = minioClient.bucketExists(
+            BucketExistsArgs.builder()
+                .bucket(bucketName)
+                .build()
+        );
+        
         if (!exists) {
             minioClient.makeBucket(
-                    MakeBucketArgs.builder().bucket(bucketName).build()
+                MakeBucketArgs.builder()
+                    .bucket(bucketName)
+                    .build()
             );
         }
+    }
+    
+    public void deleteBucket(String bucketName) throws Exception {
+        minioClient.removeBucket(
+            RemoveBucketArgs.builder()
+                .bucket(bucketName)
+                .build()
+        );
+    }
+}
+```
 
-        // 上傳文件
-        minioClient.putObject(
+#### 步驟 2：檔案權限
+```java
+import io.minio.*;
+import org.springframework.stereotype.*;
+
+@Service
+public class ClassFilePermissionService {
+    
+    private final MinioClient minioClient;
+    
+    public void setFilePermission(String bucketName,
+                                String objectName,
+                                String policy) throws Exception {
+        minioClient.setBucketPolicy(
+            SetBucketPolicyArgs.builder()
+                .bucket(bucketName)
+                .config(policy)
+                .build()
+        );
+    }
+    
+    public String getFilePermission(String bucketName) throws Exception {
+        return minioClient.getBucketPolicy(
+            GetBucketPolicyArgs.builder()
+                .bucket(bucketName)
+                .build()
+        );
+    }
+}
+```
+
+#### 步驟 3：檔案預覽
+```java
+import io.minio.*;
+import org.springframework.stereotype.*;
+import org.springframework.http.*;
+
+@Service
+public class ClassFilePreviewService {
+    
+    private final MinioClient minioClient;
+    
+    public ResponseEntity<byte[]> previewFile(String bucketName,
+                                            String objectName) throws Exception {
+        try (InputStream stream = minioClient.getObject(
+            GetObjectArgs.builder()
+                .bucket(bucketName)
+                .object(objectName)
+                .build()
+        )) {
+            byte[] content = stream.readAllBytes();
+            
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(content);
+        }
+    }
+}
+```
+
+## 高級（Advanced）層級
+
+### 1. 概念說明
+高級學習者需要掌握：
+- 分散式儲存
+- 版本控制
+- 資料加密
+- 效能優化
+
+### 2. PlantUML 圖解
+```plantuml
+@startuml
+package "進階 MinIO 系統" {
+    class DistributedStorage {
+        - nodes: List<Node>
+        + replicate()
+        + sync()
+    }
+    
+    class VersionControl {
+        - versions: List<Version>
+        + createVersion()
+        + restoreVersion()
+    }
+    
+    class Encryption {
+        - algorithm: String
+        - key: Key
+        + encrypt()
+        + decrypt()
+    }
+    
+    class Performance {
+        - metrics: Metrics
+        + monitor()
+        + optimize()
+    }
+}
+
+DistributedStorage --> VersionControl
+VersionControl --> Encryption
+Encryption --> Performance
+@enduml
+```
+
+### 3. 分段教學步驟
+
+#### 步驟 1：分散式儲存
+```java
+import io.minio.*;
+import org.springframework.stereotype.*;
+
+@Service
+public class ClassDistributedStorageService {
+    
+    private final List<MinioClient> clients;
+    
+    public void replicateFile(String bucketName,
+                            String objectName,
+                            byte[] content) throws Exception {
+        for (MinioClient client : clients) {
+            client.putObject(
                 PutObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(objectName)
+                    .stream(new ByteArrayInputStream(content),
+                           content.length, -1)
+                    .build()
+            );
+        }
+    }
+    
+    public byte[] getFileFromReplica(String bucketName,
+                                   String objectName) throws Exception {
+        for (MinioClient client : clients) {
+            try {
+                try (InputStream stream = client.getObject(
+                    GetObjectArgs.builder()
                         .bucket(bucketName)
                         .object(objectName)
-                        .stream(stream, -1, 10485760)  // 10MB 分片
                         .build()
-        );
+                )) {
+                    return stream.readAllBytes();
+                }
+            } catch (Exception e) {
+                // 嘗試下一個副本
+                continue;
+            }
+        }
+        throw new Exception("所有副本都無法訪問");
     }
 }
 ```
 
-#### 步驟 3：測試上傳
-
-使用 Postman 發送 POST 請求到你的 API
-
-在 Minio 網頁界面檢查 my-bucket 是否出現文件
-
-## 中級階段：進階功能與自定義
-
-### 目標
-
-學會管理文件、設定權限、自定義異常處理
-
-##### 1. 列出所有文件
-
-   ```java
-   public List<String> listFiles() throws Exception {
-    Iterable<Result<Item>> results = minioClient.listObjects(
-            ListObjectsArgs.builder().bucket(bucketName).build()
-    );
-
-    List<String> files = new ArrayList<>();
-    for (Result<Item> result : results) {
-        files.add(result.get().objectName());
-    }
-    return files;
-}
-   ```
-
-##### 2. 生成限時下載鏈接
-
-   ```java
-   public String getDownloadUrl(String fileName) throws Exception {
-    return minioClient.getPresignedObjectUrl(
-            GetPresignedObjectUrlArgs.builder()
-                    .method(Method.GET)
-                    .bucket(bucketName)
-                    .object(fileName)
-                    .expiry(24 * 60 * 60)  // 24 小時有效期
-                    .build()
-    );
-}
-   ```
-
-##### 3. 自定義異常處理
-
-   ```java
-   public InputStream downloadFile(String fileName) {
-    try {
-        return minioClient.getObject(
-                GetObjectArgs.builder()
-                        .bucket(bucketName)
-                        .object(fileName)
-                        .build()
-        );
-    } catch (ErrorResponseException e) {
-        throw new RuntimeException("⚠️ 文件不存在！", e);
-    }
-}
-   ```
-
-## 高級階段：故障排除與效能優化
-
-### 目標
-
-解決線上問題，提升存取速度
-
-#### 1. 常見錯誤排查表
-
-錯誤訊息 可能原因 解決方法
-Connection refused Minio 服務未啟動 檢查 Minio 是否運行在 9000 端口
-Access Denied 金鑰錯誤 檢查 access-key/secret-key
-NoSuchBucket 存儲桶不存在 先檢查 bucket 是否存在
-
-#### 2. 效能優化技巧
-
-##### 技巧 1：重用 MinioClient
-
-   ```java
-   // 在配置類創建單例
-@Bean
-@Scope("singleton")  // 默認就是單例，確保不要重複創建
-public MinioClient minioClient() {
-    // 配置內容...
-}
-   ```
-
-##### 技巧 2：分片並行上傳
-
-   ```java
-   // 上傳大文件時自動分片
-   minioClient.putObject(
-        PutObjectArgs.builder()
-   .
-
-bucket(bucketName)
-   .
-
-object("4k-video.mp4")
-   .
-
-stream(videoStream, videoStream.available(), 5242880)  // 5MB 分片
-        .
-
-build()
-   );
-   ```
-
-##### 3. 監控與日誌
-
-Minio 日誌配置
-
-   ```bash
-# 啟動時添加日誌參數
-minio server /data --console-address :9090 --audit-log-dir /var/log/minio
-```
-
-Spring Boot 效能監控
-
+#### 步驟 2：版本控制
 ```java
+import io.minio.*;
+import org.springframework.stereotype.*;
 
-@Aspect
-@Component
-@Slf4j
-public class PerformanceMonitor {
-
-    @Around("execution(* com.example.service.*.*(..))")
-    public Object logTime(ProceedingJoinPoint joinPoint) throws Throwable {
-        long start = System.currentTimeMillis();
-        Object result = joinPoint.proceed();
-        long time = System.currentTimeMillis() - start;
-        log.info("🕒 方法 {} 執行時間: {}ms",
-                joinPoint.getSignature().getName(),
-                time);
-        return result;
+@Service
+public class ClassVersionControlService {
+    
+    private final MinioClient minioClient;
+    
+    public void createVersion(String bucketName,
+                            String objectName,
+                            byte[] content) throws Exception {
+        String versionId = UUID.randomUUID().toString();
+        String versionedObjectName = objectName + "-" + versionId;
+        
+        minioClient.putObject(
+            PutObjectArgs.builder()
+                .bucket(bucketName)
+                .object(versionedObjectName)
+                .stream(new ByteArrayInputStream(content),
+                       content.length, -1)
+                .build()
+        );
+    }
+    
+    public byte[] restoreVersion(String bucketName,
+                               String objectName,
+                               String versionId) throws Exception {
+        String versionedObjectName = objectName + "-" + versionId;
+        
+        try (InputStream stream = minioClient.getObject(
+            GetObjectArgs.builder()
+                .bucket(bucketName)
+                .object(versionedObjectName)
+                .build()
+        )) {
+            return stream.readAllBytes();
+        }
     }
 }
 ```
 
-## 總結
+#### 步驟 3：資料加密
+```java
+import io.minio.*;
+import org.springframework.stereotype.*;
+import javax.crypto.*;
 
-### 階段	重點能力	關鍵工具
+@Service
+public class ClassEncryptionService {
+    
+    private final MinioClient minioClient;
+    private final SecretKey key;
+    
+    public void uploadEncryptedFile(String bucketName,
+                                  String objectName,
+                                  byte[] content) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, key);
+        byte[] encrypted = cipher.doFinal(content);
+        
+        minioClient.putObject(
+            PutObjectArgs.builder()
+                .bucket(bucketName)
+                .object(objectName)
+                .stream(new ByteArrayInputStream(encrypted),
+                       encrypted.length, -1)
+                .build()
+        );
+    }
+    
+    public byte[] downloadDecryptedFile(String bucketName,
+                                      String objectName) throws Exception {
+        try (InputStream stream = minioClient.getObject(
+            GetObjectArgs.builder()
+                .bucket(bucketName)
+                .object(objectName)
+                .build()
+        )) {
+            byte[] encrypted = stream.readAllBytes();
+            
+            Cipher cipher = Cipher.getInstance("AES");
+            cipher.init(Cipher.DECRYPT_MODE, key);
+            return cipher.doFinal(encrypted);
+        }
+    }
+}
+```
 
-#### 中級	權限管理、異常處理	Presigned URL、AOP
-
-#### 初級	基礎文件操作	MinioClient、Postman
-
-#### 高級	效能優化、系統監控	連接池、分片上傳、日誌分析
-
-### 遇到問題三步驟：
-
-#### 檢查網路連線 (telnet localhost 9000)
-
-#### 查看 Minio 控制台日誌
-
-#### 在 Spring Boot 添加斷點偵錯
-
-#### 小秘訣：用 minioClient.traceOn() 可以開啟詳細請求日誌，偵錯超方便！
+這個教學文件提供了從基礎到進階的 Spring MinIO 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的檔案操作開始，中級學習者可以學習更複雜的儲存桶管理和檔案權限，而高級學習者則可以掌握分散式儲存和版本控制等進階功能。
