@@ -22,7 +22,6 @@ else (否)
 endif
 stop
 @enduml
-```
 
 ### 3. 分段教學步驟
 

@@ -3,81 +3,80 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-Lambda 表達式是 Java 8 引入的一種簡潔的程式寫法，可以讓程式碼更簡短易讀。初級學習者需要了解：
+Java Lambda 就像是一個班級的任務分配系統，可以讓程式碼更簡潔地描述要做的事情。初級學習者需要了解：
 - 什麼是 Lambda 表達式
-- Lambda 的基本語法
-- 如何使用 Lambda 來簡化程式碼
+- 為什麼需要 Lambda 表達式
+- 基本的 Lambda 語法
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-start
-:傳統寫法;
-:使用 Lambda;
-:簡化程式碼;
-stop
+interface Function {
+    + apply()
+}
+
+class Lambda {
+    - parameters: List<Parameter>
+    - body: CodeBlock
+    + execute()
+}
+
+class Stream {
+    - elements: List<Element>
+    + filter()
+    + map()
+    + collect()
+}
+
+Function <|.. Lambda
+Stream --> Lambda
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：基本 Lambda 語法
+#### 步驟 1：基本語法
 ```java
 // 傳統寫法
-Runnable runnable = new Runnable() {
+Runnable oldWay = new Runnable() {
     @Override
     public void run() {
-        System.out.println("Hello World!");
+        System.out.println("傳統寫法");
     }
 };
 
 // Lambda 寫法
-Runnable lambdaRunnable = () -> System.out.println("Hello World!");
+Runnable newWay = () -> System.out.println("Lambda 寫法");
 ```
 
-#### 步驟 2：使用 Lambda 排序
+#### 步驟 2：簡單範例
 ```java
 import java.util.*;
+import java.util.function.*;
 
-public class SimpleLambda {
+public class ClassLambdaExample {
+    
     public static void main(String[] args) {
-        List<String> names = Arrays.asList("小明", "小華", "小美", "小強");
+        // 1. 無參數的 Lambda
+        Runnable morningAnnouncement = () -> 
+            System.out.println("早安！今天天氣真好！");
         
-        // 傳統寫法
-        Collections.sort(names, new Comparator<String>() {
-            @Override
-            public int compare(String a, String b) {
-                return a.compareTo(b);
-            }
-        });
+        // 2. 帶參數的 Lambda
+        Consumer<String> printMessage = message -> 
+            System.out.println("收到訊息: " + message);
         
-        // Lambda 寫法
-        Collections.sort(names, (a, b) -> a.compareTo(b));
+        // 3. 帶返回值的 Lambda
+        Function<Integer, String> gradeConverter = score -> {
+            if (score >= 90) return "A";
+            if (score >= 80) return "B";
+            if (score >= 70) return "C";
+            return "D";
+        };
         
-        System.out.println("排序後的名單：");
-        names.forEach(name -> System.out.println(name));
-    }
-}
-```
-
-#### 步驟 3：簡單的 Lambda 應用
-```java
-import java.util.*;
-
-public class SimpleLambdaExample {
-    public static void main(String[] args) {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        
-        // 使用 Lambda 計算平方
-        numbers.forEach(number -> {
-            int square = number * number;
-            System.out.println(number + " 的平方是 " + square);
-        });
-        
-        // 使用 Lambda 過濾偶數
-        numbers.stream()
-            .filter(number -> number % 2 == 0)
-            .forEach(number -> System.out.println(number + " 是偶數"));
+        // 使用 Lambda
+        morningAnnouncement.run();
+        printMessage.accept("今天要考試");
+        System.out.println("分數轉換: " + gradeConverter.apply(85));
     }
 }
 ```
@@ -86,129 +85,132 @@ public class SimpleLambdaExample {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 函數式介面（Functional Interface）
-- 方法參考（Method Reference）
-- Stream API 的基本使用
-- Lambda 的進階語法
+- 函數式介面
+- 方法引用
+- Stream API
+- 集合操作
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
 interface FunctionalInterface {
-    + apply(T): R
+    + abstractMethod()
+    + defaultMethod()
 }
 
-class Stream {
-    + filter(Predicate)
-    + map(Function)
-    + forEach(Consumer)
+class MethodReference {
+    - target: Object
+    - method: Method
+    + invoke()
 }
 
-class Student {
-    - name: String
-    - score: int
-    + getName(): String
-    + getScore(): int
+class StreamPipeline {
+    - source: Source
+    - operations: List<Operation>
+    + process()
 }
 
-Stream --> FunctionalInterface
-Student --> Stream
+FunctionalInterface <|.. MethodReference
+StreamPipeline --> FunctionalInterface
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：自定義函數式介面
-```java
-@FunctionalInterface
-interface StringProcessor {
-    String process(String input);
-}
-
-public class CustomLambda {
-    public static void main(String[] args) {
-        // 使用 Lambda 實作介面
-        StringProcessor toUpperCase = str -> str.toUpperCase();
-        StringProcessor addExclamation = str -> str + "!";
-        
-        String result = toUpperCase.process("hello");
-        System.out.println(result); // 輸出: HELLO
-        
-        result = addExclamation.process("hello");
-        System.out.println(result); // 輸出: hello!
-    }
-}
-```
-
-#### 步驟 2：方法參考
+#### 步驟 1：函數式介面
 ```java
 import java.util.*;
+import java.util.function.*;
 
-public class MethodReference {
+public class ClassFunctionalInterface {
+    
+    // 自定義函數式介面
+    @FunctionalInterface
+    interface StudentFilter {
+        boolean test(Student student);
+    }
+    
     public static void main(String[] args) {
-        List<String> names = Arrays.asList("小明", "小華", "小美", "小強");
+        List<Student> students = List.of(
+            new Student("小明", 85),
+            new Student("小華", 92),
+            new Student("小美", 78)
+        );
         
-        // Lambda 寫法
-        names.forEach(name -> System.out.println(name));
+        // 使用 Lambda 過濾學生
+        StudentFilter highScoreFilter = student -> student.score >= 90;
         
-        // 方法參考寫法
+        // 使用內建函數式介面
+        Predicate<Student> passingFilter = student -> student.score >= 60;
+        
+        // 過濾並顯示結果
+        students.stream()
+            .filter(highScoreFilter::test)
+            .forEach(student -> System.out.println(student.name));
+    }
+    
+    record Student(String name, int score) {}
+}
+```
+
+#### 步驟 2：方法引用
+```java
+import java.util.*;
+import java.util.function.*;
+
+public class ClassMethodReference {
+    
+    public static void main(String[] args) {
+        List<String> names = List.of("小明", "小華", "小美");
+        
+        // 1. 靜態方法引用
         names.forEach(System.out::println);
         
-        // 排序範例
-        List<Integer> numbers = Arrays.asList(5, 3, 1, 4, 2);
+        // 2. 實例方法引用
+        String prefix = "學生: ";
+        names.forEach(prefix::concat);
         
-        // Lambda 寫法
-        numbers.sort((a, b) -> a.compareTo(b));
-        
-        // 方法參考寫法
-        numbers.sort(Integer::compareTo);
+        // 3. 建構函數引用
+        Supplier<List<String>> listSupplier = ArrayList::new;
+        List<String> newList = listSupplier.get();
     }
 }
 ```
 
-#### 步驟 3：Stream API 使用
+#### 步驟 3：Stream API
 ```java
 import java.util.*;
 import java.util.stream.*;
 
-public class StreamExample {
+public class ClassStreamExample {
+    
     public static void main(String[] args) {
-        List<Student> students = Arrays.asList(
+        List<Student> students = List.of(
             new Student("小明", 85),
             new Student("小華", 92),
-            new Student("小美", 78),
-            new Student("小強", 65)
+            new Student("小美", 78)
         );
         
-        // 計算平均分數
+        // 1. 過濾
+        students.stream()
+            .filter(s -> s.score >= 80)
+            .forEach(s -> System.out.println(s.name));
+        
+        // 2. 轉換
+        List<String> names = students.stream()
+            .map(s -> s.name)
+            .toList();
+        
+        // 3. 統計
         double average = students.stream()
-            .mapToInt(Student::getScore)
+            .mapToInt(s -> s.score)
             .average()
-            .orElse(0.0);
-        System.out.println("平均分數：" + average);
-        
-        // 找出及格學生
-        List<Student> passedStudents = students.stream()
-            .filter(student -> student.getScore() >= 60)
-            .collect(Collectors.toList());
-        
-        System.out.println("及格學生：");
-        passedStudents.forEach(student -> 
-            System.out.println(student.getName() + ": " + student.getScore()));
-    }
-}
-
-class Student {
-    private String name;
-    private int score;
-    
-    public Student(String name, int score) {
-        this.name = name;
-        this.score = score;
+            .orElse(0);
+            
+        System.out.println("平均分數: " + average);
     }
     
-    public String getName() { return name; }
-    public int getScore() { return score; }
+    record Student(String name, int score) {}
 }
 ```
 
@@ -216,45 +218,44 @@ class Student {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 並行處理（Parallel Stream）
-- 自定義 Stream 操作
-- 複雜的 Lambda 組合
+- 並行處理
+- 自定義收集器
+- 函數式組合
 - 效能優化
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "資料處理系統" {
-    interface DataProcessor {
-        + process(Data): Result
-    }
-    
+package "進階 Lambda" {
     class ParallelProcessor {
-        - processors: List<DataProcessor>
-        + processAll(List<Data>): List<Result>
+        - threads: List<Thread>
+        + process()
+        + combine()
     }
     
-    class StreamProcessor {
-        - stream: Stream<Data>
-        + filter(Predicate)
-        + map(Function)
-        + reduce(BinaryOperator)
+    class CustomCollector {
+        - accumulator: BiConsumer
+        - combiner: BinaryOperator
+        + collect()
+        + finish()
     }
     
-    class Data {
-        - id: String
-        - value: int
+    class FunctionComposition {
+        - functions: List<Function>
+        + compose()
+        + andThen()
     }
     
-    class Result {
-        - data: Data
-        - processedValue: int
+    class Performance {
+        - metrics: Metrics
+        + optimize()
+        + benchmark()
     }
 }
 
-ParallelProcessor --> DataProcessor
-StreamProcessor --> Data
-StreamProcessor --> Result
+ParallelProcessor --> CustomCollector
+CustomCollector --> FunctionComposition
+FunctionComposition --> Performance
 @enduml
 ```
 
@@ -263,122 +264,91 @@ StreamProcessor --> Result
 #### 步驟 1：並行處理
 ```java
 import java.util.*;
-import java.util.stream.*;
 import java.util.concurrent.*;
-
-public class ParallelProcessing {
-    public static void main(String[] args) {
-        List<Integer> numbers = IntStream.range(1, 1000000)
-            .boxed()
-            .collect(Collectors.toList());
-        
-        // 順序處理
-        long startTime = System.currentTimeMillis();
-        long sum = numbers.stream()
-            .mapToLong(i -> i * i)
-            .sum();
-        long endTime = System.currentTimeMillis();
-        System.out.println("順序處理時間：" + (endTime - startTime) + "ms");
-        
-        // 並行處理
-        startTime = System.currentTimeMillis();
-        sum = numbers.parallelStream()
-            .mapToLong(i -> i * i)
-            .sum();
-        endTime = System.currentTimeMillis();
-        System.out.println("並行處理時間：" + (endTime - startTime) + "ms");
-    }
-}
-```
-
-#### 步驟 2：自定義 Stream 操作
-```java
-import java.util.*;
 import java.util.stream.*;
-import java.util.function.*;
 
-public class CustomStreamOperations {
-    public static void main(String[] args) {
-        // 自定義收集器
-        Collector<String, StringBuilder, String> stringJoiner = 
-            Collector.of(
-                StringBuilder::new,
-                StringBuilder::append,
-                StringBuilder::append,
-                StringBuilder::toString
-            );
-        
-        List<String> words = Arrays.asList("Hello", "World", "Java", "Lambda");
-        String result = words.stream()
-            .collect(stringJoiner);
-        System.out.println("合併結果：" + result);
-        
-        // 自定義 Stream 操作
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        int sum = numbers.stream()
-            .reduce(0, (a, b) -> a + b);
-        System.out.println("總和：" + sum);
-        
-        // 複雜的 Lambda 組合
-        Function<Integer, Integer> square = x -> x * x;
-        Function<Integer, Integer> addOne = x -> x + 1;
-        
-        Function<Integer, Integer> squareAndAddOne = square.andThen(addOne);
-        System.out.println("(3^2) + 1 = " + squareAndAddOne.apply(3));
-    }
-}
-```
-
-#### 步驟 3：效能優化
-```java
-import java.util.*;
-import java.util.stream.*;
-import java.util.concurrent.*;
-
-public class OptimizedLambda {
-    private static final int THRESHOLD = 1000;
+public class ClassParallelProcessing {
     
     public static void main(String[] args) {
-        List<Integer> numbers = IntStream.range(1, 1000000)
+        List<Integer> numbers = IntStream.range(1, 100)
             .boxed()
-            .collect(Collectors.toList());
+            .toList();
         
-        // 使用 ForkJoinPool 進行並行處理
-        ForkJoinPool pool = new ForkJoinPool(4);
-        try {
-            long sum = pool.submit(() -> 
-                numbers.parallelStream()
-                    .mapToLong(i -> {
-                        // 模擬複雜計算
-                        try {
-                            Thread.sleep(1);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        return i * i;
-                    })
-                    .sum()
-            ).get();
-            
-            System.out.println("計算結果：" + sum);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            pool.shutdown();
-        }
+        // 1. 並行計算總和
+        int sum = numbers.parallelStream()
+            .reduce(0, Integer::sum);
         
-        // 使用 Stream 的短路操作優化
-        Optional<Integer> firstEven = numbers.stream()
-            .filter(n -> {
-                System.out.println("檢查數字：" + n);
-                return n % 2 == 0;
-            })
-            .findFirst();
-            
-        firstEven.ifPresent(n -> 
-            System.out.println("找到第一個偶數：" + n));
+        // 2. 並行過濾和收集
+        List<Integer> evenNumbers = numbers.parallelStream()
+            .filter(n -> n % 2 == 0)
+            .toList();
+        
+        // 3. 並行分組
+        Map<Boolean, List<Integer>> partitioned = numbers.parallelStream()
+            .collect(Collectors.partitioningBy(n -> n % 2 == 0));
     }
 }
 ```
 
-這個教學文件提供了從基礎到進階的 Java Lambda 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的 Lambda 語法開始，中級學習者可以學習更複雜的函數式程式設計，而高級學習者則可以掌握完整的並行處理和效能優化。 
+#### 步驟 2：自定義收集器
+```java
+import java.util.*;
+import java.util.stream.*;
+
+public class ClassCustomCollector {
+    
+    public static void main(String[] args) {
+        List<Student> students = List.of(
+            new Student("小明", 85),
+            new Student("小華", 92),
+            new Student("小美", 78)
+        );
+        
+        // 自定義收集器：計算平均分數
+        Collector<Student, ?, Double> averageScoreCollector = 
+            Collectors.collectingAndThen(
+                Collectors.averagingInt(Student::score),
+                avg -> Math.round(avg * 100) / 100.0
+            );
+        
+        double average = students.stream()
+            .collect(averageScoreCollector);
+            
+        System.out.println("平均分數: " + average);
+    }
+    
+    record Student(String name, int score) {}
+}
+```
+
+#### 步驟 3：函數式組合
+```java
+import java.util.*;
+import java.util.function.*;
+
+public class ClassFunctionComposition {
+    
+    public static void main(String[] args) {
+        // 1. 函數組合
+        Function<Integer, Integer> addOne = x -> x + 1;
+        Function<Integer, Integer> multiplyByTwo = x -> x * 2;
+        
+        // 組合函數：先加1，再乘以2
+        Function<Integer, Integer> composed = addOne.andThen(multiplyByTwo);
+        System.out.println("結果: " + composed.apply(5)); // 輸出: 12
+        
+        // 2. 謂詞組合
+        Predicate<Integer> isEven = x -> x % 2 == 0;
+        Predicate<Integer> isGreaterThanTen = x -> x > 10;
+        
+        // 組合謂詞：大於10的偶數
+        Predicate<Integer> isEvenAndGreaterThanTen = 
+            isEven.and(isGreaterThanTen);
+            
+        System.out.println("是否為大於10的偶數: " + 
+            isEvenAndGreaterThanTen.test(12));
+    }
+}
+```
+
+這個教學文件提供了從基礎到進階的 Java Lambda 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的 Lambda 語法開始，中級學習者可以學習更複雜的函數式介面和 Stream API，而高級學習者則可以掌握並行處理和函數式組合等進階功能。 
