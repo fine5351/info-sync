@@ -35,162 +35,233 @@ Server --> Client : 回應
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：基本請求回應
+#### 步驟 1：定義服務接口（Protocol Buffers）
+```protobuf
+syntax = "proto3";
+
+package com.example.rpc;
+
+service SimpleService {
+  rpc ProcessRequest (Request) returns (Response) {}
+}
+
+message Request {
+  string data = 1;
+}
+
+message Response {
+  string result = 1;
+}
+```
+
+#### 步驟 2：實現服務端
 ```java
-public class SimpleRPC {
-    private String clientName;
-    private String serverName;
-    
-    public SimpleRPC(String clientName, String serverName) {
-        this.clientName = clientName;
-        this.serverName = serverName;
+public class SimpleServiceImpl extends SimpleServiceGrpc.SimpleServiceImplBase {
+    @Override
+    public void processRequest(Request request, StreamObserver<Response> responseObserver) {
+        String result = "處理完成：" + request.getData();
+        Response response = Response.newBuilder()
+            .setResult(result)
+            .build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
-    
-    public String sendRequest(String request) {
-        System.out.println(clientName + " 發送請求：" + request);
-        // 模擬網路傳輸
-        String response = handleRequest(request);
-        System.out.println(clientName + " 收到回應：" + response);
-        return response;
-    }
-    
-    private String handleRequest(String request) {
-        System.out.println(serverName + " 處理請求：" + request);
-        // 模擬處理時間
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return "處理完成：" + request;
+}
+
+public class RPCServer {
+    public static void main(String[] args) throws IOException, InterruptedException {
+        Server server = ServerBuilder.forPort(50051)
+            .addService(new SimpleServiceImpl())
+            .build()
+            .start();
+        
+        System.out.println("服務器啟動，監聽端口 50051");
+        server.awaitTermination();
     }
 }
 ```
 
-#### 步驟 2：簡單的服務調用
+#### 步驟 3：實現客戶端
 ```java
-public class SimpleService {
-    private SimpleRPC rpc;
-    
-    public SimpleService(String clientName, String serverName) {
-        rpc = new SimpleRPC(clientName, serverName);
+public class RPCClient {
+    private final SimpleServiceGrpc.SimpleServiceBlockingStub blockingStub;
+
+    public RPCClient(Channel channel) {
+        blockingStub = SimpleServiceGrpc.newBlockingStub(channel);
     }
-    
-    public void callService(String request) {
-        String response = rpc.sendRequest(request);
-        System.out.println("服務調用結果：" + response);
+
+    public void callService(String requestData) {
+        Request request = Request.newBuilder()
+            .setData(requestData)
+            .build();
+        
+        Response response = blockingStub.processRequest(request);
+        System.out.println("服務調用結果：" + response.getResult());
+    }
+
+    public static void main(String[] args) {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
+            .usePlaintext()
+            .build();
+        
+        try {
+            RPCClient client = new RPCClient(channel);
+            client.callService("測試請求");
+        } finally {
+            channel.shutdown();
+        }
     }
 }
+```
+
+### 4. 配置說明
+
+#### Maven 依賴配置
+```xml
+<dependencies>
+    <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-netty-shaded</artifactId>
+        <version>1.58.0</version>
+    </dependency>
+    <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-protobuf</artifactId>
+        <version>1.58.0</version>
+    </dependency>
+    <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-stub</artifactId>
+        <version>1.58.0</version>
+    </dependency>
+</dependencies>
+```
+
+#### 編譯 Protocol Buffers
+```xml
+<build>
+    <extensions>
+        <extension>
+            <groupId>kr.motd.maven</groupId>
+            <artifactId>os-maven-plugin</artifactId>
+            <version>1.7.1</version>
+        </extension>
+    </extensions>
+    <plugins>
+        <plugin>
+            <groupId>org.xolstice.maven.plugins</groupId>
+            <artifactId>protobuf-maven-plugin</artifactId>
+            <version>0.6.1</version>
+            <configuration>
+                <protocArtifact>com.google.protobuf:protoc:3.21.7:exe:${os.detected.classifier}</protocArtifact>
+                <pluginId>grpc-java</pluginId>
+                <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.58.0:exe:${os.detected.classifier}</pluginArtifact>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>compile</goal>
+                        <goal>compile-custom</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
 ```
 
 ## 中級（Intermediate）層級
 
 ### 1. 概念說明
 中級學習者需要理解：
-- RPC 的實現方式
-- 請求序列化
-- 回應反序列化
+- gRPC 的實現機制
+- Protocol Buffers 序列化
+- 服務註冊與發現
 - 錯誤處理
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class RPCClient {
-    - serializer: Serializer
-    - transport: Transport
+class gRPCClient {
+    - channel: ManagedChannel
+    - stub: SimpleServiceGrpc.SimpleServiceBlockingStub
     + call()
     + handleResponse()
 }
 
-class RPCServer {
-    - deserializer: Deserializer
-    - handler: RequestHandler
-    + processRequest()
-    + sendResponse()
+class gRPCServer {
+    - server: Server
+    - service: SimpleServiceImpl
+    + start()
+    + stop()
 }
 
-class Serializer {
-    + serialize()
-    + deserialize()
+class ServiceRegistry {
+    - services: Map
+    + register()
+    + discover()
 }
 
-class Transport {
-    + send()
-    + receive()
-}
-
-RPCClient --> Serializer
-RPCClient --> Transport
-RPCServer --> Deserializer
-RPCServer --> RequestHandler
+gRPCClient --> ServiceRegistry
+gRPCServer --> ServiceRegistry
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：序列化處理
+#### 步驟 1：服務註冊與發現
 ```java
-public interface Serializer {
-    String serialize(Object obj);
-    Object deserialize(String data, Class<?> type);
-}
-
-public class JSONSerializer implements Serializer {
-    @Override
-    public String serialize(Object obj) {
-        // 簡單的 JSON 序列化
-        return "{\"data\":\"" + obj.toString() + "\"}";
+// 使用 etcd 作為服務註冊中心
+public class ServiceRegistry {
+    private final Client etcdClient;
+    
+    public ServiceRegistry(String etcdUrl) {
+        this.etcdClient = Client.builder()
+            .endpoints(etcdUrl)
+            .build();
     }
     
-    @Override
-    public Object deserialize(String data, Class<?> type) {
-        // 簡單的 JSON 反序列化
-        return data.substring(8, data.length() - 2);
+    public void registerService(String serviceName, String serviceUrl) {
+        String key = "/services/" + serviceName;
+        etcdClient.putKV()
+            .key(key)
+            .value(serviceUrl)
+            .lease(60) // 60秒租約
+            .sync();
+    }
+    
+    public String discoverService(String serviceName) {
+        String key = "/services/" + serviceName;
+        GetResponse response = etcdClient.getKV()
+            .key(key)
+            .sync();
+        return response.getKvs().get(0).getValue().toString();
     }
 }
 ```
 
-#### 步驟 2：請求處理
+#### 步驟 2：錯誤處理
 ```java
 public class RPCClient {
-    private Serializer serializer;
-    private Transport transport;
+    private final SimpleServiceGrpc.SimpleServiceBlockingStub blockingStub;
     
-    public RPCClient(Serializer serializer, Transport transport) {
-        this.serializer = serializer;
-        this.transport = transport;
-    }
-    
-    public Object call(String method, Object... params) {
-        // 序列化請求
-        String request = serializer.serialize(new Request(method, params));
-        
-        // 發送請求
-        String response = transport.send(request);
-        
-        // 反序列化回應
-        return serializer.deserialize(response, Object.class);
-    }
-}
-
-public class RPCServer {
-    private Serializer serializer;
-    private RequestHandler handler;
-    
-    public RPCServer(Serializer serializer, RequestHandler handler) {
-        this.serializer = serializer;
-        this.handler = handler;
-    }
-    
-    public String processRequest(String request) {
-        // 反序列化請求
-        Request req = (Request) serializer.deserialize(request, Request.class);
-        
-        // 處理請求
-        Object result = handler.handle(req);
-        
-        // 序列化回應
-        return serializer.serialize(result);
+    public void callService(String requestData) {
+        try {
+            Request request = Request.newBuilder()
+                .setData(requestData)
+                .build();
+            
+            Response response = blockingStub.processRequest(request);
+            System.out.println("服務調用結果：" + response.getResult());
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.UNAVAILABLE) {
+                // 處理服務不可用錯誤
+                System.err.println("服務不可用，正在重試...");
+            } else {
+                // 處理其他錯誤
+                System.err.println("RPC 失敗: " + e.getStatus());
+            }
+        }
     }
 }
 ```
@@ -199,44 +270,38 @@ public class RPCServer {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 非同步 RPC
+- 非同步 gRPC
+- 流式 RPC
 - 負載平衡
-- 服務發現
-- 容錯處理
+- 服務網格集成
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階 RPC 系統" {
+package "進階 gRPC 系統" {
     class AsyncRPCClient {
-        - loadBalancer: LoadBalancer
-        - serviceDiscovery: ServiceDiscovery
+        - channel: ManagedChannel
+        - stub: SimpleServiceGrpc.SimpleServiceStub
         + callAsync()
         + handleCallback()
     }
     
+    class StreamRPCClient {
+        - channel: ManagedChannel
+        - stub: SimpleServiceGrpc.SimpleServiceStub
+        + streamRequest()
+        + handleStream()
+    }
+    
     class LoadBalancer {
-        - servers: List
-        + selectServer()
+        - channel: ManagedChannel
+        + selectEndpoint()
         + updateWeights()
-    }
-    
-    class ServiceDiscovery {
-        - services: Map
-        + register()
-        + discover()
-    }
-    
-    class FaultHandler {
-        - strategies: Map
-        + handleFault()
-        + retry()
     }
 }
 
 AsyncRPCClient --> LoadBalancer
-AsyncRPCClient --> ServiceDiscovery
-AsyncRPCClient --> FaultHandler
+StreamRPCClient --> LoadBalancer
 @enduml
 ```
 
@@ -245,120 +310,114 @@ AsyncRPCClient --> FaultHandler
 #### 步驟 1：非同步調用
 ```java
 public class AsyncRPCClient {
-    private LoadBalancer loadBalancer;
-    private ServiceDiscovery serviceDiscovery;
-    private FaultHandler faultHandler;
+    private final SimpleServiceGrpc.SimpleServiceStub asyncStub;
     
-    public AsyncRPCClient(LoadBalancer loadBalancer, ServiceDiscovery serviceDiscovery) {
-        this.loadBalancer = loadBalancer;
-        this.serviceDiscovery = serviceDiscovery;
-        this.faultHandler = new FaultHandler();
-    }
-    
-    public CompletableFuture<Object> callAsync(String service, String method, Object... params) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                // 選擇服務器
-                Server server = loadBalancer.selectServer(service);
-                
-                // 發送請求
-                return sendRequest(server, method, params);
-            } catch (Exception e) {
-                // 處理錯誤
-                return faultHandler.handleFault(e, () -> retry(service, method, params));
+    public void callAsync(String requestData) {
+        Request request = Request.newBuilder()
+            .setData(requestData)
+            .build();
+        
+        asyncStub.processRequest(request, new StreamObserver<Response>() {
+            @Override
+            public void onNext(Response response) {
+                System.out.println("收到回應：" + response.getResult());
+            }
+            
+            @Override
+            public void onError(Throwable t) {
+                System.err.println("RPC 失敗: " + t);
+            }
+            
+            @Override
+            public void onCompleted() {
+                System.out.println("RPC 完成");
             }
         });
     }
-    
-    private Object sendRequest(Server server, String method, Object... params) {
-        // 實現請求發送邏輯
-        return null;
-    }
-    
-    private Object retry(String service, String method, Object... params) {
-        // 實現重試邏輯
-        return null;
-    }
 }
 ```
 
-#### 步驟 2：負載平衡
+#### 步驟 2：流式 RPC
 ```java
-public class LoadBalancer {
-    private Map<String, List<Server>> servers;
-    private Map<String, Integer> weights;
-    
-    public LoadBalancer() {
-        servers = new HashMap<>();
-        weights = new HashMap<>();
-    }
-    
-    public Server selectServer(String service) {
-        List<Server> serviceServers = servers.get(service);
-        if (serviceServers == null || serviceServers.isEmpty()) {
-            throw new RuntimeException("沒有可用的服務器");
-        }
-        
-        // 簡單的輪詢負載平衡
-        int index = weights.getOrDefault(service, 0);
-        Server server = serviceServers.get(index);
-        weights.put(service, (index + 1) % serviceServers.size());
-        
-        return server;
-    }
-    
-    public void updateWeights(String service, Map<Server, Integer> newWeights) {
-        // 更新服務器權重
-    }
-}
-```
-
-#### 步驟 3：容錯處理
-```java
-public class FaultHandler {
-    private Map<Class<? extends Exception>, FaultStrategy> strategies;
-    
-    public FaultHandler() {
-        strategies = new HashMap<>();
-        // 初始化策略
-        strategies.put(TimeoutException.class, new RetryStrategy(3));
-        strategies.put(NetworkException.class, new CircuitBreakerStrategy());
-    }
-    
-    public Object handleFault(Exception e, Supplier<Object> retrySupplier) {
-        FaultStrategy strategy = strategies.get(e.getClass());
-        if (strategy != null) {
-            return strategy.handle(e, retrySupplier);
-        }
-        throw new RuntimeException("未處理的錯誤", e);
-    }
+// 定義流式服務
+service StreamService {
+    rpc StreamProcess (stream Request) returns (stream Response) {}
 }
 
-interface FaultStrategy {
-    Object handle(Exception e, Supplier<Object> retrySupplier);
-}
-
-class RetryStrategy implements FaultStrategy {
-    private int maxRetries;
+// 實現流式客戶端
+public class StreamRPCClient {
+    private final StreamServiceGrpc.StreamServiceStub asyncStub;
     
-    public RetryStrategy(int maxRetries) {
-        this.maxRetries = maxRetries;
-    }
-    
-    @Override
-    public Object handle(Exception e, Supplier<Object> retrySupplier) {
-        for (int i = 0; i < maxRetries; i++) {
-            try {
-                return retrySupplier.get();
-            } catch (Exception ex) {
-                if (i == maxRetries - 1) {
-                    throw new RuntimeException("重試失敗", ex);
+    public void streamRequests(List<String> requests) {
+        StreamObserver<Request> requestObserver = asyncStub.streamProcess(
+            new StreamObserver<Response>() {
+                @Override
+                public void onNext(Response response) {
+                    System.out.println("收到回應：" + response.getResult());
                 }
-            }
+                
+                @Override
+                public void onError(Throwable t) {
+                    System.err.println("RPC 失敗: " + t);
+                }
+                
+                @Override
+                public void onCompleted() {
+                    System.out.println("流式 RPC 完成");
+                }
+            });
+        
+        for (String requestData : requests) {
+            Request request = Request.newBuilder()
+                .setData(requestData)
+                .build();
+            requestObserver.onNext(request);
         }
-        throw new RuntimeException("重試失敗", e);
+        requestObserver.onCompleted();
     }
 }
+```
+
+#### 步驟 3：負載平衡配置
+```java
+// 使用 gRPC 的負載平衡功能
+ManagedChannel channel = ManagedChannelBuilder.forTarget("dns:///my-service")
+    .defaultLoadBalancingPolicy("round_robin")
+    .usePlaintext()
+    .build();
+```
+
+### 4. 進階配置
+
+#### 服務網格集成（使用 Istio）
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: grpc-service
+spec:
+  hosts:
+  - grpc-service
+  http:
+  - route:
+    - destination:
+        host: grpc-service
+        subset: v1
+      weight: 80
+    - destination:
+        host: grpc-service
+        subset: v2
+      weight: 20
+```
+
+#### 監控配置（使用 Prometheus）
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: 'grpc-service'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: '/metrics'
 ```
 
 這個教學文件提供了從基礎到進階的 RPC 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的請求回應開始，中級學習者可以學習序列化和請求處理，而高級學習者則可以掌握非同步調用和容錯處理等進階功能。 

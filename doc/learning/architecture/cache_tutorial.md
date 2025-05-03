@@ -36,28 +36,30 @@ Cache --> DataSource
 
 #### 步驟 1：基本快取操作
 ```java
-public class SimpleCache {
-    private Map<String, String> cache;
+// 配置快取
+Cache<String, String> cache = Caffeine.newBuilder()
+    .maximumSize(10_000)
+    .expireAfterWrite(5, TimeUnit.MINUTES)
+    .build();
+
+// 快取操作
+public class CacheService {
+    private final Cache<String, String> cache;
+    private final DataSource dataSource;
     
-    public SimpleCache() {
-        cache = new HashMap<>();
+    public CacheService(DataSource dataSource) {
+        this.cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+        this.dataSource = dataSource;
     }
     
     public String get(String key) {
-        // 先檢查快取中是否有資料
-        String value = cache.get(key);
-        if (value != null) {
-            System.out.println("從快取取得資料: " + key);
-            return value;
-        }
-        
-        // 如果快取中沒有，從資料來源取得
-        value = fetchFromDataSource(key);
-        if (value != null) {
-            // 將資料存入快取
-            cache.put(key, value);
-        }
-        return value;
+        return cache.get(key, k -> {
+            System.out.println("從資料來源取得資料: " + k);
+            return dataSource.fetch(k);
+        });
     }
     
     public void put(String key, String value) {
@@ -65,144 +67,96 @@ public class SimpleCache {
         System.out.println("將資料存入快取: " + key);
     }
     
-    private String fetchFromDataSource(String key) {
-        // 模擬從資料來源取得資料
-        System.out.println("從資料來源取得資料: " + key);
-        return "資料內容";
+    public void invalidate(String key) {
+        cache.invalidate(key);
     }
 }
 ```
 
-#### 步驟 2：簡單的快取清理
+#### 步驟 2：快取清理策略
 ```java
-public class CacheCleaner {
-    private SimpleCache cache;
-    private int maxSize;
-    
-    public CacheCleaner(SimpleCache cache, int maxSize) {
-        this.cache = cache;
-        this.maxSize = maxSize;
-    }
-    
-    public void checkAndClean() {
-        if (cache.size() > maxSize) {
-            System.out.println("快取已滿，開始清理...");
-            // 簡單的清理策略：移除最舊的資料
-            cache.removeOldest();
-        }
+public class CacheConfig {
+    public Cache<String, String> createCache() {
+        return Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .removalListener((key, value, cause) -> {
+                System.out.printf("Key %s was removed (%s)%n", key, cause);
+            })
+            .build();
     }
 }
+```
+
+### 4. 配置說明
+
+#### Maven 依賴配置
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>3.1.8</version>
+    </dependency>
+</dependencies>
 ```
 
 ## 中級（Intermediate）層級
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 快取策略
-- 快取失效
-- 快取更新
-- 快取監控
+- Caffeine 的架構和組件
+- 快取策略和算法
+- 快取監控和統計
+- 快取性能優化
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class CacheManager {
-    - caches: Map
-    + getCache()
-    + createCache()
-    + removeCache()
-}
-
-class CacheStrategy {
-    - type: String
+class CaffeineCache {
+    - cache: Cache
+    - policy: Policy
     + get()
     + put()
     + invalidate()
 }
 
-class CacheMonitor {
-    - metrics: Map
-    + collectMetrics()
-    + analyzePerformance()
+class CachePolicy {
+    - eviction: Eviction
+    - expiration: Expiration
+    + getEvictionPolicy()
+    + getExpirationPolicy()
 }
 
-CacheManager --> CacheStrategy
-CacheStrategy --> CacheMonitor
+class CacheStats {
+    - hitCount: long
+    - missCount: long
+    + getHitRate()
+    + getMissRate()
+}
+
+CaffeineCache --> CachePolicy
+CaffeineCache --> CacheStats
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：快取策略實作
+#### 步驟 1：快取策略配置
 ```java
-import java.util.*;
-
-public class CacheStrategy {
-    private Map<String, CacheEntry> cache;
-    private int maxSize;
-    private String strategyType;
-    
-    public CacheStrategy(int maxSize, String strategyType) {
-        this.cache = new HashMap<>();
-        this.maxSize = maxSize;
-        this.strategyType = strategyType;
-    }
-    
-    public String get(String key) {
-        CacheEntry entry = cache.get(key);
-        if (entry == null) {
-            return null;
-        }
-        
-        // 更新最後存取時間
-        entry.updateLastAccess();
-        return entry.getValue();
-    }
-    
-    public void put(String key, String value) {
-        if (cache.size() >= maxSize) {
-            evict();
-        }
-        
-        cache.put(key, new CacheEntry(value));
-    }
-    
-    private void evict() {
-        switch (strategyType) {
-            case "LRU":
-                evictLRU();
-                break;
-            case "FIFO":
-                evictFIFO();
-                break;
-        }
-    }
-    
-    private void evictLRU() {
-        // 移除最久未使用的項目
-        String oldestKey = cache.entrySet().stream()
-            .min((e1, e2) -> e1.getValue().getLastAccess()
-                .compareTo(e2.getValue().getLastAccess()))
-            .map(Map.Entry::getKey)
-            .orElse(null);
-        
-        if (oldestKey != null) {
-            cache.remove(oldestKey);
-        }
-    }
-}
-
-class CacheEntry {
-    private String value;
-    private Date lastAccess;
-    
-    public CacheEntry(String value) {
-        this.value = value;
-        this.lastAccess = new Date();
-    }
-    
-    public void updateLastAccess() {
-        this.lastAccess = new Date();
+public class AdvancedCacheConfig {
+    public Cache<String, String> createCache() {
+        return Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .expireAfterAccess(10, TimeUnit.MINUTES)
+            .refreshAfterWrite(1, TimeUnit.MINUTES)
+            .weakKeys()
+            .weakValues()
+            .removalListener((key, value, cause) -> {
+                System.out.printf("Key %s was removed (%s)%n", key, cause);
+            })
+            .build();
     }
 }
 ```
@@ -210,37 +164,19 @@ class CacheEntry {
 #### 步驟 2：快取監控
 ```java
 public class CacheMonitor {
-    private Map<String, CacheMetrics> metrics;
+    private final Cache<String, String> cache;
     
-    public void collectMetrics(String cacheName, CacheStrategy cache) {
-        CacheMetrics metric = new CacheMetrics();
-        metric.setHitCount(cache.getHitCount());
-        metric.setMissCount(cache.getMissCount());
-        metric.setSize(cache.size());
-        
-        metrics.put(cacheName, metric);
+    public CacheMonitor(Cache<String, String> cache) {
+        this.cache = cache;
     }
     
-    public void analyzePerformance() {
-        for (Map.Entry<String, CacheMetrics> entry : metrics.entrySet()) {
-            String cacheName = entry.getKey();
-            CacheMetrics metric = entry.getValue();
-            
-            double hitRate = (double) metric.getHitCount() / 
-                           (metric.getHitCount() + metric.getMissCount());
-            
-            System.out.println("快取 " + cacheName + " 的命中率: " + 
-                             String.format("%.2f", hitRate * 100) + "%");
-        }
+    public void printStats() {
+        CacheStats stats = cache.stats();
+        System.out.printf("Hit Rate: %.2f%%%n", stats.hitRate() * 100);
+        System.out.printf("Miss Rate: %.2f%%%n", stats.missRate() * 100);
+        System.out.printf("Load Success Rate: %.2f%%%n", stats.loadSuccessRate() * 100);
+        System.out.printf("Average Load Penalty: %.2f ms%n", stats.averageLoadPenalty() / 1_000_000.0);
     }
-}
-
-class CacheMetrics {
-    private int hitCount;
-    private int missCount;
-    private int size;
-    
-    // Getters and setters
 }
 ```
 
@@ -248,206 +184,169 @@ class CacheMetrics {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式快取
-- 快取一致性
+- 非同步快取
 - 快取預熱
-- 快取監控與優化
+- 快取分片
+- 快取監控和告警
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "分散式快取系統" {
-    class DistributedCache {
-        - nodes: List
-        + get()
-        + put()
-        + sync()
+package "進階 Caffeine 系統" {
+    class AsyncCache {
+        - cache: AsyncLoadingCache
+        + getAsync()
+        + putAsync()
     }
     
-    class CacheCoordinator {
-        - strategy: String
-        + coordinate()
-        + resolveConflict()
-    }
-    
-    class CachePreloader {
-        - patterns: List
+    class CacheWarmup {
+        - cache: Cache
+        + warmup()
         + preload()
-        + analyze()
     }
     
-    class CacheOptimizer {
-        - metrics: Map
-        + optimize()
-        + tune()
+    class CacheSharding {
+        - caches: List<Cache>
+        + getShard()
+        + putShard()
+    }
+    
+    class CacheMonitoring {
+        - metrics: Metrics
+        + collectMetrics()
+        + sendAlerts()
     }
 }
 
-DistributedCache --> CacheCoordinator
-CacheCoordinator --> CachePreloader
-CachePreloader --> CacheOptimizer
+AsyncCache --> CacheMonitoring
+CacheWarmup --> CacheMonitoring
+CacheSharding --> CacheMonitoring
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分散式快取
+#### 步驟 1：非同步快取
 ```java
-import java.util.*;
-
-public class DistributedCache {
-    private List<CacheNode> nodes;
-    private CacheCoordinator coordinator;
+public class AsyncCacheService {
+    private final AsyncLoadingCache<String, String> cache;
     
-    public DistributedCache(List<CacheNode> nodes) {
-        this.nodes = nodes;
-        this.coordinator = new CacheCoordinator();
+    public AsyncCacheService() {
+        this.cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .buildAsync(key -> {
+                System.out.println("非同步載入資料: " + key);
+                return fetchData(key);
+            });
     }
     
-    public String get(String key) {
-        // 根據一致性雜湊選擇節點
-        CacheNode node = selectNode(key);
-        
-        // 從選定的節點取得資料
-        String value = node.get(key);
-        
-        if (value == null) {
-            // 如果本地節點沒有資料，從其他節點同步
-            value = syncFromOtherNodes(key);
-            if (value != null) {
-                node.put(key, value);
-            }
-        }
-        
-        return value;
+    public CompletableFuture<String> getAsync(String key) {
+        return cache.get(key);
     }
     
-    private CacheNode selectNode(String key) {
-        // 使用一致性雜湊選擇節點
-        int hash = key.hashCode();
-        return nodes.get(Math.abs(hash % nodes.size()));
-    }
-    
-    private String syncFromOtherNodes(String key) {
-        // 從其他節點同步資料
-        for (CacheNode node : nodes) {
-            String value = node.get(key);
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
-    }
-}
-
-class CacheNode {
-    private Map<String, String> data;
-    private String id;
-    
-    public CacheNode(String id) {
-        this.id = id;
-        this.data = new HashMap<>();
-    }
-    
-    public String get(String key) {
-        return data.get(key);
-    }
-    
-    public void put(String key, String value) {
-        data.put(key, value);
+    private String fetchData(String key) {
+        // 模擬從資料來源取得資料
+        return "資料內容";
     }
 }
 ```
 
 #### 步驟 2：快取預熱
 ```java
-public class CachePreloader {
-    private DistributedCache cache;
-    private List<AccessPattern> patterns;
+public class CacheWarmupService {
+    private final Cache<String, String> cache;
     
-    public void preload() {
-        // 分析存取模式
-        analyzeAccessPatterns();
-        
-        // 根據模式預先載入資料
-        for (AccessPattern pattern : patterns) {
-            preloadPattern(pattern);
-        }
+    public CacheWarmupService() {
+        this.cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .build();
     }
     
-    private void analyzeAccessPatterns() {
-        // 分析歷史存取記錄，找出常用模式
-        patterns = new ArrayList<>();
-        // 添加分析邏輯
+    public void warmup(List<String> keys) {
+        keys.parallelStream().forEach(key -> {
+            String value = fetchData(key);
+            cache.put(key, value);
+        });
     }
     
-    private void preloadPattern(AccessPattern pattern) {
-        // 根據模式預先載入資料
-        List<String> keys = pattern.predictKeys();
-        for (String key : keys) {
-            cache.get(key);
-        }
-    }
-}
-
-class AccessPattern {
-    private String type;
-    private List<String> history;
-    
-    public List<String> predictKeys() {
-        // 根據歷史記錄預測未來可能存取的鍵
-        return new ArrayList<>();
+    private String fetchData(String key) {
+        // 模擬從資料來源取得資料
+        return "資料內容";
     }
 }
 ```
 
-#### 步驟 3：快取優化
+#### 步驟 3：快取分片
 ```java
-public class CacheOptimizer {
-    private DistributedCache cache;
-    private Map<String, PerformanceMetrics> metrics;
+public class ShardedCache {
+    private final List<Cache<String, String>> shards;
     
-    public void optimize() {
-        // 收集效能指標
-        collectMetrics();
-        
-        // 分析並調整快取參數
-        tuneParameters();
-        
-        // 優化快取策略
-        optimizeStrategy();
-    }
-    
-    private void tuneParameters() {
-        // 根據效能指標調整快取參數
-        for (Map.Entry<String, PerformanceMetrics> entry : metrics.entrySet()) {
-            String nodeId = entry.getKey();
-            PerformanceMetrics metric = entry.getValue();
-            
-            // 調整快取大小
-            if (metric.getHitRate() < 0.8) {
-                increaseCacheSize(nodeId);
-            }
-            
-            // 調整過期時間
-            if (metric.getExpirationRate() > 0.3) {
-                adjustExpirationTime(nodeId);
-            }
+    public ShardedCache(int numShards) {
+        this.shards = new ArrayList<>(numShards);
+        for (int i = 0; i < numShards; i++) {
+            shards.add(Caffeine.newBuilder()
+                .maximumSize(10_000 / numShards)
+                .build());
         }
     }
     
-    private void optimizeStrategy() {
-        // 根據使用模式優化快取策略
-        // 實現優化邏輯
+    public String get(String key) {
+        Cache<String, String> shard = getShard(key);
+        return shard.get(key, k -> fetchData(k));
+    }
+    
+    private Cache<String, String> getShard(String key) {
+        int shardIndex = Math.abs(key.hashCode() % shards.size());
+        return shards.get(shardIndex);
+    }
+    
+    private String fetchData(String key) {
+        // 模擬從資料來源取得資料
+        return "資料內容";
     }
 }
+```
 
-class PerformanceMetrics {
-    private double hitRate;
-    private double expirationRate;
-    private int size;
-    
-    // Getters and setters
+### 4. 進階配置
+
+#### 監控配置（使用 Micrometer）
+```java
+public class CacheMetricsConfig {
+    public Cache<String, String> createCacheWithMetrics() {
+        return Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .recordStats(() -> new StatsCounter() {
+                private final Counter hits = Metrics.counter("cache.hits");
+                private final Counter misses = Metrics.counter("cache.misses");
+                
+                @Override
+                public void recordHits(int count) {
+                    hits.increment(count);
+                }
+                
+                @Override
+                public void recordMisses(int count) {
+                    misses.increment(count);
+                }
+            })
+            .build();
+    }
+}
+```
+
+#### 性能優化配置
+```java
+public class PerformanceOptimizedCache {
+    public Cache<String, String> createOptimizedCache() {
+        return Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .initialCapacity(1000)
+            .executor(Runnable::run) // 使用當前線程
+            .scheduler(Scheduler.systemScheduler())
+            .weigher((String key, String value) -> value.length())
+            .build();
+    }
 }
 ```
 

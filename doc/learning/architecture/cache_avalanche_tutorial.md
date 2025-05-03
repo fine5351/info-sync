@@ -40,55 +40,55 @@ SimpleCache --> CacheItem
 
 #### 步驟 1：基本快取實現
 ```java
-public class SimpleCacheItem {
-    private String key;
-    private Object value;
-    private long expireTime;
-    
-    public SimpleCacheItem(String key, Object value, long expireTime) {
-        this.key = key;
-        this.value = value;
-        this.expireTime = expireTime;
-    }
-    
-    public String getKey() {
-        return key;
-    }
-    
-    public Object getValue() {
-        return value;
-    }
-    
-    public boolean isExpired() {
-        return System.currentTimeMillis() > expireTime;
+// 配置 Caffeine 快取
+public class CacheConfig {
+    public Cache<String, Object> createCache() {
+        return Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
     }
 }
 
-public class SimpleCache {
-    private Map<String, SimpleCacheItem> items;
+// 使用 Redis 實現分布式快取
+public class CacheService {
+    private final Cache<String, Object> localCache;
+    private final RedissonClient redisson;
+    private final DataSource dataSource;
     
-    public SimpleCache() {
-        items = new HashMap<>();
-    }
-    
-    public void put(String key, Object value, long expireTime) {
-        SimpleCacheItem item = new SimpleCacheItem(key, value, 
-            System.currentTimeMillis() + expireTime);
-        items.put(key, item);
-        System.out.println("存入快取：" + key);
+    public CacheService(DataSource dataSource) {
+        this.localCache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+        this.redisson = Redisson.create();
+        this.dataSource = dataSource;
     }
     
     public Object get(String key) {
-        SimpleCacheItem item = items.get(key);
-        if (item != null) {
-            if (item.isExpired()) {
-                items.remove(key);
-                System.out.println("快取過期：" + key);
-                return null;
-            }
-            return item.getValue();
+        // 先從本地快取獲取
+        Object value = localCache.getIfPresent(key);
+        if (value != null) {
+            return value;
         }
-        return null;
+        
+        // 從分布式快取獲取
+        RBucket<Object> bucket = redisson.getBucket(key);
+        value = bucket.get();
+        if (value != null) {
+            localCache.put(key, value);
+            return value;
+        }
+        
+        // 從資料來源獲取
+        value = dataSource.fetch(key);
+        if (value != null) {
+            // 設置隨機過期時間，避免雪崩
+            long randomExpireTime = 5 * 60 * 1000 + (long)(Math.random() * 60 * 1000);
+            bucket.set(value, randomExpireTime, TimeUnit.MILLISECONDS);
+            localCache.put(key, value);
+        }
+        return value;
     }
 }
 ```
@@ -97,7 +97,7 @@ public class SimpleCache {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 雪崩預防策略
+- 分布式快取的使用
 - 過期時間分散
 - 請求限流機制
 - 降級處理策略
@@ -105,110 +105,106 @@ public class SimpleCache {
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class CacheItem {
-    - key: String
-    - value: Object
-    - expireTime: long
-    - randomOffset: long
-    + getKey()
-    + getValue()
-    + getExpireTime()
-}
-
-class AvalanchePreventor {
-    - items: Map<String, CacheItem>
-    - rateLimiter: RateLimiter
-    + checkRateLimit()
-    + addRandomOffset()
+class CacheService {
+    - localCache: Cache
+    - redisson: RedissonClient
+    - dataSource: DataSource
+    + get()
+    + put()
     + handleOverload()
 }
 
-class Cache {
-    - preventor: AvalanchePreventor
-    + put()
-    + get()
-    + handleFailure()
+class RateLimiter {
+    - limiter: RRateLimiter
+    + tryAcquire()
+    + reset()
 }
 
-Cache --> AvalanchePreventor
-AvalanchePreventor --> CacheItem
+class CircuitBreaker {
+    - breaker: RCircuitBreaker
+    + checkState()
+    + recordFailure()
+}
+
+CacheService --> RateLimiter
+CacheService --> CircuitBreaker
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：雪崩預防
+#### 步驟 1：請求限流
 ```java
-public class AdvancedCacheItem {
-    private String key;
-    private Object value;
-    private long expireTime;
-    private long randomOffset;
+public class AdvancedCacheService {
+    private final Cache<String, Object> localCache;
+    private final RedissonClient redisson;
+    private final RRateLimiter rateLimiter;
+    private final RCircuitBreaker circuitBreaker;
     
-    public AdvancedCacheItem(String key, Object value, long expireTime) {
-        this.key = key;
-        this.value = value;
-        this.randomOffset = (long)(Math.random() * 1000); // 隨機偏移
-        this.expireTime = System.currentTimeMillis() + expireTime + randomOffset;
-    }
-    
-    public long getExpireTime() {
-        return expireTime;
-    }
-}
-```
-
-#### 步驟 2：請求限流
-```java
-public class RateLimiter {
-    private Map<String, Integer> requestCounts;
-    private int maxRequests;
-    private long windowSize;
-    
-    public RateLimiter(int maxRequests, long windowSize) {
-        this.requestCounts = new HashMap<>();
-        this.maxRequests = maxRequests;
-        this.windowSize = windowSize;
-    }
-    
-    public boolean checkRateLimit(String key) {
-        int count = requestCounts.getOrDefault(key, 0);
-        if (count >= maxRequests) {
-            return false;
-        }
-        requestCounts.put(key, count + 1);
-        return true;
-    }
-    
-    public void resetCount(String key) {
-        requestCounts.remove(key);
-    }
-}
-
-public class AvalanchePreventor {
-    private Map<String, AdvancedCacheItem> items;
-    private RateLimiter rateLimiter;
-    
-    public AvalanchePreventor() {
-        items = new HashMap<>();
-        rateLimiter = new RateLimiter(100, 1000); // 每秒最多100個請求
+    public AdvancedCacheService() {
+        this.localCache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+        this.redisson = Redisson.create();
+        this.rateLimiter = redisson.getRateLimiter("rate:limiter");
+        this.circuitBreaker = redisson.getCircuitBreaker("circuit:breaker");
+        
+        // 配置限流器：每秒最多100個請求
+        rateLimiter.trySetRate(RateType.OVERALL, 100, 1, RateIntervalUnit.SECONDS);
+        
+        // 配置熔斷器：5次失敗後熔斷，10秒後半開
+        circuitBreaker.trySetConfiguration(
+            new CircuitBreakerConfig()
+                .setFailureRateThreshold(5)
+                .setWaitDurationInOpenState(10_000)
+        );
     }
     
     public Object get(String key) {
-        if (!rateLimiter.checkRateLimit(key)) {
-            System.out.println("請求過多，降級處理：" + key);
+        // 檢查熔斷器狀態
+        if (!circuitBreaker.tryPass()) {
             return handleOverload(key);
         }
         
-        AdvancedCacheItem item = items.get(key);
-        if (item != null && !item.isExpired()) {
-            return item.getValue();
+        // 檢查限流
+        if (!rateLimiter.tryAcquire()) {
+            return handleOverload(key);
         }
-        return null;
+        
+        try {
+            // 從本地快取獲取
+            Object value = localCache.getIfPresent(key);
+            if (value != null) {
+                return value;
+            }
+            
+            // 從分布式快取獲取
+            RBucket<Object> bucket = redisson.getBucket(key);
+            value = bucket.get();
+            if (value != null) {
+                localCache.put(key, value);
+                return value;
+            }
+            
+            // 從資料來源獲取
+            value = fetchFromDataSource(key);
+            if (value != null) {
+                // 設置隨機過期時間
+                long randomExpireTime = 5 * 60 * 1000 + (long)(Math.random() * 60 * 1000);
+                bucket.set(value, randomExpireTime, TimeUnit.MILLISECONDS);
+                localCache.put(key, value);
+                circuitBreaker.onSuccess();
+            }
+            return value;
+        } catch (Exception e) {
+            circuitBreaker.onFailure();
+            return handleOverload(key);
+        }
     }
     
     private Object handleOverload(String key) {
-        // 降級處理邏輯
+        // 返回降級數據
         return "降級數據";
     }
 }
@@ -218,182 +214,136 @@ public class AvalanchePreventor {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式雪崩預防
 - 多級快取策略
-- 熔斷機制
-- 自動恢復策略
+- 自動恢復機制
+- 監控和告警
+- 性能優化
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
 package "進階快取系統" {
-    class DistributedCache {
-        - nodes: List<Node>
-        - coordinator: Coordinator
-        - circuitBreaker: CircuitBreaker
-        + put()
+    class MultiLevelCache {
+        - localCache: Cache
+        - distributedCache: RBucket
         + get()
-        + handleFailure()
+        + put()
     }
     
-    class Coordinator {
-        - cacheLevels: List<CacheLevel>
-        + distributeLoad()
-        + handleOverload()
+    class AutoRecovery {
+        - metrics: Metrics
+        + checkHealth()
         + recover()
     }
     
-    class CircuitBreaker {
-        - state: State
-        - failureCount: int
-        + checkState()
-        + handleFailure()
-        + reset()
-    }
-    
-    class CacheLevel {
-        - level: int
-        - items: Map
-        + put()
-        + get()
-        + clear()
+    class CacheMonitor {
+        - metrics: Metrics
+        + collectMetrics()
+        + sendAlerts()
     }
 }
 
-DistributedCache --> Coordinator
-DistributedCache --> CircuitBreaker
-Coordinator --> CacheLevel
+MultiLevelCache --> AutoRecovery
+AutoRecovery --> CacheMonitor
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分散式快取
+#### 步驟 1：多級快取
 ```java
-public class DistributedCache {
-    private List<Node> nodes;
-    private Coordinator coordinator;
-    private CircuitBreaker circuitBreaker;
+public class MultiLevelCache {
+    private final Cache<String, Object> localCache;
+    private final RedissonClient redisson;
+    private final CacheMonitor monitor;
     
-    public DistributedCache() {
-        nodes = new ArrayList<>();
-        coordinator = new Coordinator();
-        circuitBreaker = new CircuitBreaker();
+    public MultiLevelCache() {
+        this.localCache = Caffeine.newBuilder()
+            .maximumSize(1_000)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build();
+        this.redisson = Redisson.create();
+        this.monitor = new CacheMonitor();
     }
     
     public Object get(String key) {
-        if (!circuitBreaker.checkState()) {
-            return handleFailure(key);
+        // 先從本地快取獲取
+        Object value = localCache.getIfPresent(key);
+        if (value != null) {
+            monitor.recordLocalHit();
+            return value;
         }
         
-        // 分散式獲取
-        for (Node node : nodes) {
-            Object value = node.get(key);
-            if (value != null) {
-                return value;
-            }
+        // 從分布式快取獲取
+        RBucket<Object> bucket = redisson.getBucket(key);
+        value = bucket.get();
+        if (value != null) {
+            localCache.put(key, value);
+            monitor.recordDistributedHit();
+            return value;
         }
-        return null;
-    }
-    
-    private Object handleFailure(String key) {
-        circuitBreaker.handleFailure();
-        return coordinator.handleOverload(key);
+        
+        // 從資料來源獲取
+        value = fetchFromDataSource(key);
+        if (value != null) {
+            // 設置隨機過期時間
+            long randomExpireTime = 5 * 60 * 1000 + (long)(Math.random() * 60 * 1000);
+            bucket.set(value, randomExpireTime, TimeUnit.MILLISECONDS);
+            localCache.put(key, value);
+        }
+        return value;
     }
 }
 ```
 
-#### 步驟 2：熔斷機制
+### 4. 進階配置
+
+#### 監控配置（使用 Micrometer）
 ```java
-public class CircuitBreaker {
-    private enum State { OPEN, HALF_OPEN, CLOSED }
-    private State state;
-    private int failureCount;
-    private int threshold;
+public class CacheMetrics {
+    private final Counter localCacheHits;
+    private final Counter distributedCacheHits;
+    private final Counter circuitBreakerTrips;
     
-    public CircuitBreaker() {
-        state = State.CLOSED;
-        failureCount = 0;
-        threshold = 10;
+    public CacheMetrics() {
+        this.localCacheHits = Metrics.counter("local.cache.hits");
+        this.distributedCacheHits = Metrics.counter("distributed.cache.hits");
+        this.circuitBreakerTrips = Metrics.counter("circuit.breaker.trips");
     }
     
-    public boolean checkState() {
-        if (state == State.OPEN) {
-            return false;
-        }
-        return true;
+    public void recordLocalHit() {
+        localCacheHits.increment();
     }
     
-    public void handleFailure() {
-        failureCount++;
-        if (failureCount >= threshold) {
-            state = State.OPEN;
-            System.out.println("熔斷器開啟");
-        }
+    public void recordDistributedHit() {
+        distributedCacheHits.increment();
     }
     
-    public void reset() {
-        state = State.CLOSED;
-        failureCount = 0;
-        System.out.println("熔斷器重置");
+    public void recordCircuitBreakerTrip() {
+        circuitBreakerTrips.increment();
     }
 }
 ```
 
-#### 步驟 3：多級快取
-```java
-public class CacheLevel {
-    private int level;
-    private Map<String, Object> items;
-    
-    public CacheLevel(int level) {
-        this.level = level;
-        this.items = new HashMap<>();
-    }
-    
-    public void put(String key, Object value) {
-        items.put(key, value);
-        System.out.println("存入快取層級 " + level + "：" + key);
-    }
-    
-    public Object get(String key) {
-        return items.get(key);
-    }
-    
-    public void clear() {
-        items.clear();
-    }
-}
-
-public class Coordinator {
-    private List<CacheLevel> cacheLevels;
-    
-    public Coordinator() {
-        cacheLevels = new ArrayList<>();
-        // 初始化多級快取
-        for (int i = 0; i < 3; i++) {
-            cacheLevels.add(new CacheLevel(i));
-        }
-    }
-    
-    public void distributeLoad(String key, Object value) {
-        // 根據策略分配到不同層級
-        for (CacheLevel level : cacheLevels) {
-            level.put(key, value);
-        }
-    }
-    
-    public Object handleOverload(String key) {
-        // 從較低層級獲取數據
-        for (CacheLevel level : cacheLevels) {
-            Object value = level.get(key);
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
-    }
-}
+#### Maven 依賴配置
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>3.1.8</version>
+    </dependency>
+    <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson</artifactId>
+        <version>3.24.3</version>
+    </dependency>
+    <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-core</artifactId>
+        <version>1.11.5</version>
+    </dependency>
+</dependencies>
 ```
 
 這個教學文件提供了從基礎到進階的快取雪崩學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的快取實現開始，中級學習者可以學習雪崩預防和請求限流，而高級學習者則可以掌握分散式快取、熔斷機制和多級快取等進階功能。 

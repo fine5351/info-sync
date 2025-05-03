@@ -40,65 +40,63 @@ SimpleCache --> CacheItem
 
 #### 步驟 1：基本快取實現
 ```java
-public class SimpleCacheItem {
-    private String key;
-    private Object value;
-    private boolean exists;
-    
-    public SimpleCacheItem(String key, Object value) {
-        this.key = key;
-        this.value = value;
-        this.exists = true;
-    }
-    
-    public String getKey() {
-        return key;
-    }
-    
-    public Object getValue() {
-        return value;
-    }
-    
-    public boolean exists() {
-        return exists;
-    }
-    
-    public void markNotExists() {
-        this.exists = false;
-        this.value = null;
+// 配置 Caffeine 快取
+public class CacheConfig {
+    public Cache<String, Object> createCache() {
+        return Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
     }
 }
 
-public class SimpleCache {
-    private Map<String, SimpleCacheItem> items;
+// 使用 Redis 布隆過濾器
+public class CacheService {
+    private final Cache<String, Object> cache;
+    private final RedissonClient redisson;
+    private final DataSource dataSource;
+    private final CacheMetrics metrics;
     
-    public SimpleCache() {
-        items = new HashMap<>();
-    }
-    
-    public void put(String key, Object value) {
-        SimpleCacheItem item = new SimpleCacheItem(key, value);
-        items.put(key, item);
-        System.out.println("存入快取：" + key);
+    public CacheService(DataSource dataSource) {
+        this.cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+        this.redisson = Redisson.create();
+        this.dataSource = dataSource;
+        this.metrics = new CacheMetrics();
+        
+        // 初始化布隆過濾器
+        RBloomFilter<String> bloomFilter = redisson.getBloomFilter("bloom:filter");
+        bloomFilter.tryInit(100_000, 0.01); // 預期元素數量 100,000，誤判率 1%
     }
     
     public Object get(String key) {
-        SimpleCacheItem item = items.get(key);
-        if (item != null) {
-            if (!item.exists()) {
-                System.out.println("快取標記不存在：" + key);
-                return null;
-            }
-            return item.getValue();
+        // 先從快取獲取
+        Object value = cache.getIfPresent(key);
+        if (value != null) {
+            metrics.recordCacheHit();
+            return value;
         }
-        return null;
-    }
-    
-    public void markNotExists(String key) {
-        SimpleCacheItem item = new SimpleCacheItem(key, null);
-        item.markNotExists();
-        items.put(key, item);
-        System.out.println("標記不存在：" + key);
+        
+        // 使用布隆過濾器檢查
+        RBloomFilter<String> bloomFilter = redisson.getBloomFilter("bloom:filter");
+        if (!bloomFilter.contains(key)) {
+            metrics.recordBloomFilterMiss();
+            return null;
+        }
+        
+        // 從資料來源獲取數據
+        value = dataSource.fetch(key);
+        if (value != null) {
+            cache.put(key, value);
+            metrics.recordCacheMiss();
+        } else {
+            // 如果數據不存在，將 key 加入布隆過濾器
+            bloomFilter.add(key);
+            metrics.recordBloomFilterAdd();
+        }
+        return value;
     }
 }
 ```
@@ -107,7 +105,7 @@ public class SimpleCache {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 穿透預防策略
+- 布隆過濾器的使用
 - 空值快取機制
 - 請求過濾機制
 - 降級處理策略
@@ -115,322 +113,185 @@ public class SimpleCache {
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class CacheItem {
-    - key: String
-    - value: Object
-    - exists: boolean
-    - lastAccessTime: long
-    + getKey()
-    + getValue()
-    + exists()
-    + updateAccessTime()
-}
-
-class PenetrationPreventor {
-    - items: Map<String, CacheItem>
-    - filter: RequestFilter
-    + checkRequest()
-    + handleEmpty()
-    + filterInvalid()
-}
-
-class Cache {
-    - preventor: PenetrationPreventor
-    + put()
+class CacheService {
+    - cache: Cache
+    - redisson: RedissonClient
+    - dataSource: DataSource
+    - metrics: CacheMetrics
     + get()
+    + put()
     + handleEmpty()
 }
 
-Cache --> PenetrationPreventor
-PenetrationPreventor --> CacheItem
+class BloomFilter {
+    - filter: RBloomFilter
+    + contains()
+    + add()
+}
+
+class RequestFilter {
+    - invalidPatterns: RSet
+    + isValid()
+    + addPattern()
+}
+
+CacheService --> BloomFilter
+CacheService --> RequestFilter
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：穿透預防
-```java
-public class AdvancedCacheItem {
-    private String key;
-    private Object value;
-    private boolean exists;
-    private long lastAccessTime;
-    
-    public AdvancedCacheItem(String key, Object value) {
-        this.key = key;
-        this.value = value;
-        this.exists = true;
-        this.lastAccessTime = System.currentTimeMillis();
-    }
-    
-    public void updateAccessTime() {
-        lastAccessTime = System.currentTimeMillis();
-    }
-    
-    public void markNotExists() {
-        this.exists = false;
-        this.value = null;
-    }
-    
-    public long getLastAccessTime() {
-        return lastAccessTime;
-    }
-}
-```
-
-#### 步驟 2：請求過濾
+#### 步驟 1：請求過濾
 ```java
 public class RequestFilter {
-    private Set<String> invalidKeys;
+    private final RSet<String> invalidPatterns;
+    private final Pattern pattern;
     
-    public RequestFilter() {
-        invalidKeys = new HashSet<>();
+    public RequestFilter(RedissonClient redisson) {
+        this.invalidPatterns = redisson.getSet("invalid:patterns");
+        this.pattern = Pattern.compile("[^a-zA-Z0-9]");
     }
     
     public boolean isValid(String key) {
-        return !invalidKeys.contains(key);
+        // 檢查是否包含無效字符
+        if (pattern.matcher(key).find()) {
+            return false;
+        }
+        
+        // 檢查是否匹配無效模式
+        return !invalidPatterns.contains(key);
     }
     
-    public void addInvalid(String key) {
-        invalidKeys.add(key);
-    }
-    
-    public void removeInvalid(String key) {
-        invalidKeys.remove(key);
+    public void addInvalidPattern(String pattern) {
+        invalidPatterns.add(pattern);
     }
 }
 
-public class PenetrationPreventor {
-    private Map<String, AdvancedCacheItem> items;
-    private RequestFilter filter;
+public class AdvancedCacheService {
+    private final Cache<String, Object> cache;
+    private final RedissonClient redisson;
+    private final RequestFilter requestFilter;
+    private final CacheMetrics metrics;
     
-    public PenetrationPreventor() {
-        items = new HashMap<>();
-        filter = new RequestFilter();
+    public AdvancedCacheService() {
+        this.cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+        this.redisson = Redisson.create();
+        this.requestFilter = new RequestFilter(redisson);
+        this.metrics = new CacheMetrics();
+        
+        // 初始化布隆過濾器
+        RBloomFilter<String> bloomFilter = redisson.getBloomFilter("bloom:filter");
+        bloomFilter.tryInit(100_000, 0.01);
     }
     
     public Object get(String key) {
-        if (!filter.isValid(key)) {
-            System.out.println("請求被過濾：" + key);
+        // 檢查請求是否有效
+        if (!requestFilter.isValid(key)) {
+            metrics.recordInvalidRequest();
             return handleEmpty(key);
         }
         
-        AdvancedCacheItem item = items.get(key);
-        if (item != null) {
-            if (!item.exists()) {
-                return handleEmpty(key);
-            }
-            return item.getValue();
-        }
-        return null;
-    }
-    
-    private Object handleEmpty(String key) {
-        // 降級處理邏輯
-        return "空值處理";
-    }
-}
-```
-
-## 高級（Advanced）層級
-
-### 1. 概念說明
-高級學習者需要掌握：
-- 分散式穿透預防
-- 多級過濾策略
-- 布隆過濾器
-- 自動恢復策略
-
-### 2. PlantUML 圖解
-```plantuml
-@startuml
-package "進階快取系統" {
-    class DistributedCache {
-        - nodes: List<Node>
-        - coordinator: Coordinator
-        - bloomFilter: BloomFilter
-        + put()
-        + get()
-        + handleEmpty()
-    }
-    
-    class Coordinator {
-        - filters: List<Filter>
-        + distributeFilter()
-        + handleEmpty()
-        + recover()
-    }
-    
-    class BloomFilter {
-        - bits: BitSet
-        - hashFunctions: List<HashFunction>
-        + add()
-        + contains()
-        + clear()
-    }
-    
-    class Filter {
-        <<interface>>
-        + check()
-        + add()
-        + remove()
-    }
-}
-
-DistributedCache --> Coordinator
-DistributedCache --> BloomFilter
-Coordinator --> Filter
-@enduml
-```
-
-### 3. 分段教學步驟
-
-#### 步驟 1：分散式快取
-```java
-public class DistributedCache {
-    private List<Node> nodes;
-    private Coordinator coordinator;
-    private BloomFilter bloomFilter;
-    
-    public DistributedCache() {
-        nodes = new ArrayList<>();
-        coordinator = new Coordinator();
-        bloomFilter = new BloomFilter();
-    }
-    
-    public Object get(String key) {
+        // 使用布隆過濾器
+        RBloomFilter<String> bloomFilter = redisson.getBloomFilter("bloom:filter");
         if (!bloomFilter.contains(key)) {
+            metrics.recordBloomFilterMiss();
             return handleEmpty(key);
         }
         
-        // 分散式獲取
-        for (Node node : nodes) {
-            Object value = node.get(key);
-            if (value != null) {
-                return value;
-            }
+        // 從快取獲取
+        Object value = cache.getIfPresent(key);
+        if (value != null) {
+            metrics.recordCacheHit();
+            return value;
         }
-        return null;
+        
+        // 從資料來源獲取
+        value = fetchFromDataSource(key);
+        if (value != null) {
+            cache.put(key, value);
+            metrics.recordCacheMiss();
+        } else {
+            bloomFilter.add(key);
+            metrics.recordBloomFilterAdd();
+        }
+        return value;
     }
     
     private Object handleEmpty(String key) {
-        return coordinator.handleEmpty(key);
+        // 返回降級數據
+        return "降級數據";
     }
 }
 ```
 
-#### 步驟 2：布隆過濾器
+### 4. 進階配置
+
+#### 監控配置（使用 Micrometer）
 ```java
-public class BloomFilter {
-    private BitSet bits;
-    private List<HashFunction> hashFunctions;
+public class CacheMetrics {
+    private final Counter cacheHits;
+    private final Counter cacheMisses;
+    private final Counter bloomFilterHits;
+    private final Counter bloomFilterMisses;
+    private final Counter invalidRequests;
     
-    public BloomFilter() {
-        bits = new BitSet(1000);
-        hashFunctions = new ArrayList<>();
-        // 初始化多個雜湊函數
-        for (int i = 0; i < 3; i++) {
-            hashFunctions.add(new HashFunction(i));
-        }
+    public CacheMetrics() {
+        this.cacheHits = Metrics.counter("cache.hits");
+        this.cacheMisses = Metrics.counter("cache.misses");
+        this.bloomFilterHits = Metrics.counter("bloom.filter.hits");
+        this.bloomFilterMisses = Metrics.counter("bloom.filter.misses");
+        this.invalidRequests = Metrics.counter("invalid.requests");
     }
     
-    public void add(String key) {
-        for (HashFunction hash : hashFunctions) {
-            int index = hash.hash(key) % bits.size();
-            bits.set(index);
-        }
+    public void recordCacheHit() {
+        cacheHits.increment();
     }
     
-    public boolean contains(String key) {
-        for (HashFunction hash : hashFunctions) {
-            int index = hash.hash(key) % bits.size();
-            if (!bits.get(index)) {
-                return false;
-            }
-        }
-        return true;
+    public void recordCacheMiss() {
+        cacheMisses.increment();
     }
     
-    public void clear() {
-        bits.clear();
-    }
-}
-
-public class HashFunction {
-    private int seed;
-    
-    public HashFunction(int seed) {
-        this.seed = seed;
+    public void recordBloomFilterHit() {
+        bloomFilterHits.increment();
     }
     
-    public int hash(String key) {
-        int hash = 0;
-        for (int i = 0; i < key.length(); i++) {
-            hash = seed * hash + key.charAt(i);
-        }
-        return Math.abs(hash);
+    public void recordBloomFilterMiss() {
+        bloomFilterMisses.increment();
+    }
+    
+    public void recordBloomFilterAdd() {
+        bloomFilterMisses.increment();
+    }
+    
+    public void recordInvalidRequest() {
+        invalidRequests.increment();
     }
 }
 ```
 
-#### 步驟 3：過濾策略
-```java
-public interface Filter {
-    boolean check(String key);
-    void add(String key);
-    void remove(String key);
-}
-
-public class KeyFilter implements Filter {
-    private Set<String> keys;
-    
-    public KeyFilter() {
-        keys = new HashSet<>();
-    }
-    
-    @Override
-    public boolean check(String key) {
-        return keys.contains(key);
-    }
-    
-    @Override
-    public void add(String key) {
-        keys.add(key);
-    }
-    
-    @Override
-    public void remove(String key) {
-        keys.remove(key);
-    }
-}
-
-public class PatternFilter implements Filter {
-    private Set<String> patterns;
-    
-    public PatternFilter() {
-        patterns = new HashSet<>();
-    }
-    
-    @Override
-    public boolean check(String key) {
-        for (String pattern : patterns) {
-            if (key.matches(pattern)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    @Override
-    public void add(String key) {
-        patterns.add(key);
-    }
-    
-    @Override
-    public void remove(String key) {
-        patterns.remove(key);
-    }
-}
+#### Maven 依賴配置
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>3.1.8</version>
+    </dependency>
+    <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson</artifactId>
+        <version>3.24.3</version>
+    </dependency>
+    <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-core</artifactId>
+        <version>1.11.5</version>
+    </dependency>
+</dependencies>
 ```
 
-這個教學文件提供了從基礎到進階的快取穿透學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的快取實現開始，中級學習者可以學習穿透預防和請求過濾，而高級學習者則可以掌握分散式快取、布隆過濾器和多級過濾策略等進階功能。 
+這個教學文件提供了從基礎到進階的快取穿透學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的快取實現開始，中級學習者可以學習布隆過濾器和請求過濾，而高級學習者則可以掌握多級布隆過濾器和自動恢復策略等進階功能。 

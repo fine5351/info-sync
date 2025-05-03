@@ -40,64 +40,78 @@ SimpleCache --> CacheItem
 
 #### 步驟 1：基本快取實現
 ```java
-public class SimpleCacheItem {
-    private String key;
-    private Object value;
-    private boolean isHot;
-    
-    public SimpleCacheItem(String key, Object value) {
-        this.key = key;
-        this.value = value;
-        this.isHot = false;
-    }
-    
-    public String getKey() {
-        return key;
-    }
-    
-    public Object getValue() {
-        return value;
-    }
-    
-    public boolean isHot() {
-        return isHot;
-    }
-    
-    public void markHot() {
-        this.isHot = true;
+// 配置 Caffeine 快取
+public class CacheConfig {
+    public Cache<String, Object> createCache() {
+        return Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
     }
 }
 
-public class SimpleCache {
-    private Map<String, SimpleCacheItem> items;
+// 使用 Redisson 實現分布式鎖
+public class CacheService {
+    private final Cache<String, Object> cache;
+    private final RedissonClient redisson;
+    private final DataSource dataSource;
+    private final CacheMetrics metrics;
     
-    public SimpleCache() {
-        items = new HashMap<>();
-    }
-    
-    public void put(String key, Object value) {
-        SimpleCacheItem item = new SimpleCacheItem(key, value);
-        items.put(key, item);
-        System.out.println("存入快取：" + key);
+    public CacheService(DataSource dataSource) {
+        this.cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+        this.redisson = Redisson.create();
+        this.dataSource = dataSource;
+        this.metrics = new CacheMetrics();
     }
     
     public Object get(String key) {
-        SimpleCacheItem item = items.get(key);
-        if (item != null) {
-            if (item.isHot()) {
-                System.out.println("熱門項目：" + key);
-            }
-            return item.getValue();
+        // 先從快取獲取
+        Object value = cache.getIfPresent(key);
+        if (value != null) {
+            metrics.recordCacheHit();
+            return value;
         }
-        return null;
+        
+        // 獲取分布式鎖
+        RLock lock = redisson.getLock("lock:" + key);
+        try {
+            // 嘗試獲取鎖，最多等待 100ms
+            if (lock.tryLock(100, TimeUnit.MILLISECONDS)) {
+                try {
+                    // 再次檢查快取（雙重檢查）
+                    value = cache.getIfPresent(key);
+                    if (value != null) {
+                        metrics.recordCacheHit();
+                        return value;
+                    }
+                    
+                    // 從資料來源獲取數據
+                    value = dataSource.fetch(key);
+                    if (value != null) {
+                        cache.put(key, value);
+                        metrics.recordCacheMiss();
+                    }
+                    return value;
+                } finally {
+                    lock.unlock();
+                }
+            }
+            // 如果獲取鎖失敗，返回降級數據
+            metrics.recordLockFailure();
+            return getDegradedData(key);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            metrics.recordLockFailure();
+            return getDegradedData(key);
+        }
     }
     
-    public void markHot(String key) {
-        SimpleCacheItem item = items.get(key);
-        if (item != null) {
-            item.markHot();
-            System.out.println("標記熱門：" + key);
-        }
+    private Object getDegradedData(String key) {
+        // 返回降級數據
+        return "降級數據";
     }
 }
 ```
@@ -106,75 +120,148 @@ public class SimpleCache {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 擊穿預防策略
-- 並發控制機制
+- 分布式鎖的使用
+- 熱點數據處理
 - 請求合併機制
 - 降級處理策略
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class CacheItem {
-    - key: String
-    - value: Object
-    - isHot: boolean
-    - accessCount: int
-    + getKey()
-    + getValue()
-    + isHot()
-    + incrementAccess()
-}
-
-class BreakdownPreventor {
-    - items: Map<String, CacheItem>
-    - merger: RequestMerger
-    + checkConcurrent()
-    + handleHot()
-    + mergeRequests()
-}
-
-class Cache {
-    - preventor: BreakdownPreventor
-    + put()
+class CacheService {
+    - cache: Cache
+    - redisson: RedissonClient
+    - dataSource: DataSource
+    - metrics: CacheMetrics
     + get()
+    + put()
     + handleHot()
 }
 
-Cache --> BreakdownPreventor
-BreakdownPreventor --> CacheItem
+class HotKeyDetector {
+    - accessCount: RAtomicLong
+    + detect()
+    + isHot()
+}
+
+class RequestMerger {
+    - pendingRequests: RMap
+    + merge()
+    + execute()
+}
+
+CacheService --> HotKeyDetector
+CacheService --> RequestMerger
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：擊穿預防
+#### 步驟 1：熱點數據處理
 ```java
-public class AdvancedCacheItem {
-    private String key;
-    private Object value;
-    private boolean isHot;
-    private int accessCount;
+public class HotKeyDetector {
+    private final RedissonClient redisson;
+    private final long threshold;
     
-    public AdvancedCacheItem(String key, Object value) {
-        this.key = key;
-        this.value = value;
-        this.isHot = false;
-        this.accessCount = 0;
+    public HotKeyDetector(RedissonClient redisson, long threshold) {
+        this.redisson = redisson;
+        this.threshold = threshold;
     }
     
-    public void incrementAccess() {
-        accessCount++;
-        if (accessCount > 100) { // 設定熱門閾值
-            isHot = true;
+    public void increment(String key) {
+        RAtomicLong counter = redisson.getAtomicLong("hot:key:" + key);
+        counter.incrementAndGet();
+    }
+    
+    public boolean isHot(String key) {
+        RAtomicLong counter = redisson.getAtomicLong("hot:key:" + key);
+        return counter.get() > threshold;
+    }
+    
+    public void reset(String key) {
+        RAtomicLong counter = redisson.getAtomicLong("hot:key:" + key);
+        counter.set(0);
+    }
+}
+
+public class AdvancedCacheService {
+    private final Cache<String, Object> cache;
+    private final RedissonClient redisson;
+    private final HotKeyDetector hotKeyDetector;
+    private final RequestMerger requestMerger;
+    private final CacheMetrics metrics;
+    
+    public AdvancedCacheService() {
+        this.cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+        this.redisson = Redisson.create();
+        this.hotKeyDetector = new HotKeyDetector(redisson, 100);
+        this.requestMerger = new RequestMerger(redisson);
+        this.metrics = new CacheMetrics();
+    }
+    
+    public CompletableFuture<Object> getAsync(String key) {
+        // 檢查是否為熱點數據
+        if (hotKeyDetector.isHot(key)) {
+            return handleHotKey(key);
         }
+        
+        // 正常處理流程
+        Object value = cache.getIfPresent(key);
+        if (value != null) {
+            metrics.recordCacheHit();
+            return CompletableFuture.completedFuture(value);
+        }
+        
+        return requestMerger.merge(key, () -> {
+            RLock lock = redisson.getLock("lock:" + key);
+            try {
+                if (lock.tryLock(100, TimeUnit.MILLISECONDS)) {
+                    try {
+                        value = cache.getIfPresent(key);
+                        if (value != null) {
+                            metrics.recordCacheHit();
+                            return value;
+                        }
+                        value = fetchFromDataSource(key);
+                        if (value != null) {
+                            cache.put(key, value);
+                            metrics.recordCacheMiss();
+                        }
+                        return value;
+                    } finally {
+                        lock.unlock();
+                    }
+                }
+                metrics.recordLockFailure();
+                return getDegradedData(key);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                metrics.recordLockFailure();
+                return getDegradedData(key);
+            }
+        });
     }
     
-    public boolean isHot() {
-        return isHot;
-    }
-    
-    public int getAccessCount() {
-        return accessCount;
+    private CompletableFuture<Object> handleHotKey(String key) {
+        // 對熱點數據使用本地快取
+        Object value = cache.getIfPresent(key);
+        if (value != null) {
+            metrics.recordCacheHit();
+            return CompletableFuture.completedFuture(value);
+        }
+        
+        // 使用請求合併
+        return requestMerger.merge(key, () -> {
+            value = fetchFromDataSource(key);
+            if (value != null) {
+                cache.put(key, value);
+                metrics.recordCacheMiss();
+            }
+            return value;
+        });
     }
 }
 ```
@@ -182,55 +269,32 @@ public class AdvancedCacheItem {
 #### 步驟 2：請求合併
 ```java
 public class RequestMerger {
-    private Map<String, List<Runnable>> pendingRequests;
+    private final RMap<String, CompletableFuture<Object>> pendingRequests;
     
-    public RequestMerger() {
-        pendingRequests = new HashMap<>();
+    public RequestMerger(RMap<String, CompletableFuture<Object>> pendingRequests) {
+        this.pendingRequests = pendingRequests;
     }
     
-    public void addRequest(String key, Runnable request) {
-        pendingRequests.computeIfAbsent(key, k -> new ArrayList<>())
-                      .add(request);
-    }
-    
-    public void executeRequests(String key) {
-        List<Runnable> requests = pendingRequests.remove(key);
-        if (requests != null) {
-            for (Runnable request : requests) {
-                request.run();
-            }
+    public CompletableFuture<Object> merge(String key, Supplier<Object> supplier) {
+        CompletableFuture<Object> future = new CompletableFuture<>();
+        
+        pendingRequests.put(key, future);
+        
+        // 只有第一個請求執行實際操作
+        if (pendingRequests.get(key).size() == 1) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Object result = supplier.get();
+                    pendingRequests.remove(key);
+                    future.complete(result);
+                } catch (Exception e) {
+                    pendingRequests.remove(key);
+                    future.completeExceptionally(e);
+                }
+            });
         }
-    }
-}
-
-public class BreakdownPreventor {
-    private Map<String, AdvancedCacheItem> items;
-    private RequestMerger merger;
-    
-    public BreakdownPreventor() {
-        items = new HashMap<>();
-        merger = new RequestMerger();
-    }
-    
-    public Object get(String key) {
-        AdvancedCacheItem item = items.get(key);
-        if (item != null) {
-            item.incrementAccess();
-            if (item.isHot()) {
-                return handleHot(key);
-            }
-            return item.getValue();
-        }
-        return null;
-    }
-    
-    private Object handleHot(String key) {
-        // 合併請求
-        merger.addRequest(key, () -> {
-            System.out.println("處理熱門請求：" + key);
-        });
-        merger.executeRequests(key);
-        return "降級數據";
+        
+        return future;
     }
 }
 ```
@@ -239,87 +303,101 @@ public class BreakdownPreventor {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式擊穿預防
 - 多級快取策略
 - 熔斷機制
 - 自動恢復策略
+- 監控和告警
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
 package "進階快取系統" {
-    class DistributedCache {
-        - nodes: List<Node>
-        - coordinator: Coordinator
-        - circuitBreaker: CircuitBreaker
-        + put()
+    class MultiLevelCache {
+        - localCache: Cache
+        - distributedCache: Cache
         + get()
-        + handleHot()
-    }
-    
-    class Coordinator {
-        - cacheLevels: List<CacheLevel>
-        + distributeLoad()
-        + handleHot()
-        + recover()
+        + put()
     }
     
     class CircuitBreaker {
         - state: State
         - failureCount: int
-        + checkState()
-        + handleFailure()
-        + reset()
+        + check()
+        + recordFailure()
+        + recordSuccess()
     }
     
-    class CacheLevel {
-        - level: int
-        - items: Map
-        + put()
-        + get()
-        + clear()
+    class AutoRecovery {
+        - metrics: Metrics
+        + checkHealth()
+        + recover()
+    }
+    
+    class CacheMonitor {
+        - metrics: Metrics
+        + collectMetrics()
+        + sendAlerts()
     }
 }
 
-DistributedCache --> Coordinator
-DistributedCache --> CircuitBreaker
-Coordinator --> CacheLevel
+MultiLevelCache --> CircuitBreaker
+CircuitBreaker --> AutoRecovery
+AutoRecovery --> CacheMonitor
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分散式快取
+#### 步驟 1：多級快取
 ```java
-public class DistributedCache {
-    private List<Node> nodes;
-    private Coordinator coordinator;
-    private CircuitBreaker circuitBreaker;
+public class MultiLevelCache {
+    private final Cache<String, Object> localCache;
+    private final RedissonClient redisson;
+    private final CircuitBreaker circuitBreaker;
     
-    public DistributedCache() {
-        nodes = new ArrayList<>();
-        coordinator = new Coordinator();
-        circuitBreaker = new CircuitBreaker();
+    public MultiLevelCache() {
+        this.localCache = Caffeine.newBuilder()
+            .maximumSize(1_000)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build();
+        this.redisson = Redisson.create();
+        this.circuitBreaker = new CircuitBreaker(5, 10_000);
     }
     
     public Object get(String key) {
-        if (!circuitBreaker.checkState()) {
-            return handleHot(key);
+        // 先從本地快取獲取
+        Object value = localCache.getIfPresent(key);
+        if (value != null) {
+            return value;
         }
         
-        // 分散式獲取
-        for (Node node : nodes) {
-            Object value = node.get(key);
-            if (value != null) {
-                return value;
-            }
+        // 檢查熔斷器
+        if (!circuitBreaker.check()) {
+            return getDegradedData(key);
         }
-        return null;
-    }
-    
-    private Object handleHot(String key) {
-        circuitBreaker.handleFailure();
-        return coordinator.handleHot(key);
+        
+        // 從分布式快取獲取
+        RBucket<Object> bucket = redisson.getBucket(key);
+        value = bucket.get();
+        if (value != null) {
+            localCache.put(key, value);
+            circuitBreaker.recordSuccess();
+            return value;
+        }
+        
+        // 從資料來源獲取
+        try {
+            value = fetchFromDataSource(key);
+            if (value != null) {
+                bucket.set(value, 5, TimeUnit.MINUTES);
+                localCache.put(key, value);
+                circuitBreaker.recordSuccess();
+            }
+            return value;
+        } catch (Exception e) {
+            circuitBreaker.recordFailure();
+            return getDegradedData(key);
+        }
     }
 }
 ```
@@ -327,94 +405,95 @@ public class DistributedCache {
 #### 步驟 2：熔斷機制
 ```java
 public class CircuitBreaker {
-    private enum State { OPEN, HALF_OPEN, CLOSED }
-    private State state;
-    private int failureCount;
-    private int threshold;
+    private final int failureThreshold;
+    private final long timeout;
+    private volatile State state = State.CLOSED;
+    private volatile int failureCount = 0;
+    private volatile long lastFailureTime = 0;
     
-    public CircuitBreaker() {
-        state = State.CLOSED;
-        failureCount = 0;
-        threshold = 10;
+    public CircuitBreaker(int failureThreshold, long timeout) {
+        this.failureThreshold = failureThreshold;
+        this.timeout = timeout;
     }
     
-    public boolean checkState() {
+    public boolean check() {
         if (state == State.OPEN) {
+            if (System.currentTimeMillis() - lastFailureTime > timeout) {
+                state = State.HALF_OPEN;
+                return true;
+            }
             return false;
         }
         return true;
     }
     
-    public void handleFailure() {
+    public void recordFailure() {
         failureCount++;
-        if (failureCount >= threshold) {
+        if (failureCount >= failureThreshold) {
             state = State.OPEN;
-            System.out.println("熔斷器開啟");
+            lastFailureTime = System.currentTimeMillis();
         }
     }
     
-    public void reset() {
-        state = State.CLOSED;
+    public void recordSuccess() {
         failureCount = 0;
-        System.out.println("熔斷器重置");
+        state = State.CLOSED;
+    }
+    
+    private enum State {
+        CLOSED, OPEN, HALF_OPEN
     }
 }
 ```
 
-#### 步驟 3：多級快取
-```java
-public class CacheLevel {
-    private int level;
-    private Map<String, Object> items;
-    
-    public CacheLevel(int level) {
-        this.level = level;
-        this.items = new HashMap<>();
-    }
-    
-    public void put(String key, Object value) {
-        items.put(key, value);
-        System.out.println("存入快取層級 " + level + "：" + key);
-    }
-    
-    public Object get(String key) {
-        return items.get(key);
-    }
-    
-    public void clear() {
-        items.clear();
-    }
-}
+### 4. 進階配置
 
-public class Coordinator {
-    private List<CacheLevel> cacheLevels;
+#### 監控配置（使用 Micrometer）
+```java
+public class CacheMetrics {
+    private final Counter cacheHits;
+    private final Counter cacheMisses;
+    private final Counter lockFailures;
     
-    public Coordinator() {
-        cacheLevels = new ArrayList<>();
-        // 初始化多級快取
-        for (int i = 0; i < 3; i++) {
-            cacheLevels.add(new CacheLevel(i));
-        }
+    public CacheMetrics() {
+        this.cacheHits = Metrics.counter("cache.hits");
+        this.cacheMisses = Metrics.counter("cache.misses");
+        this.lockFailures = Metrics.counter("lock.failures");
     }
     
-    public void distributeLoad(String key, Object value) {
-        // 根據策略分配到不同層級
-        for (CacheLevel level : cacheLevels) {
-            level.put(key, value);
-        }
+    public void recordCacheHit() {
+        cacheHits.increment();
     }
     
-    public Object handleHot(String key) {
-        // 從較低層級獲取數據
-        for (CacheLevel level : cacheLevels) {
-            Object value = level.get(key);
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
+    public void recordCacheMiss() {
+        cacheMisses.increment();
+    }
+    
+    public void recordLockFailure() {
+        lockFailures.increment();
     }
 }
+```
+
+#### Maven 依賴配置
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>3.1.8</version>
+    </dependency>
+    <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson</artifactId>
+        <version>3.24.3</version>
+    </dependency>
+    <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-core</artifactId>
+        <version>1.11.5</version>
+    </dependency>
+</dependencies>
 ```
 
 這個教學文件提供了從基礎到進階的快取擊穿學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的快取實現開始，中級學習者可以學習擊穿預防和請求合併，而高級學習者則可以掌握分散式快取、熔斷機制和多級快取等進階功能。 
