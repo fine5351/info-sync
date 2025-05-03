@@ -13,7 +13,75 @@
 - 為什麼需要資料庫同步
 - 基本的資料複製方法
 
-### 2. PlantUML 圖解
+### 2. 使用原因
+資料庫同步的主要使用原因包括：
+1. 資料備份：
+   - 防止資料遺失
+   - 提供災難恢復
+   - 確保資料安全
+
+2. 負載均衡：
+   - 分散查詢負載
+   - 提高系統效能
+   - 優化資源使用
+
+3. 高可用性：
+   - 提供故障轉移
+   - 確保服務不中斷
+   - 提升系統可靠性
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 同步延遲：
+   - 資料更新不及時
+   - 同步速度緩慢
+   - 系統負載過高
+
+2. 資料問題：
+   - 資料不一致
+   - 同步衝突
+   - 資料完整性受損
+
+3. 系統問題：
+   - 網路中斷
+   - 系統故障
+   - 資源不足
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 選擇適當的同步策略
+   - 設計有效的同步機制
+   - 建立監控系統
+
+2. 資料管理：
+   - 定期檢查同步狀態
+   - 優化同步策略
+   - 確保資料一致性
+
+3. 效能優化：
+   - 合理設置同步頻率
+   - 優化同步方式
+   - 實現負載均衡
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 同步延遲處理：
+   - 檢查網路狀態
+   - 優化同步策略
+   - 調整同步頻率
+
+2. 資料問題處理：
+   - 檢查資料一致性
+   - 解決同步衝突
+   - 修復資料完整性
+
+3. 系統問題處理：
+   - 檢查系統狀態
+   - 修復網路問題
+   - 優化資源使用
+
+### 6. PlantUML 圖解
 ```plantuml
 @startuml
 class Database {
@@ -33,55 +101,62 @@ SyncManager --> Database : 目標
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 7. 分段教學步驟
 
 #### 步驟 1：基本資料同步
 ```java
 public class SimpleSyncManager {
     private Database source;
     private Database target;
+    private SyncMonitor monitor;
+    private SyncValidator validator;
     
     public SimpleSyncManager(Database source, Database target) {
         this.source = source;
         this.target = target;
+        this.monitor = new SyncMonitor(source, target);
+        this.validator = new SyncValidator();
     }
     
     public void sync() {
+        // 檢查同步狀態
+        if (!validator.validateSync(source, target)) {
+            System.out.println("同步驗證失敗！");
+            return;
+        }
+        
         // 從來源資料庫讀取所有資料
         Map<String, String> sourceData = source.readAll();
         
         // 將資料寫入目標資料庫
         for (Map.Entry<String, String> entry : sourceData.entrySet()) {
-            target.write(entry.getKey(), entry.getValue());
+            if (validator.validateData(entry.getKey(), entry.getValue())) {
+                target.write(entry.getKey(), entry.getValue());
+                monitor.recordSyncOperation("write", entry.getKey());
+            }
         }
         
+        // 檢查同步結果
+        monitor.checkSync();
         System.out.println("資料同步完成！");
     }
 }
 
-class Database {
-    private Map<String, String> data;
-    
-    public Database() {
-        data = new HashMap<>();
-    }
-    
-    public void write(String key, String value) {
-        data.put(key, value);
-        System.out.println("寫入資料: " + key + " = " + value);
-    }
-    
-    public Map<String, String> readAll() {
-        return new HashMap<>(data);
-    }
-}
-```
-
-#### 步驟 2：簡單的同步監控
-```java
-public class SyncMonitor {
+class SyncMonitor {
     private Database source;
     private Database target;
+    private Map<String, Integer> operationCounts;
+    
+    public SyncMonitor(Database source, Database target) {
+        this.source = source;
+        this.target = target;
+        this.operationCounts = new HashMap<>();
+    }
+    
+    public void recordSyncOperation(String operation, String key) {
+        String metric = operation + ":" + key;
+        operationCounts.merge(metric, 1, Integer::sum);
+    }
     
     public void checkSync() {
         Map<String, String> sourceData = source.readAll();
@@ -94,7 +169,30 @@ public class SyncMonitor {
             System.out.println("資料庫已同步！");
         } else {
             System.out.println("資料庫需要同步！");
+            // 記錄不同步的資料
+            for (Map.Entry<String, String> entry : sourceData.entrySet()) {
+                String key = entry.getKey();
+                String sourceValue = entry.getValue();
+                String targetValue = targetData.get(key);
+                
+                if (!sourceValue.equals(targetValue)) {
+                    System.out.println("資料不同步: " + key);
+                    System.out.println("來源值: " + sourceValue);
+                    System.out.println("目標值: " + targetValue);
+                }
+            }
         }
+    }
+}
+
+class SyncValidator {
+    public boolean validateSync(Database source, Database target) {
+        // 檢查資料庫連接狀態
+        return source.isConnected() && target.isConnected();
+    }
+    
+    public boolean validateData(String key, String value) {
+        return key != null && !key.isEmpty() && value != null;
     }
 }
 ```
@@ -145,8 +243,16 @@ public class IncrementalSyncManager {
     private Database source;
     private Database target;
     private SyncLog syncLog;
+    private SyncMonitor monitor;
+    private SyncValidator validator;
     
     public void sync() {
+        // 檢查同步狀態
+        if (!validator.validateSync(source, target)) {
+            System.out.println("同步驗證失敗！");
+            return;
+        }
+        
         // 取得上次同步時間
         Date lastSync = syncLog.getLastSync();
         
@@ -155,44 +261,37 @@ public class IncrementalSyncManager {
         
         // 套用變更
         for (Change change : changes) {
-            applyChange(change);
+            if (validator.validateChange(change)) {
+                applyChange(change);
+                monitor.recordSyncOperation(change.getType().name(), change.getKey());
+            }
         }
         
         // 更新同步日誌
         syncLog.addEntry(new Date());
+        
+        // 檢查同步結果
+        monitor.checkSync();
     }
     
     private void applyChange(Change change) {
-        switch (change.getType()) {
-            case INSERT:
-                target.insert(change.getKey(), change.getValue());
-                break;
-            case UPDATE:
-                target.update(change.getKey(), change.getValue());
-                break;
-            case DELETE:
-                target.delete(change.getKey());
-                break;
+        try {
+            switch (change.getType()) {
+                case INSERT:
+                    target.insert(change.getKey(), change.getValue());
+                    break;
+                case UPDATE:
+                    target.update(change.getKey(), change.getValue());
+                    break;
+                case DELETE:
+                    target.delete(change.getKey());
+                    break;
+            }
+        } catch (Exception e) {
+            System.out.println("套用變更失敗: " + change.getKey());
+            e.printStackTrace();
         }
     }
-}
-
-class Change {
-    private ChangeType type;
-    private String key;
-    private String value;
-    private Date timestamp;
-    
-    public Change(ChangeType type, String key, String value) {
-        this.type = type;
-        this.key = key;
-        this.value = value;
-        this.timestamp = new Date();
-    }
-}
-
-enum ChangeType {
-    INSERT, UPDATE, DELETE
 }
 ```
 
@@ -415,6 +514,192 @@ class PerformanceMetric {
         this.syncDelay = syncDelay;
         this.threshold = threshold;
         this.timestamp = new Date();
+    }
+}
+```
+
+### 4. 常見問題與解決方案
+
+#### 問題表象
+1. 同步延遲：
+   - 資料更新不及時
+   - 同步速度緩慢
+   - 系統負載過高
+
+2. 資料問題：
+   - 資料不一致
+   - 同步衝突
+   - 資料完整性受損
+
+3. 系統問題：
+   - 網路中斷
+   - 系統故障
+   - 資源不足
+
+#### 避免方法
+1. 系統設計：
+   - 選擇適當的同步策略
+   - 設計有效的同步機制
+   - 建立監控系統
+
+2. 資料管理：
+   - 定期檢查同步狀態
+   - 優化同步策略
+   - 確保資料一致性
+
+3. 效能優化：
+   - 合理設置同步頻率
+   - 優化同步方式
+   - 實現負載均衡
+
+#### 處理方案
+1. 技術方案：
+   ```java
+   public class SyncManager {
+       private SyncStrategy strategy;
+       private SyncMonitor monitor;
+       private SyncValidator validator;
+       private SyncOptimizer optimizer;
+       
+       public void handleSyncIssue(SyncIssue issue) {
+           switch (issue.getType()) {
+               case DELAY:
+                   handleDelayIssue(issue);
+                   break;
+               case DATA:
+                   handleDataIssue(issue);
+                   break;
+               case SYSTEM:
+                   handleSystemIssue(issue);
+                   break;
+           }
+       }
+       
+       private void handleDelayIssue(SyncIssue issue) {
+           // 檢查網路狀態
+           checkNetworkStatus();
+           // 優化同步策略
+           optimizeSyncStrategy();
+           // 調整同步頻率
+           adjustSyncFrequency();
+       }
+       
+       private void handleDataIssue(SyncIssue issue) {
+           // 檢查資料一致性
+           checkDataConsistency();
+           // 解決同步衝突
+           resolveConflicts();
+           // 修復資料完整性
+           repairDataIntegrity();
+       }
+       
+       private void handleSystemIssue(SyncIssue issue) {
+           // 檢查系統狀態
+           checkSystemStatus();
+           // 修復網路問題
+           repairNetwork();
+           // 優化資源使用
+           optimizeResources();
+       }
+   }
+   ```
+
+2. 監控方案：
+   ```java
+   public class SyncMonitor {
+       private MetricsCollector metricsCollector;
+       private SyncChecker syncChecker;
+       private AlertManager alertManager;
+       
+       public void monitorSync() {
+           SyncMetrics metrics = metricsCollector.collectMetrics();
+           SyncStatus status = syncChecker.checkSync();
+           
+           // 檢查同步延遲
+           if (metrics.getSyncDelay() > DELAY_THRESHOLD) {
+               alertManager.alert("同步延遲警告", metrics.getDetails());
+           }
+           
+           // 檢查資料一致性
+           if (!status.isConsistent()) {
+               alertManager.alert("資料不一致警告", status.getDetails());
+           }
+           
+           // 檢查系統狀態
+           if (metrics.getSystemStatus() != SystemStatus.HEALTHY) {
+               alertManager.alert("系統狀態警告", metrics.getDetails());
+           }
+       }
+   }
+   ```
+
+3. 最佳實踐：
+   - 實現自動化同步
+   - 配置智能監控
+   - 建立告警機制
+   - 優化同步策略
+   - 定期效能優化
+   - 保持系統文檔
+   - 建立應急流程
+
+### 5. 實戰案例
+
+#### 案例一：電商系統資料同步
+```java
+public class ECommerceSync {
+    private SyncManager syncManager;
+    private SyncMonitor monitor;
+    
+    public void syncProductData(String category) {
+        // 設定同步策略
+        syncManager.setStrategy(new ProductSyncStrategy(category));
+        
+        // 執行同步
+        syncManager.sync();
+        
+        // 檢查同步結果
+        monitor.checkSync();
+    }
+    
+    public void syncOrderData(String status) {
+        // 設定同步策略
+        syncManager.setStrategy(new OrderSyncStrategy(status));
+        
+        // 執行同步
+        syncManager.sync();
+        
+        // 檢查同步結果
+        monitor.checkSync();
+    }
+}
+```
+
+#### 案例二：社交媒體資料同步
+```java
+public class SocialMediaSync {
+    private SyncManager syncManager;
+    private SyncMonitor monitor;
+    
+    public void syncUserData(String region) {
+        // 設定同步策略
+        syncManager.setStrategy(new UserSyncStrategy(region));
+        
+        // 執行同步
+        syncManager.sync();
+        
+        // 檢查同步結果
+        monitor.checkSync();
+    }
+    
+    public void syncPostData(String type) {
+        // 設定同步策略
+        syncManager.setStrategy(new PostSyncStrategy(type));
+        
+        // 執行同步
+        syncManager.sync();
+        
+        // 檢查同步結果
+        monitor.checkSync();
     }
 }
 ```

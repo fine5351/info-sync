@@ -13,7 +13,75 @@
 - 為什麼需要資料庫分割
 - 基本的資料分割方法
 
-### 2. PlantUML 圖解
+### 2. 使用原因
+資料庫分割的主要使用原因包括：
+1. 效能優化：
+   - 提高查詢效能
+   - 減少資料掃描範圍
+   - 優化資料存取
+
+2. 可擴展性：
+   - 支援資料增長
+   - 分散資料負載
+   - 提升系統容量
+
+3. 管理便利：
+   - 簡化資料維護
+   - 提高資料可用性
+   - 優化備份策略
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 效能問題：
+   - 查詢效能下降
+   - 資料存取延遲
+   - 系統負載過高
+
+2. 資料問題：
+   - 資料不一致
+   - 分割不均
+   - 資料完整性受損
+
+3. 管理問題：
+   - 分割策略不當
+   - 維護困難
+   - 監控不足
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 選擇適當的分割策略
+   - 設計有效的分割機制
+   - 建立監控系統
+
+2. 資料管理：
+   - 定期檢查分割狀態
+   - 優化分割策略
+   - 確保資料一致性
+
+3. 效能優化：
+   - 合理設置分割大小
+   - 優化查詢策略
+   - 實現負載均衡
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 效能問題處理：
+   - 檢查分割策略
+   - 優化查詢語句
+   - 調整分割大小
+
+2. 資料問題處理：
+   - 檢查資料一致性
+   - 修復分割問題
+   - 重新平衡資料
+
+3. 管理問題處理：
+   - 調整分割策略
+   - 改進維護機制
+   - 加強監控系統
+
+### 6. PlantUML 圖解
 ```plantuml
 @startuml
 class Database {
@@ -32,26 +100,40 @@ PartitionManager --> Database : 管理
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 7. 分段教學步驟
 
 #### 步驟 1：基本資料分割
 ```java
 public class SimplePartitionManager {
     private Map<String, Database> partitions;
+    private PartitionMonitor monitor;
+    private PartitionValidator validator;
     
     public SimplePartitionManager() {
         partitions = new HashMap<>();
+        monitor = new PartitionMonitor();
+        validator = new PartitionValidator();
     }
     
     public void createPartition(String name) {
-        partitions.put(name, new Database());
-        System.out.println("建立分割區: " + name);
+        if (validator.validatePartitionName(name)) {
+            partitions.put(name, new Database());
+            monitor.recordPartitionOperation("create", name);
+            System.out.println("建立分割區: " + name);
+        } else {
+            System.out.println("無效的分割區名稱: " + name);
+        }
     }
     
     public void storeData(String partitionName, String key, String value) {
         Database partition = partitions.get(partitionName);
         if (partition != null) {
-            partition.write(key, value);
+            if (validator.validateData(key, value)) {
+                partition.write(key, value);
+                monitor.recordDataOperation("write", partitionName, key);
+            } else {
+                System.out.println("無效的資料: " + key + " = " + value);
+            }
         } else {
             System.out.println("分割區不存在: " + partitionName);
         }
@@ -60,26 +142,59 @@ public class SimplePartitionManager {
     public String getData(String partitionName, String key) {
         Database partition = partitions.get(partitionName);
         if (partition != null) {
-            return partition.read(key);
+            String value = partition.read(key);
+            monitor.recordDataOperation("read", partitionName, key);
+            return value;
         }
         return null;
     }
+    
+    public void checkPartitionHealth() {
+        monitor.checkPartitionHealth(partitions);
+    }
 }
 
-class Database {
-    private Map<String, String> data;
+class PartitionMonitor {
+    private Map<String, Integer> operationCounts;
+    private Map<String, Long> lastCheckTimes;
     
-    public Database() {
-        data = new HashMap<>();
+    public PartitionMonitor() {
+        operationCounts = new HashMap<>();
+        lastCheckTimes = new HashMap<>();
     }
     
-    public void write(String key, String value) {
-        data.put(key, value);
-        System.out.println("寫入資料: " + key + " = " + value);
+    public void recordPartitionOperation(String operation, String partitionName) {
+        String metric = operation + ":" + partitionName;
+        operationCounts.merge(metric, 1, Integer::sum);
     }
     
-    public String read(String key) {
-        return data.get(key);
+    public void recordDataOperation(String operation, String partitionName, String key) {
+        String metric = operation + ":" + partitionName + ":" + key;
+        operationCounts.merge(metric, 1, Integer::sum);
+    }
+    
+    public void checkPartitionHealth(Map<String, Database> partitions) {
+        long currentTime = System.currentTimeMillis();
+        for (Map.Entry<String, Database> entry : partitions.entrySet()) {
+            String partitionName = entry.getKey();
+            Long lastCheck = lastCheckTimes.get(partitionName);
+            
+            if (lastCheck == null || currentTime - lastCheck > 3600000) { // 1小時檢查一次
+                // 檢查分割區健康狀態
+                System.out.println("檢查分割區健康狀態: " + partitionName);
+                lastCheckTimes.put(partitionName, currentTime);
+            }
+        }
+    }
+}
+
+class PartitionValidator {
+    public boolean validatePartitionName(String name) {
+        return name != null && !name.isEmpty() && name.matches("[a-zA-Z0-9_]+");
+    }
+    
+    public boolean validateData(String key, String value) {
+        return key != null && !key.isEmpty() && value != null;
     }
 }
 ```
@@ -151,45 +266,60 @@ public class AdvancedPartitionManager {
     private Map<String, List<Database>> horizontalPartitions;
     private Map<String, Map<String, Database>> verticalPartitions;
     private PartitionStrategy strategy;
+    private PartitionMonitor monitor;
+    private PartitionValidator validator;
     
     public void createHorizontalPartition(String tableName, String partitionKey) {
-        List<Database> partitions = new ArrayList<>();
-        horizontalPartitions.put(tableName, partitions);
-        
-        // 根據分割鍵建立分割區
-        for (String key : getPartitionKeys(partitionKey)) {
-            Database partition = new Database();
-            partitions.add(partition);
+        if (validator.validateTableName(tableName) && validator.validatePartitionKey(partitionKey)) {
+            List<Database> partitions = new ArrayList<>();
+            horizontalPartitions.put(tableName, partitions);
+            
+            // 根據分割鍵建立分割區
+            for (String key : getPartitionKeys(partitionKey)) {
+                Database partition = new Database();
+                partitions.add(partition);
+                monitor.recordPartitionOperation("create", tableName + ":" + key);
+            }
         }
     }
     
     public void createVerticalPartition(String tableName, String[] columns) {
-        Map<String, Database> partitions = new HashMap<>();
-        verticalPartitions.put(tableName, partitions);
-        
-        // 為每個欄位建立分割區
-        for (String column : columns) {
-            Database partition = new Database();
-            partitions.put(column, partition);
+        if (validator.validateTableName(tableName) && validator.validateColumns(columns)) {
+            Map<String, Database> partitions = new HashMap<>();
+            verticalPartitions.put(tableName, partitions);
+            
+            // 為每個欄位建立分割區
+            for (String column : columns) {
+                Database partition = new Database();
+                partitions.put(column, partition);
+                monitor.recordPartitionOperation("create", tableName + ":" + column);
+            }
         }
     }
     
     public void storeData(String tableName, String partitionKey, Map<String, String> data) {
-        // 決定水平分割區
-        Database horizontalPartition = strategy.determineHorizontalPartition(
-            tableName, partitionKey);
+        if (validator.validateData(tableName, partitionKey, data)) {
+            // 決定水平分割區
+            Database horizontalPartition = strategy.determineHorizontalPartition(
+                tableName, partitionKey);
+                
+            // 決定垂直分割區
+            Map<String, Database> verticalPartitions = this.verticalPartitions.get(tableName);
             
-        // 決定垂直分割區
-        Map<String, Database> verticalPartitions = this.verticalPartitions.get(tableName);
-        
-        // 儲存資料
-        for (Map.Entry<String, String> entry : data.entrySet()) {
-            String column = entry.getKey();
-            String value = entry.getValue();
-            
-            Database verticalPartition = verticalPartitions.get(column);
-            verticalPartition.write(partitionKey, value);
+            // 儲存資料
+            for (Map.Entry<String, String> entry : data.entrySet()) {
+                String column = entry.getKey();
+                String value = entry.getValue();
+                
+                Database verticalPartition = verticalPartitions.get(column);
+                verticalPartition.write(partitionKey, value);
+                monitor.recordDataOperation("write", tableName, partitionKey + ":" + column);
+            }
         }
+    }
+    
+    public void checkPartitionHealth() {
+        monitor.checkPartitionHealth(horizontalPartitions, verticalPartitions);
     }
 }
 
@@ -413,6 +543,196 @@ interface ReorganizationStrategy {
     boolean isApplicable(PartitionAnalysis analysis);
     double getScore(PartitionAnalysis analysis);
     void execute(DistributedPartitionManager manager);
+}
+```
+
+### 4. 常見問題與解決方案
+
+#### 問題表象
+1. 效能問題：
+   - 查詢效能下降
+   - 資料存取延遲
+   - 系統負載過高
+
+2. 資料問題：
+   - 資料不一致
+   - 分割不均
+   - 資料完整性受損
+
+3. 管理問題：
+   - 分割策略不當
+   - 維護困難
+   - 監控不足
+
+#### 避免方法
+1. 系統設計：
+   - 選擇適當的分割策略
+   - 設計有效的分割機制
+   - 建立監控系統
+
+2. 資料管理：
+   - 定期檢查分割狀態
+   - 優化分割策略
+   - 確保資料一致性
+
+3. 效能優化：
+   - 合理設置分割大小
+   - 優化查詢策略
+   - 實現負載均衡
+
+#### 處理方案
+1. 技術方案：
+   ```java
+   public class PartitionManager {
+       private PartitionStrategy strategy;
+       private PartitionMonitor monitor;
+       private PartitionValidator validator;
+       private PartitionOptimizer optimizer;
+       
+       public void handlePartitionIssue(PartitionIssue issue) {
+           switch (issue.getType()) {
+               case PERFORMANCE:
+                   handlePerformanceIssue(issue);
+                   break;
+               case DATA:
+                   handleDataIssue(issue);
+                   break;
+               case MANAGEMENT:
+                   handleManagementIssue(issue);
+                   break;
+           }
+       }
+       
+       private void handlePerformanceIssue(PartitionIssue issue) {
+           // 檢查分割策略
+           checkPartitionStrategy();
+           // 優化查詢語句
+           optimizeQueries();
+           // 調整分割大小
+           adjustPartitionSize();
+       }
+       
+       private void handleDataIssue(PartitionIssue issue) {
+           // 檢查資料一致性
+           checkDataConsistency();
+           // 修復分割問題
+           repairPartitions();
+           // 重新平衡資料
+           rebalanceData();
+       }
+       
+       private void handleManagementIssue(PartitionIssue issue) {
+           // 檢查分割策略
+           checkPartitionStrategy();
+           // 改進維護機制
+           improveMaintenance();
+           // 加強監控系統
+           enhanceMonitoring();
+       }
+   }
+   ```
+
+2. 監控方案：
+   ```java
+   public class PartitionMonitor {
+       private MetricsCollector metricsCollector;
+       private PartitionChecker partitionChecker;
+       private AlertManager alertManager;
+       
+       public void monitorPartitions() {
+           PartitionMetrics metrics = metricsCollector.collectMetrics();
+           PartitionStatus status = partitionChecker.checkPartitions();
+           
+           // 檢查查詢效能
+           if (metrics.getQueryPerformance() < PERFORMANCE_THRESHOLD) {
+               alertManager.alert("查詢效能警告", metrics.getDetails());
+           }
+           
+           // 檢查資料一致性
+           if (!status.isConsistent()) {
+               alertManager.alert("資料不一致警告", status.getDetails());
+           }
+           
+           // 檢查分割狀態
+           if (metrics.getPartitionStatus() != PartitionStatus.HEALTHY) {
+               alertManager.alert("分割狀態警告", metrics.getDetails());
+           }
+       }
+   }
+   ```
+
+3. 最佳實踐：
+   - 實現自動化分割
+   - 配置智能監控
+   - 建立告警機制
+   - 優化分割策略
+   - 定期效能優化
+   - 保持系統文檔
+   - 建立應急流程
+
+### 5. 實戰案例
+
+#### 案例一：電商系統資料分割
+```java
+public class ECommercePartition {
+    private PartitionManager partitionManager;
+    private PartitionMonitor monitor;
+    
+    public void createProductPartition(String category) {
+        // 建立水平分割
+        partitionManager.createHorizontalPartition("products", category);
+        
+        // 建立垂直分割
+        String[] columns = {"id", "name", "price", "stock", "description"};
+        partitionManager.createVerticalPartition("products", columns);
+        
+        // 記錄操作
+        monitor.recordPartitionOperation("create", "products:" + category);
+    }
+    
+    public void storeProduct(Product product) {
+        // 儲存產品資料
+        Map<String, String> data = new HashMap<>();
+        data.put("id", product.getId());
+        data.put("name", product.getName());
+        data.put("price", String.valueOf(product.getPrice()));
+        data.put("stock", String.valueOf(product.getStock()));
+        data.put("description", product.getDescription());
+        
+        partitionManager.storeData("products", product.getCategory(), data);
+    }
+}
+```
+
+#### 案例二：社交媒體資料分割
+```java
+public class SocialMediaPartition {
+    private PartitionManager partitionManager;
+    private PartitionMonitor monitor;
+    
+    public void createUserPartition(String region) {
+        // 建立水平分割
+        partitionManager.createHorizontalPartition("users", region);
+        
+        // 建立垂直分割
+        String[] columns = {"id", "username", "email", "profile", "settings"};
+        partitionManager.createVerticalPartition("users", columns);
+        
+        // 記錄操作
+        monitor.recordPartitionOperation("create", "users:" + region);
+    }
+    
+    public void storeUser(User user) {
+        // 儲存用戶資料
+        Map<String, String> data = new HashMap<>();
+        data.put("id", user.getId());
+        data.put("username", user.getUsername());
+        data.put("email", user.getEmail());
+        data.put("profile", user.getProfile());
+        data.put("settings", user.getSettings());
+        
+        partitionManager.storeData("users", user.getRegion(), data);
+    }
 }
 ```
 

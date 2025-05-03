@@ -13,7 +13,75 @@
 - 為什麼需要避免重複消費
 - 基本的消息標記概念
 
-### 2. PlantUML 圖解
+### 2. 使用原因
+消息隊列不重複消費的主要使用原因包括：
+1. 數據一致性：
+   - 避免重複處理
+   - 確保數據準確性
+   - 防止數據錯誤
+
+2. 業務正確性：
+   - 避免重複操作
+   - 確保業務邏輯正確
+   - 防止業務異常
+
+3. 資源優化：
+   - 避免資源浪費
+   - 提高系統效率
+   - 優化處理流程
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 數據問題：
+   - 重複處理
+   - 數據不一致
+   - 數據錯誤
+
+2. 業務問題：
+   - 重複操作
+   - 業務異常
+   - 邏輯錯誤
+
+3. 效能問題：
+   - 資源浪費
+   - 處理延遲
+   - 系統負載高
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 實現冪等性
+   - 設計狀態管理
+   - 建立追蹤機制
+
+2. 數據管理：
+   - 實現消息標記
+   - 設置狀態檢查
+   - 定期清理數據
+
+3. 效能優化：
+   - 優化處理流程
+   - 實現並發控制
+   - 定期效能評估
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 數據問題處理：
+   - 檢查數據一致性
+   - 修復數據錯誤
+   - 恢復正確狀態
+
+2. 業務問題處理：
+   - 檢查業務邏輯
+   - 修復業務異常
+   - 恢復正常流程
+
+3. 效能問題處理：
+   - 優化處理流程
+   - 調整資源分配
+   - 實現動態擴展
+
+### 6. PlantUML 圖解
 ```plantuml
 @startuml
 class Message {
@@ -34,17 +102,19 @@ MessageQueue --> Message
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 7. 分段教學步驟
 
 #### 步驟 1：基本消息標記
 ```java
 public class SimpleMessage {
     private String id;
     private String content;
+    private boolean processed;
     
     public SimpleMessage(String content) {
         this.id = UUID.randomUUID().toString();
         this.content = content;
+        this.processed = false;
     }
     
     public String getId() {
@@ -54,18 +124,34 @@ public class SimpleMessage {
     public String getContent() {
         return content;
     }
+    
+    public boolean isProcessed() {
+        return processed;
+    }
+    
+    public void setProcessed(boolean processed) {
+        this.processed = processed;
+    }
 }
 
 public class SimpleQueue {
     private List<SimpleMessage> messages;
     private Set<String> processedIds;
+    private MessageValidator validator;
     
     public SimpleQueue() {
         messages = new ArrayList<>();
         processedIds = new HashSet<>();
+        validator = new MessageValidator();
     }
     
     public void send(SimpleMessage message) {
+        // 驗證消息
+        if (!validator.validate(message)) {
+            System.out.println("消息驗證失敗！");
+            return;
+        }
+        
         System.out.println("發送消息：" + message.getContent());
         messages.add(message);
     }
@@ -75,11 +161,20 @@ public class SimpleQueue {
             SimpleMessage message = messages.remove(0);
             if (!processedIds.contains(message.getId())) {
                 processedIds.add(message.getId());
+                message.setProcessed(true);
                 System.out.println("接收消息：" + message.getContent());
                 return message;
             }
         }
         return null;
+    }
+}
+
+class MessageValidator {
+    public boolean validate(SimpleMessage message) {
+        return message != null && 
+               message.getContent() != null && 
+               !message.getContent().isEmpty();
     }
 }
 ```
@@ -134,18 +229,23 @@ public enum MessageStatus {
     PENDING,
     PROCESSING,
     COMPLETED,
-    FAILED
+    FAILED,
+    RETRYING
 }
 
 public class AdvancedMessage {
     private String id;
     private String content;
     private MessageStatus status;
+    private int retryCount;
+    private long lastProcessedTime;
     
     public AdvancedMessage(String content) {
         this.id = UUID.randomUUID().toString();
         this.content = content;
         this.status = MessageStatus.PENDING;
+        this.retryCount = 0;
+        this.lastProcessedTime = 0;
     }
     
     public String getId() {
@@ -162,6 +262,22 @@ public class AdvancedMessage {
     
     public void setStatus(MessageStatus status) {
         this.status = status;
+    }
+    
+    public int getRetryCount() {
+        return retryCount;
+    }
+    
+    public void incrementRetryCount() {
+        this.retryCount++;
+    }
+    
+    public long getLastProcessedTime() {
+        return lastProcessedTime;
+    }
+    
+    public void setLastProcessedTime(long time) {
+        this.lastProcessedTime = time;
     }
 }
 ```
@@ -372,6 +488,192 @@ public class Storage {
     
     public void update(Message message) {
         db.put(message.getId(), message);
+    }
+}
+```
+
+### 4. 常見問題與解決方案
+
+#### 問題表象
+1. 數據問題：
+   - 重複處理
+   - 數據不一致
+   - 數據錯誤
+
+2. 業務問題：
+   - 重複操作
+   - 業務異常
+   - 邏輯錯誤
+
+3. 效能問題：
+   - 資源浪費
+   - 處理延遲
+   - 系統負載高
+
+#### 避免方法
+1. 系統設計：
+   - 實現冪等性
+   - 設計狀態管理
+   - 建立追蹤機制
+
+2. 數據管理：
+   - 實現消息標記
+   - 設置狀態檢查
+   - 定期清理數據
+
+3. 效能優化：
+   - 優化處理流程
+   - 實現並發控制
+   - 定期效能評估
+
+#### 處理方案
+1. 技術方案：
+   ```java
+   public class MessageQueueManager {
+       private MessageQueue queue;
+       private StatusTracker tracker;
+       private MessageValidator validator;
+       private RetryManager retryManager;
+       
+       public void handleIssue(MessageQueueIssue issue) {
+           switch (issue.getType()) {
+               case DATA:
+                   handleDataIssue(issue);
+                   break;
+               case BUSINESS:
+                   handleBusinessIssue(issue);
+                   break;
+               case PERFORMANCE:
+                   handlePerformanceIssue(issue);
+                   break;
+           }
+       }
+       
+       private void handleDataIssue(MessageQueueIssue issue) {
+           // 檢查數據一致性
+           checkDataConsistency();
+           // 修復數據錯誤
+           repairData();
+           // 恢復正確狀態
+           restoreState();
+       }
+       
+       private void handleBusinessIssue(MessageQueueIssue issue) {
+           // 檢查業務邏輯
+           checkBusinessLogic();
+           // 修復業務異常
+           repairBusiness();
+           // 恢復正常流程
+           restoreFlow();
+       }
+       
+       private void handlePerformanceIssue(MessageQueueIssue issue) {
+           // 優化處理流程
+           optimizeProcess();
+           // 調整資源分配
+           adjustResources();
+           // 實現動態擴展
+           implementScaling();
+       }
+   }
+   ```
+
+2. 監控方案：
+   ```java
+   public class MessageQueueMonitor {
+       private MetricsCollector metricsCollector;
+       private StatusTracker tracker;
+       private AlertManager alertManager;
+       
+       public void monitor() {
+           MessageQueueMetrics metrics = metricsCollector.collectMetrics();
+           boolean isConsistent = tracker.checkConsistency();
+           
+           // 檢查數據狀態
+           if (!isConsistent) {
+               alertManager.alert("數據狀態警告", metrics.getDetails());
+           }
+           
+           // 檢查業務狀態
+           if (metrics.getBusinessStatus() != BusinessStatus.NORMAL) {
+               alertManager.alert("業務狀態警告", metrics.getDetails());
+           }
+           
+           // 檢查效能狀態
+           if (metrics.getPerformanceStatus() != PerformanceStatus.OPTIMAL) {
+               alertManager.alert("效能警告", metrics.getDetails());
+           }
+       }
+   }
+   ```
+
+3. 最佳實踐：
+   - 實現自動化監控
+   - 配置智能告警
+   - 建立應急流程
+   - 優化處理策略
+   - 定期效能評估
+   - 保持系統文檔
+   - 實現自動恢復
+
+### 5. 實戰案例
+
+#### 案例一：電商系統消息隊列
+```java
+public class ECommerceMessageQueue {
+    private MessageQueueManager manager;
+    private MessageQueueMonitor monitor;
+    
+    public void handleOrderMessage(String orderId) {
+        // 設定消息隊列策略
+        manager.setStrategy(new OrderMessageStrategy(orderId));
+        
+        // 處理消息
+        manager.handleMessage(orderId);
+        
+        // 檢查消息隊列狀態
+        monitor.checkStatus();
+    }
+    
+    public void handlePaymentMessage(String paymentId) {
+        // 設定消息隊列策略
+        manager.setStrategy(new PaymentMessageStrategy(paymentId));
+        
+        // 處理消息
+        manager.handleMessage(paymentId);
+        
+        // 檢查消息隊列狀態
+        monitor.checkStatus();
+    }
+}
+```
+
+#### 案例二：社交媒體消息隊列
+```java
+public class SocialMediaMessageQueue {
+    private MessageQueueManager manager;
+    private MessageQueueMonitor monitor;
+    
+    public void handleUserMessage(String userId) {
+        // 設定消息隊列策略
+        manager.setStrategy(new UserMessageStrategy(userId));
+        
+        // 處理消息
+        manager.handleMessage(userId);
+        
+        // 檢查消息隊列狀態
+        monitor.checkStatus();
+    }
+    
+    public void handlePostMessage(String postId) {
+        // 設定消息隊列策略
+        manager.setStrategy(new PostMessageStrategy(postId));
+        
+        // 處理消息
+        manager.handleMessage(postId);
+        
+        // 檢查消息隊列狀態
+        monitor.checkStatus();
     }
 }
 ```

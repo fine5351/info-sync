@@ -202,7 +202,7 @@ interface AvailabilityStrategy {
 
 class BackupStrategy implements AvailabilityStrategy {
     @Override
-    public void handleUnavailable(Node node) {
+    public void handleU~navailable(Node node) {
         // 使用備用節點
         System.out.println("使用備用節點替代: " + node.getId());
     }
@@ -373,6 +373,139 @@ interface FaultStrategy {
     boolean isApplicable(FaultAnalysis analysis);
     double getScore(FaultAnalysis analysis);
     void execute(CAPSystem system);
+}
+```
+
+### 4. 常見問題與解決方案
+
+#### 問題表象
+1. 一致性問題：
+   - 數據不一致
+   - 讀取到過期數據
+   - 並發寫入衝突
+
+2. 可用性問題：
+   - 系統響應慢
+   - 服務不可用
+   - 節點故障
+
+3. 分區容錯問題：
+   - 網絡分區
+   - 節點間通信中斷
+   - 數據同步延遲
+
+#### 避免方法
+1. 一致性優化：
+   - 實現強一致性協議（如 Paxos、Raft）
+   - 使用版本控制機制
+   - 實現樂觀鎖或悲觀鎖
+
+2. 可用性提升：
+   - 實現負載均衡
+   - 使用健康檢查機制
+   - 實現自動故障轉移
+
+3. 分區容錯處理：
+   - 實現心跳檢測
+   - 使用超時機制
+   - 實現自動重連
+
+#### 處理方案
+1. 技術方案：
+   ```java
+   public class CAPSystem {
+       private ConsistencyManager consistencyManager;
+       private AvailabilityManager availabilityManager;
+       private PartitionToleranceManager partitionToleranceManager;
+       
+       public void handleSystemIssue(IssueType issue) {
+           switch (issue) {
+               case CONSISTENCY:
+                   consistencyManager.handleConsistencyIssue();
+                   break;
+               case AVAILABILITY:
+                   availabilityManager.handleAvailabilityIssue();
+                   break;
+               case PARTITION:
+                   partitionToleranceManager.handlePartitionIssue();
+                   break;
+           }
+       }
+   }
+   ```
+
+2. 監控方案：
+   ```java
+   public class SystemMonitor {
+       private MetricsCollector metricsCollector;
+       private AlertManager alertManager;
+       
+       public void monitorSystem() {
+           // 收集系統指標
+           SystemMetrics metrics = metricsCollector.collectMetrics();
+           
+           // 檢查系統狀態
+           if (metrics.isConsistencyDegraded()) {
+               alertManager.alert("一致性問題", metrics.getConsistencyDetails());
+           }
+           
+           if (metrics.isAvailabilityDegraded()) {
+               alertManager.alert("可用性問題", metrics.getAvailabilityDetails());
+           }
+           
+           if (metrics.isPartitionToleranceDegraded()) {
+               alertManager.alert("分區容錯問題", metrics.getPartitionToleranceDetails());
+           }
+       }
+   }
+   ```
+
+3. 最佳實踐：
+   - 根據業務需求選擇合適的 CAP 組合
+   - 實現分層架構，不同層級採用不同的 CAP 策略
+   - 定期進行系統評估和優化
+   - 建立完善的監控和告警機制
+   - 制定詳細的故障處理流程
+
+### 5. 實戰案例
+
+#### 案例一：電商系統
+```java
+public class ECommerceSystem {
+    private ProductService productService;
+    private OrderService orderService;
+    private InventoryService inventoryService;
+    
+    public void handleOrder(Order order) {
+        // 使用最終一致性處理訂單
+        orderService.createOrder(order);
+        
+        // 使用強一致性處理庫存
+        inventoryService.updateInventory(order.getProductId(), order.getQuantity());
+        
+        // 使用高可用性處理支付
+        paymentService.processPayment(order);
+    }
+}
+```
+
+#### 案例二：社交媒體系統
+```java
+public class SocialMediaSystem {
+    private PostService postService;
+    private CommentService commentService;
+    private LikeService likeService;
+    
+    public void handlePost(Post post) {
+        // 使用高可用性處理發文
+        postService.createPost(post);
+        
+        // 使用最終一致性處理評論
+        commentService.addComment(post.getId(), comment);
+        
+        // 使用分區容錯處理點讚
+        likeService.handleLike(post.getId(), userId);
+    }
 }
 ```
 

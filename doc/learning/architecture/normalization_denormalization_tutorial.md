@@ -12,7 +12,76 @@
 - 什麼是反正規化
 - 基本的資料組織概念
 
-### 2. PlantUML 圖解
+### 2. 使用原因
+正規化-反正規化的主要使用原因包括：
+1. 數據完整性：
+   - 減少數據冗餘
+   - 避免數據不一致
+   - 確保數據準確性
+
+2. 查詢效能：
+   - 優化查詢速度
+   - 減少連接操作
+   - 提高系統響應
+
+3. 系統維護：
+   - 簡化數據更新
+   - 降低維護成本
+   - 提高系統可擴展性
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 數據問題：
+   - 數據冗餘
+   - 更新異常
+   - 插入異常
+   - 刪除異常
+
+2. 效能問題：
+   - 查詢緩慢
+   - 連接開銷大
+   - 資源消耗高
+
+3. 維護問題：
+   - 更新困難
+   - 維護成本高
+   - 擴展性差
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 設計階段：
+   - 合理規劃數據結構
+   - 適當使用正規化
+   - 適時採用反正規化
+
+2. 實現階段：
+   - 使用索引優化
+   - 實現緩存機制
+   - 優化查詢語句
+
+3. 維護階段：
+   - 定期數據清理
+   - 監控系統效能
+   - 及時調整結構
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 數據問題處理：
+   - 檢查數據完整性
+   - 修復異常數據
+   - 重建索引結構
+
+2. 效能問題處理：
+   - 優化查詢語句
+   - 調整數據結構
+   - 增加緩存機制
+
+3. 維護問題處理：
+   - 重構數據模型
+   - 優化維護流程
+   - 改進監控機制
+
+### 6. PlantUML 圖解
 ```plantuml
 @startuml
 class Student {
@@ -33,7 +102,7 @@ Student "1" -- "n" Score
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 7. 分段教學步驟
 
 #### 步驟 1：基本資料結構
 ```java
@@ -348,6 +417,173 @@ public class SyncManager {
             source.getSubjectName(score.getSubjectId()),
             score.getScore()
         );
+    }
+}
+```
+
+### 4. 實戰案例
+
+#### 案例一：電商訂單系統
+```java
+// 正規化設計
+public class Order {
+    private String orderId;
+    private String customerId;
+    private Date orderDate;
+    private List<OrderItem> items;
+    
+    // 反正規化設計
+    private String customerName;
+    private String customerAddress;
+    private BigDecimal totalAmount;
+}
+
+// 使用 JPA 實現
+@Entity
+@Table(name = "orders")
+public class Order {
+    @Id
+    private String orderId;
+    
+    @ManyToOne
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
+    
+    @OneToMany(mappedBy = "order")
+    private List<OrderItem> items;
+    
+    // 反正規化字段
+    @Column(name = "customer_name")
+    private String customerName;
+    
+    @Column(name = "total_amount")
+    private BigDecimal totalAmount;
+}
+```
+
+#### 案例二：社交媒體系統
+```java
+// 正規化設計
+public class Post {
+    private String postId;
+    private String userId;
+    private String content;
+    private List<Comment> comments;
+    
+    // 反正規化設計
+    private String userName;
+    private String userAvatar;
+    private int likeCount;
+}
+
+// 使用 MongoDB 實現
+@Document(collection = "posts")
+public class Post {
+    @Id
+    private String postId;
+    
+    private String userId;
+    private String content;
+    
+    // 反正規化字段
+    private String userName;
+    private String userAvatar;
+    private int likeCount;
+    
+    @DBRef
+    private List<Comment> comments;
+}
+```
+
+### 5. 最佳實踐
+
+#### 1. 使用現有工具
+```java
+// 使用 Hibernate 實現正規化
+@Entity
+@Table(name = "students")
+public class Student {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String name;
+    private int grade;
+    
+    @OneToMany(mappedBy = "student")
+    private List<Score> scores;
+}
+
+// 使用 Redis 實現反正規化
+public class StudentCache {
+    private final RedisTemplate<String, Object> redisTemplate;
+    
+    public void cacheStudent(Student student) {
+        String key = "student:" + student.getId();
+        redisTemplate.opsForValue().set(key, student);
+    }
+    
+    public Student getCachedStudent(Long id) {
+        String key = "student:" + id;
+        return (Student) redisTemplate.opsForValue().get(key);
+    }
+}
+```
+
+#### 2. 監控與優化
+```java
+public class DatabaseMonitor {
+    private MetricsCollector metricsCollector;
+    private AlertManager alertManager;
+    
+    public void monitor() {
+        DatabaseMetrics metrics = metricsCollector.collectMetrics();
+        
+        // 檢查數據完整性
+        if (!metrics.isDataConsistent()) {
+            alertManager.alert("數據警告", metrics.getDetails());
+        }
+        
+        // 檢查查詢效能
+        if (metrics.getQueryPerformance() < 0.8) {
+            alertManager.alert("效能警告", metrics.getDetails());
+        }
+        
+        // 檢查緩存命中率
+        if (metrics.getCacheHitRate() < 0.7) {
+            alertManager.alert("緩存警告", metrics.getDetails());
+        }
+    }
+}
+```
+
+#### 3. 錯誤處理與恢復
+```java
+public class DataRecovery {
+    private DataValidator validator;
+    private DataRepairer repairer;
+    
+    public void recover() {
+        // 檢查數據狀態
+        checkDataState();
+        
+        // 修復數據錯誤
+        fixDataIssues();
+        
+        // 重建索引
+        rebuildIndexes();
+    }
+    
+    private void checkDataState() {
+        // 實現數據狀態檢查邏輯
+    }
+    
+    private void fixDataIssues() {
+        // 實現數據修復邏輯
+    }
+    
+    private void rebuildIndexes() {
+        // 實現索引重建邏輯
     }
 }
 ```

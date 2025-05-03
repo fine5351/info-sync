@@ -13,7 +13,75 @@
 - 為什麼需要一致性
 - 基本的更新機制
 
-### 2. PlantUML 圖解
+### 2. 使用原因
+快取資料庫一致性的主要使用原因包括：
+1. 提高系統效能：
+   - 減少資料庫訪問次數
+   - 加快資料讀取速度
+   - 降低系統負載
+
+2. 確保資料正確性：
+   - 避免資料不一致
+   - 防止髒讀問題
+   - 保證資料完整性
+
+3. 優化使用者體驗：
+   - 提供即時資料更新
+   - 減少等待時間
+   - 提升系統響應速度
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 資料問題：
+   - 快取與資料庫不一致
+   - 資料過期或失效
+   - 髒讀問題
+
+2. 效能問題：
+   - 快取擊穿
+   - 快取雪崩
+   - 快取穿透
+
+3. 管理問題：
+   - 版本控制混亂
+   - 更新策略不當
+   - 監控不足
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 實現適當的更新策略
+   - 設計有效的失效機制
+   - 建立監控系統
+
+2. 資料管理：
+   - 定期一致性檢查
+   - 實現版本控制
+   - 優化更新策略
+
+3. 效能優化：
+   - 合理配置快取大小
+   - 優化更新頻率
+   - 實現負載均衡
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 資料問題處理：
+   - 執行一致性檢查
+   - 修復不一致資料
+   - 更新快取策略
+
+2. 效能問題處理：
+   - 優化快取機制
+   - 調整更新頻率
+   - 改進失效策略
+
+3. 管理問題處理：
+   - 完善版本控制
+   - 改進更新策略
+   - 加強監控系統
+
+### 6. PlantUML 圖解
 ```plantuml
 @startuml
 class CacheItem {
@@ -36,7 +104,7 @@ SimpleCache --> CacheItem
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 7. 分段教學步驟
 
 #### 步驟 1：基本快取實現
 ```java
@@ -44,11 +112,15 @@ public class SimpleCacheItem {
     private String key;
     private Object value;
     private int version;
+    private long lastUpdateTime;
+    private boolean isValid;
     
     public SimpleCacheItem(String key, Object value) {
         this.key = key;
         this.value = value;
         this.version = 0;
+        this.lastUpdateTime = System.currentTimeMillis();
+        this.isValid = true;
     }
     
     public String getKey() {
@@ -66,25 +138,43 @@ public class SimpleCacheItem {
     public void updateValue(Object newValue) {
         this.value = newValue;
         this.version++;
+        this.lastUpdateTime = System.currentTimeMillis();
+    }
+    
+    public boolean isStale(long currentTime) {
+        return currentTime - lastUpdateTime > 5000; // 5秒過期
+    }
+    
+    public boolean isValid() {
+        return isValid;
+    }
+    
+    public void invalidate() {
+        this.isValid = false;
     }
 }
 
 public class SimpleCache {
     private Map<String, SimpleCacheItem> items;
+    private ConsistencyChecker consistencyChecker;
+    private VersionManager versionManager;
     
     public SimpleCache() {
         items = new HashMap<>();
+        consistencyChecker = new ConsistencyChecker();
+        versionManager = new VersionManager();
     }
     
     public void put(String key, Object value) {
         SimpleCacheItem item = new SimpleCacheItem(key, value);
         items.put(key, item);
+        versionManager.recordVersion(key, item.getVersion());
         System.out.println("存入快取：" + key);
     }
     
     public Object get(String key) {
         SimpleCacheItem item = items.get(key);
-        if (item != null) {
+        if (item != null && item.isValid() && !item.isStale(System.currentTimeMillis())) {
             return item.getValue();
         }
         return null;
@@ -94,8 +184,37 @@ public class SimpleCache {
         SimpleCacheItem item = items.get(key);
         if (item != null) {
             item.updateValue(newValue);
+            versionManager.recordVersion(key, item.getVersion());
+            consistencyChecker.checkConsistency(key, newValue);
             System.out.println("更新快取：" + key + "，版本：" + item.getVersion());
         }
+    }
+    
+    public void invalidate(String key) {
+        SimpleCacheItem item = items.get(key);
+        if (item != null) {
+            item.invalidate();
+            System.out.println("失效快取：" + key);
+        }
+    }
+}
+
+class ConsistencyChecker {
+    public void checkConsistency(String key, Object value) {
+        // 實現一致性檢查邏輯
+        System.out.println("檢查一致性：" + key);
+    }
+}
+
+class VersionManager {
+    private Map<String, Integer> versions;
+    
+    public void recordVersion(String key, int version) {
+        versions.put(key, version);
+    }
+    
+    public int getVersion(String key) {
+        return versions.getOrDefault(key, 0);
     }
 }
 ```
@@ -152,23 +271,51 @@ public class AdvancedCacheItem {
     private Object value;
     private int version;
     private long lastUpdateTime;
+    private boolean isValid;
+    private List<CacheListener> listeners;
     
     public AdvancedCacheItem(String key, Object value) {
         this.key = key;
         this.value = value;
         this.version = 0;
         this.lastUpdateTime = System.currentTimeMillis();
+        this.isValid = true;
+        this.listeners = new ArrayList<>();
     }
     
     public void updateValue(Object newValue) {
         this.value = newValue;
         this.version++;
         this.lastUpdateTime = System.currentTimeMillis();
+        notifyListeners();
     }
     
     public boolean isStale(long currentTime) {
         return currentTime - lastUpdateTime > 5000; // 5秒過期
     }
+    
+    public boolean isValid() {
+        return isValid;
+    }
+    
+    public void invalidate() {
+        this.isValid = false;
+        notifyListeners();
+    }
+    
+    public void addListener(CacheListener listener) {
+        listeners.add(listener);
+    }
+    
+    private void notifyListeners() {
+        for (CacheListener listener : listeners) {
+            listener.onCacheUpdate(this);
+        }
+    }
+}
+
+interface CacheListener {
+    void onCacheUpdate(AdvancedCacheItem item);
 }
 ```
 
@@ -417,4 +564,185 @@ public class TransactionManager {
 }
 ```
 
-這個教學文件提供了從基礎到進階的快取資料庫一致性學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的快取實現開始，中級學習者可以學習版本控制和更新通知，而高級學習者則可以掌握分散式一致性、多版本並發控制和事務管理等進階功能。 
+### 4. 常見問題與解決方案
+
+#### 問題表象
+1. 資料問題：
+   - 快取與資料庫不一致
+   - 資料過期或失效
+   - 髒讀問題
+
+2. 效能問題：
+   - 快取擊穿
+   - 快取雪崩
+   - 快取穿透
+
+3. 管理問題：
+   - 版本控制混亂
+   - 更新策略不當
+   - 監控不足
+
+#### 避免方法
+1. 系統設計：
+   - 實現適當的更新策略
+   - 設計有效的失效機制
+   - 建立監控系統
+
+2. 資料管理：
+   - 定期一致性檢查
+   - 實現版本控制
+   - 優化更新策略
+
+3. 效能優化：
+   - 合理配置快取大小
+   - 優化更新頻率
+   - 實現負載均衡
+
+#### 處理方案
+1. 技術方案：
+   ```java
+   public class CacheConsistencyManager {
+       private CacheManager cacheManager;
+       private DatabaseManager dbManager;
+       private VersionManager versionManager;
+       private MonitoringManager monitoringManager;
+       private AlertManager alertManager;
+       
+       public void handleConsistencyIssue(ConsistencyIssue issue) {
+           switch (issue.getType()) {
+               case DATA:
+                   handleDataIssue(issue);
+                   break;
+               case PERFORMANCE:
+                   handlePerformanceIssue(issue);
+                   break;
+               case MANAGEMENT:
+                   handleManagementIssue(issue);
+                   break;
+           }
+       }
+       
+       private void handleDataIssue(ConsistencyIssue issue) {
+           // 檢查資料一致性
+           checkDataConsistency();
+           // 修復不一致資料
+           repairInconsistentData();
+           // 更新快取策略
+           updateCacheStrategy();
+       }
+       
+       private void handlePerformanceIssue(ConsistencyIssue issue) {
+           // 檢查效能指標
+           checkPerformanceMetrics();
+           // 優化快取機制
+           optimizeCache();
+           // 調整更新頻率
+           adjustUpdateFrequency();
+       }
+       
+       private void handleManagementIssue(ConsistencyIssue issue) {
+           // 檢查版本控制
+           checkVersionControl();
+           // 改進更新策略
+           improveUpdateStrategy();
+           // 加強監控系統
+           enhanceMonitoring();
+       }
+   }
+   ```
+
+2. 監控方案：
+   ```java
+   public class CacheMonitor {
+       private MetricsCollector metricsCollector;
+       private ConsistencyChecker consistencyChecker;
+       private AlertManager alertManager;
+       
+       public void monitorCache() {
+           CacheMetrics metrics = metricsCollector.collectMetrics();
+           ConsistencyStatus status = consistencyChecker.checkConsistency();
+           
+           // 檢查快取命中率
+           if (metrics.getHitRate() < HIT_RATE_THRESHOLD) {
+               alertManager.alert("快取命中率警告", metrics.getDetails());
+           }
+           
+           // 檢查資料一致性
+           if (!status.isConsistent()) {
+               alertManager.alert("資料不一致警告", status.getDetails());
+           }
+           
+           // 檢查資源使用
+           if (metrics.getResourceUsage() > RESOURCE_THRESHOLD) {
+               alertManager.alert("資源使用警告", metrics.getDetails());
+           }
+       }
+   }
+   ```
+
+3. 最佳實踐：
+   - 實現自動化更新
+   - 配置智能失效
+   - 建立版本控制
+   - 優化更新策略
+   - 完善監控告警
+   - 定期效能優化
+   - 保持系統文檔
+   - 建立應急流程
+
+### 5. 實戰案例
+
+#### 案例一：電商系統快取一致性
+```java
+public class ECommerceCache {
+    private CacheManager cacheManager;
+    private DatabaseManager dbManager;
+    private VersionManager versionManager;
+    
+    public void updateProduct(Product product) {
+        // 更新資料庫
+        dbManager.updateProduct(product);
+        
+        // 更新快取
+        cacheManager.updateProduct(product);
+        
+        // 記錄版本
+        versionManager.recordVersion("product", product.getId());
+        
+        // 檢查一致性
+        checkConsistency(product);
+    }
+    
+    private void checkConsistency(Product product) {
+        // 實現一致性檢查邏輯
+        System.out.println("檢查產品一致性：" + product.getId());
+    }
+}
+```
+
+#### 案例二：社交媒體快取一致性
+```java
+public class SocialMediaCache {
+    private CacheManager cacheManager;
+    private DatabaseManager dbManager;
+    private VersionManager versionManager;
+    
+    public void updatePost(Post post) {
+        // 更新資料庫
+        dbManager.updatePost(post);
+        
+        // 更新快取
+        cacheManager.updatePost(post);
+        
+        // 記錄版本
+        versionManager.recordVersion("post", post.getId());
+        
+        // 檢查一致性
+        checkConsistency(post);
+    }
+    
+    private void checkConsistency(Post post) {
+        // 實現一致性檢查邏輯
+        System.out.println("檢查貼文一致性：" + post.getId());
+    }
+} 

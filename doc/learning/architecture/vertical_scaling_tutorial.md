@@ -13,86 +13,217 @@
 - 為什麼需要擴展
 - 基本的擴展方式
 
-### 2. PlantUML 圖解
-```plantuml
-@startuml
-class Server {
-    - memory: int
-    - cpu: int
-    - storage: int
-    + upgradeMemory()
-    + upgradeCPU()
-    + upgradeStorage()
+### 2. 使用原因
+垂直擴展的主要使用原因包括：
+1. 效能需求：
+   - 處理更多請求
+   - 提高運算速度
+   - 增加數據處理能力
+
+2. 業務增長：
+   - 用戶數量增加
+   - 數據量增長
+   - 業務複雜度提升
+
+3. 系統穩定性：
+   - 提高系統可靠性
+   - 減少系統瓶頸
+   - 優化資源利用
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 效能問題：
+   - CPU 使用率過高
+   - 記憶體不足
+   - 磁碟 I/O 瓶頸
+
+2. 成本問題：
+   - 硬體成本增加
+   - 維護成本上升
+   - 能源消耗增加
+
+3. 擴展限制：
+   - 單機硬體限制
+   - 擴展成本遞增
+   - 維護複雜度增加
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 合理規劃資源需求
+   - 預留擴展空間
+   - 實現資源監控
+
+2. 實現階段：
+   - 使用資源管理工具
+   - 實現效能監控
+   - 優化資源使用
+
+3. 維護階段：
+   - 定期效能評估
+   - 及時資源調整
+   - 監控成本效益
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 效能問題處理：
+   - 分析效能瓶頸
+   - 優化資源配置
+   - 升級硬體設備
+
+2. 成本問題處理：
+   - 評估成本效益
+   - 優化資源使用
+   - 考慮替代方案
+
+3. 擴展限制處理：
+   - 評估擴展需求
+   - 考慮水平擴展
+   - 優化系統架構
+
+### 6. 實戰案例
+
+#### 案例一：使用 Spring Boot Actuator 監控
+```java
+@SpringBootApplication
+@EnableActuator
+public class MonitoringApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MonitoringApplication.class, args);
+    }
 }
 
-class Application {
-    - users: int
-    + handleRequest()
+@RestController
+public class ResourceController {
+    @Autowired
+    private SystemMetrics metrics;
+    
+    @GetMapping("/metrics")
+    public Map<String, Object> getMetrics() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("cpu", metrics.getCPUUsage());
+        result.put("memory", metrics.getMemoryUsage());
+        result.put("disk", metrics.getDiskUsage());
+        return result;
+    }
 }
-
-Server --> Application
-@enduml
 ```
 
-### 3. 分段教學步驟
-
-#### 步驟 1：基本系統監控
+#### 案例二：使用 Micrometer 監控
 ```java
-public class SystemMonitor {
-    private int memoryUsage;
-    private int cpuUsage;
-    private int storageUsage;
+@Configuration
+public class MetricsConfig {
+    @Bean
+    public MeterRegistry meterRegistry() {
+        return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+    }
+}
+
+@Service
+public class ResourceMonitor {
+    private final MeterRegistry registry;
     
-    public void checkSystemStatus() {
-        // 檢查記憶體使用量
-        memoryUsage = getMemoryUsage();
-        System.out.println("記憶體使用量: " + memoryUsage + "%");
-        
-        // 檢查 CPU 使用量
-        cpuUsage = getCPUUsage();
-        System.out.println("CPU 使用量: " + cpuUsage + "%");
-        
-        // 檢查儲存空間使用量
-        storageUsage = getStorageUsage();
-        System.out.println("儲存空間使用量: " + storageUsage + "%");
+    public ResourceMonitor(MeterRegistry registry) {
+        this.registry = registry;
     }
     
-    private int getMemoryUsage() {
-        // 模擬取得記憶體使用量
-        return 75;
-    }
-    
-    private int getCPUUsage() {
-        // 模擬取得 CPU 使用量
-        return 60;
-    }
-    
-    private int getStorageUsage() {
-        // 模擬取得儲存空間使用量
-        return 80;
+    public void monitorResources() {
+        // CPU 使用率
+        registry.gauge("system.cpu.usage", 
+            Runtime.getRuntime().availableProcessors(),
+            Runtime.getRuntime()::availableProcessors);
+            
+        // 記憶體使用率
+        registry.gauge("system.memory.usage",
+            Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory(),
+            value -> value);
+            
+        // 磁碟使用率
+        File root = new File("/");
+        registry.gauge("system.disk.usage",
+            root.getTotalSpace() - root.getFreeSpace(),
+            value -> value);
     }
 }
 ```
 
-#### 步驟 2：簡單的擴展決策
+### 7. 最佳實踐
+
+#### 1. 使用現有工具
 ```java
-public class ScalingDecision {
-    private SystemMonitor monitor;
+// 使用 Dropwizard Metrics
+public class SystemMetrics {
+    private final MetricRegistry metrics = new MetricRegistry();
+    private final JmxReporter reporter;
     
-    public void makeDecision() {
-        monitor.checkSystemStatus();
+    public SystemMetrics() {
+        reporter = JmxReporter.forRegistry(metrics).build();
+        reporter.start();
         
-        if (monitor.getMemoryUsage() > 80) {
-            System.out.println("建議增加記憶體");
+        // 註冊 CPU 使用率計量
+        metrics.register("cpu.usage", (Gauge<Double>) () -> 
+            ManagementFactory.getOperatingSystemMXBean().getSystemLoadAverage());
+            
+        // 註冊記憶體使用率計量
+        metrics.register("memory.usage", (Gauge<Long>) () -> 
+            Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+    }
+}
+```
+
+#### 2. 監控與警報
+```java
+public class ResourceAlert {
+    private final AlertManager alertManager;
+    private final ResourceMonitor monitor;
+    
+    public void checkResources() {
+        // CPU 警報
+        if (monitor.getCPUUsage() > 80) {
+            alertManager.alert("CPU 使用率過高", 
+                "當前 CPU 使用率: " + monitor.getCPUUsage() + "%");
         }
         
-        if (monitor.getCPUUsage() > 70) {
-            System.out.println("建議升級 CPU");
+        // 記憶體警報
+        if (monitor.getMemoryUsage() > 85) {
+            alertManager.alert("記憶體使用率過高",
+                "當前記憶體使用率: " + monitor.getMemoryUsage() + "%");
         }
         
-        if (monitor.getStorageUsage() > 90) {
-            System.out.println("建議增加儲存空間");
+        // 磁碟警報
+        if (monitor.getDiskUsage() > 90) {
+            alertManager.alert("磁碟空間不足",
+                "當前磁碟使用率: " + monitor.getDiskUsage() + "%");
         }
+    }
+}
+```
+
+#### 3. 自動擴展
+```java
+public class AutoScaler {
+    private final ResourceMonitor monitor;
+    private final ScalingManager scalingManager;
+    
+    public void evaluateScaling() {
+        // 評估是否需要擴展
+        if (shouldScaleUp()) {
+            scalingManager.scaleUp();
+        } else if (shouldScaleDown()) {
+            scalingManager.scaleDown();
+        }
+    }
+    
+    private boolean shouldScaleUp() {
+        return monitor.getCPUUsage() > 80 || 
+               monitor.getMemoryUsage() > 85 ||
+               monitor.getDiskUsage() > 90;
+    }
+    
+    private boolean shouldScaleDown() {
+        return monitor.getCPUUsage() < 30 && 
+               monitor.getMemoryUsage() < 40 &&
+               monitor.getDiskUsage() < 50;
     }
 }
 ```

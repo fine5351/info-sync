@@ -13,7 +13,75 @@
 - 為什麼需要容錯轉移
 - 基本的備用系統概念
 
-### 2. PlantUML 圖解
+### 2. 使用原因
+容錯轉移系統的主要使用原因包括：
+1. 提高系統可用性：
+   - 確保服務持續運行
+   - 減少系統停機時間
+   - 提供不間斷的用戶體驗
+
+2. 增強系統可靠性：
+   - 防止單點故障
+   - 提供故障恢復機制
+   - 確保數據完整性
+
+3. 優化資源利用：
+   - 實現負載均衡
+   - 提高資源利用率
+   - 支持系統擴展
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 系統故障：
+   - 服務不可用
+   - 響應超時
+   - 數據不一致
+
+2. 性能問題：
+   - 切換延遲
+   - 資源競爭
+   - 負載不均
+
+3. 監控問題：
+   - 故障檢測延遲
+   - 狀態同步失敗
+   - 告警不及時
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 實現冗余備份
+   - 設計自動切換機制
+   - 建立健康檢查機制
+
+2. 資源管理：
+   - 合理分配資源
+   - 實現負載均衡
+   - 優化資源使用
+
+3. 監控機制：
+   - 建立實時監控
+   - 設置預警閾值
+   - 實現自動告警
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 故障處理：
+   - 自動切換備用系統
+   - 執行故障恢復
+   - 記錄故障信息
+
+2. 性能優化：
+   - 調整資源分配
+   - 優化切換策略
+   - 改進負載均衡
+
+3. 監控改進：
+   - 完善監控機制
+   - 優化告警策略
+   - 加強故障預測
+
+### 6. PlantUML 圖解
 ```plantuml
 @startuml
 class Computer {
@@ -33,25 +101,32 @@ Computer --> BackupComputer : 故障時切換
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 7. 分段教學步驟
 
 #### 步驟 1：基本電腦系統
 ```java
 public class SimpleComputerSystem {
     private Computer mainComputer;
     private Computer backupComputer;
+    private HealthMonitor healthMonitor;
+    private AlertSystem alertSystem;
     
     public SimpleComputerSystem() {
         mainComputer = new Computer("主電腦");
         backupComputer = new Computer("備用電腦");
+        healthMonitor = new HealthMonitor();
+        alertSystem = new AlertSystem();
     }
     
     public void useComputer() {
         if (mainComputer.isWorking()) {
             mainComputer.use();
+            healthMonitor.checkHealth(mainComputer);
         } else {
             System.out.println("主電腦故障，切換到備用電腦");
+            alertSystem.sendAlert("主電腦故障，正在切換到備用電腦");
             backupComputer.takeOver();
+            healthMonitor.checkHealth(backupComputer);
         }
     }
 }
@@ -59,14 +134,23 @@ public class SimpleComputerSystem {
 class Computer {
     private String name;
     private boolean isWorking;
+    private long lastHealthCheck;
+    private int errorCount;
     
     public Computer(String name) {
         this.name = name;
         this.isWorking = true;
+        this.lastHealthCheck = System.currentTimeMillis();
+        this.errorCount = 0;
     }
     
     public void use() {
         System.out.println("使用 " + name);
+        // 模擬可能的故障
+        if (Math.random() < 0.1) {
+            isWorking = false;
+            errorCount++;
+        }
     }
     
     public boolean isWorking() {
@@ -76,26 +160,29 @@ class Computer {
     public void takeOver() {
         System.out.println(name + " 接管工作");
         isWorking = true;
+        errorCount = 0;
+    }
+    
+    public void reset() {
+        isWorking = true;
+        errorCount = 0;
+        lastHealthCheck = System.currentTimeMillis();
     }
 }
-```
 
-#### 步驟 2：簡單的故障檢測
-```java
-public class FaultDetector {
-    private Computer computer;
-    
-    public void checkComputer() {
+class HealthMonitor {
+    public void checkHealth(Computer computer) {
         if (!computer.isWorking()) {
-            System.out.println("檢測到電腦故障");
-            // 觸發故障處理
-            handleFault();
+            System.out.println("檢測到電腦健康問題");
+            // 可以添加更多的健康檢查邏輯
         }
     }
-    
-    private void handleFault() {
-        System.out.println("開始處理故障");
-        // 這裡可以加入更多的故障處理邏輯
+}
+
+class AlertSystem {
+    public void sendAlert(String message) {
+        System.out.println("告警: " + message);
+        // 可以實現更多的告警邏輯，如發送郵件、短信等
     }
 }
 ```
@@ -140,14 +227,30 @@ FailoverManager --> StateSynchronizer
 #### 步驟 1：健康檢查
 ```java
 import java.util.*;
+import java.util.concurrent.*;
 
 public class HealthChecker {
     private List<HealthCheck> checks;
     private Map<String, Boolean> nodeStatus;
+    private ScheduledExecutorService scheduler;
+    private AlertManager alertManager;
     
     public HealthChecker() {
         checks = new ArrayList<>();
         nodeStatus = new HashMap<>();
+        scheduler = Executors.newScheduledThreadPool(1);
+        alertManager = new AlertManager();
+    }
+    
+    public void startMonitoring() {
+        scheduler.scheduleAtFixedRate(() -> {
+            for (String nodeId : nodeStatus.keySet()) {
+                boolean isHealthy = checkHealth(nodeId);
+                if (!isHealthy) {
+                    alertManager.sendAlert("節點 " + nodeId + " 健康檢查失敗");
+                }
+            }
+        }, 0, 30, TimeUnit.SECONDS);
     }
     
     public void addCheck(HealthCheck check) {
@@ -159,16 +262,22 @@ public class HealthChecker {
         for (HealthCheck check : checks) {
             if (!check.perform(nodeId)) {
                 isHealthy = false;
+                alertManager.sendAlert("節點 " + nodeId + " 檢查失敗: " + check.getName());
                 break;
             }
         }
         nodeStatus.put(nodeId, isHealthy);
         return isHealthy;
     }
+    
+    public void shutdown() {
+        scheduler.shutdown();
+    }
 }
 
 interface HealthCheck {
     boolean perform(String nodeId);
+    String getName();
 }
 
 class PingCheck implements HealthCheck {
@@ -176,6 +285,18 @@ class PingCheck implements HealthCheck {
     public boolean perform(String nodeId) {
         // 模擬 ping 檢查
         return Math.random() > 0.1; // 90% 的成功率
+    }
+    
+    @Override
+    public String getName() {
+        return "Ping 檢查";
+    }
+}
+
+class AlertManager {
+    public void sendAlert(String message) {
+        System.out.println("告警: " + message);
+        // 可以實現更多的告警邏輯
     }
 }
 ```

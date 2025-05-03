@@ -13,7 +13,75 @@
 - 為什麼需要多台伺服器
 - 基本的負載分配
 
-### 2. PlantUML 圖解
+### 2. 使用原因
+水平擴展的主要使用原因包括：
+1. 效能提升：
+   - 提高系統吞吐量
+   - 減少響應時間
+   - 優化資源使用
+
+2. 可用性：
+   - 避免單點故障
+   - 提供故障轉移
+   - 確保服務不中斷
+
+3. 擴展性：
+   - 支援業務增長
+   - 適應流量波動
+   - 方便資源調整
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 負載問題：
+   - 負載不均衡
+   - 資源浪費
+   - 效能瓶頸
+
+2. 系統問題：
+   - 節點故障
+   - 網路延遲
+   - 同步失敗
+
+3. 管理問題：
+   - 配置複雜
+   - 監控困難
+   - 維護成本高
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 選擇適當的擴展策略
+   - 設計有效的負載均衡
+   - 建立監控系統
+
+2. 資源管理：
+   - 合理分配資源
+   - 優化負載策略
+   - 實現自動擴展
+
+3. 效能優化：
+   - 優化資源使用
+   - 實現負載均衡
+   - 定期效能評估
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 負載問題處理：
+   - 調整負載策略
+   - 優化資源分配
+   - 實現動態擴展
+
+2. 系統問題處理：
+   - 檢查節點狀態
+   - 修復網路問題
+   - 重試同步操作
+
+3. 管理問題處理：
+   - 簡化配置流程
+   - 加強監控系統
+   - 優化維護流程
+
+### 6. PlantUML 圖解
 ```plantuml
 @startuml
 class LoadBalancer {
@@ -33,15 +101,19 @@ LoadBalancer --> Server
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 7. 分段教學步驟
 
 #### 步驟 1：基本負載分配
 ```java
 public class SimpleLoadBalancer {
     private List<Server> servers;
+    private LoadMonitor monitor;
+    private LoadValidator validator;
     
     public SimpleLoadBalancer() {
         servers = new ArrayList<>();
+        monitor = new LoadMonitor();
+        validator = new LoadValidator();
         // 初始化三台伺服器
         servers.add(new Server(1));
         servers.add(new Server(2));
@@ -49,9 +121,18 @@ public class SimpleLoadBalancer {
     }
     
     public void handleRequest(Request request) {
+        // 驗證請求
+        if (!validator.validateRequest(request)) {
+            System.out.println("請求驗證失敗！");
+            return;
+        }
+        
         // 簡單的輪詢分配
         Server server = servers.get(request.getCount() % servers.size());
         server.handleRequest(request);
+        
+        // 監控負載
+        monitor.recordLoad(server);
     }
 }
 
@@ -80,6 +161,33 @@ class Request {
     
     public int getCount() {
         return count;
+    }
+}
+
+class LoadMonitor {
+    private Map<Integer, Integer> serverLoads;
+    private Map<Integer, Integer> requestCounts;
+    
+    public LoadMonitor() {
+        serverLoads = new HashMap<>();
+        requestCounts = new HashMap<>();
+    }
+    
+    public void recordLoad(Server server) {
+        int serverId = server.getId();
+        serverLoads.merge(serverId, 1, Integer::sum);
+        requestCounts.merge(serverId, 1, Integer::sum);
+    }
+    
+    public boolean shouldAddServer() {
+        return serverLoads.values().stream()
+            .anyMatch(load -> load > 80);
+    }
+}
+
+class LoadValidator {
+    public boolean validateRequest(Request request) {
+        return request != null && request.getId() > 0;
     }
 }
 ```
@@ -158,8 +266,16 @@ public class AdvancedLoadBalancer {
     private LoadBalancingStrategy strategy;
     private ServerPool serverPool;
     private SessionManager sessionManager;
+    private LoadMonitor monitor;
+    private LoadValidator validator;
     
     public void distributeRequest(Request request) {
+        // 驗證請求
+        if (!validator.validateRequest(request)) {
+            System.out.println("請求驗證失敗！");
+            return;
+        }
+        
         // 檢查伺服器健康狀態
         List<Server> healthyServers = serverPool.getHealthyServers();
         
@@ -175,6 +291,9 @@ public class AdvancedLoadBalancer {
         
         // 分配請求
         selectedServer.handleRequest(request);
+        
+        // 監控負載
+        monitor.recordLoad(selectedServer);
     }
 }
 
@@ -422,6 +541,192 @@ public class FaultTolerance {
                 replicaList.add(newNode);
             }
         }
+    }
+}
+```
+
+### 4. 常見問題與解決方案
+
+#### 問題表象
+1. 負載問題：
+   - 負載不均衡
+   - 資源浪費
+   - 效能瓶頸
+
+2. 系統問題：
+   - 節點故障
+   - 網路延遲
+   - 同步失敗
+
+3. 管理問題：
+   - 配置複雜
+   - 監控困難
+   - 維護成本高
+
+#### 避免方法
+1. 系統設計：
+   - 選擇適當的擴展策略
+   - 設計有效的負載均衡
+   - 建立監控系統
+
+2. 資源管理：
+   - 合理分配資源
+   - 優化負載策略
+   - 實現自動擴展
+
+3. 效能優化：
+   - 優化資源使用
+   - 實現負載均衡
+   - 定期效能評估
+
+#### 處理方案
+1. 技術方案：
+   ```java
+   public class ScalingManager {
+       private ScalingStrategy strategy;
+       private LoadMonitor monitor;
+       private LoadValidator validator;
+       private ScalingOptimizer optimizer;
+       
+       public void handleScalingIssue(ScalingIssue issue) {
+           switch (issue.getType()) {
+               case LOAD:
+                   handleLoadIssue(issue);
+                   break;
+               case SYSTEM:
+                   handleSystemIssue(issue);
+                   break;
+               case MANAGEMENT:
+                   handleManagementIssue(issue);
+                   break;
+           }
+       }
+       
+       private void handleLoadIssue(ScalingIssue issue) {
+           // 調整負載策略
+           adjustLoadStrategy();
+           // 優化資源分配
+           optimizeResourceAllocation();
+           // 實現動態擴展
+           implementDynamicScaling();
+       }
+       
+       private void handleSystemIssue(ScalingIssue issue) {
+           // 檢查節點狀態
+           checkNodeStatus();
+           // 修復網路問題
+           repairNetwork();
+           // 重試同步操作
+           retrySync();
+       }
+       
+       private void handleManagementIssue(ScalingIssue issue) {
+           // 簡化配置流程
+           simplifyConfiguration();
+           // 加強監控系統
+           enhanceMonitoring();
+           // 優化維護流程
+           optimizeMaintenance();
+       }
+   }
+   ```
+
+2. 監控方案：
+   ```java
+   public class ScalingMonitor {
+       private MetricsCollector metricsCollector;
+       private ScalingChecker scalingChecker;
+       private AlertManager alertManager;
+       
+       public void monitorScaling() {
+           ScalingMetrics metrics = metricsCollector.collectMetrics();
+           ScalingStatus status = scalingChecker.checkScaling();
+           
+           // 檢查負載狀態
+           if (metrics.getLoadStatus() != LoadStatus.BALANCED) {
+               alertManager.alert("負載警告", metrics.getDetails());
+           }
+           
+           // 檢查系統狀態
+           if (metrics.getSystemStatus() != SystemStatus.HEALTHY) {
+               alertManager.alert("系統狀態警告", metrics.getDetails());
+           }
+           
+           // 檢查管理狀態
+           if (metrics.getManagementStatus() != ManagementStatus.OPTIMAL) {
+               alertManager.alert("管理警告", metrics.getDetails());
+           }
+       }
+   }
+   ```
+
+3. 最佳實踐：
+   - 實現自動化擴展
+   - 配置智能監控
+   - 建立告警機制
+   - 優化負載策略
+   - 定期效能評估
+   - 保持系統文檔
+   - 建立應急流程
+
+### 5. 實戰案例
+
+#### 案例一：電商系統水平擴展
+```java
+public class ECommerceScaling {
+    private ScalingManager scalingManager;
+    private ScalingMonitor monitor;
+    
+    public void handleProductRequest(String productId) {
+        // 設定擴展策略
+        scalingManager.setStrategy(new ProductScalingStrategy(productId));
+        
+        // 處理請求
+        scalingManager.handleRequest(productId);
+        
+        // 檢查擴展狀態
+        monitor.checkScaling();
+    }
+    
+    public void handleOrderRequest(String orderId) {
+        // 設定擴展策略
+        scalingManager.setStrategy(new OrderScalingStrategy(orderId));
+        
+        // 處理請求
+        scalingManager.handleRequest(orderId);
+        
+        // 檢查擴展狀態
+        monitor.checkScaling();
+    }
+}
+```
+
+#### 案例二：社交媒體水平擴展
+```java
+public class SocialMediaScaling {
+    private ScalingManager scalingManager;
+    private ScalingMonitor monitor;
+    
+    public void handleUserRequest(String userId) {
+        // 設定擴展策略
+        scalingManager.setStrategy(new UserScalingStrategy(userId));
+        
+        // 處理請求
+        scalingManager.handleRequest(userId);
+        
+        // 檢查擴展狀態
+        monitor.checkScaling();
+    }
+    
+    public void handlePostRequest(String postId) {
+        // 設定擴展策略
+        scalingManager.setStrategy(new PostScalingStrategy(postId));
+        
+        // 處理請求
+        scalingManager.handleRequest(postId);
+        
+        // 檢查擴展狀態
+        monitor.checkScaling();
     }
 }
 ```

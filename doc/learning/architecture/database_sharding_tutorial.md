@@ -378,3 +378,220 @@ spring:
 使用這個方案，系統可以根據實際負載情況自動調整分片數量，實現更好的資源利用和性能優化。
 
 這個教學文件提供了從基礎到進階的資料庫分庫分表學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的資料分割開始，中級學習者可以學習分片策略和路由機制，而高級學習者則可以掌握分散式分片、一致性雜湊和跨分片事務等進階功能。 
+
+### 4. 常見問題與解決方案
+
+#### 問題表象
+1. 數據傾斜：
+   - 某些分片數據量過大
+   - 查詢性能不均衡
+   - 存儲空間分配不均
+
+2. 跨分片查詢：
+   - 查詢性能下降
+   - 結果合併複雜
+   - 內存消耗增加
+
+3. 分片擴容：
+   - 數據遷移困難
+   - 服務中斷風險
+   - 一致性難以保證
+
+4. 事務處理：
+   - 跨分片事務複雜
+   - 性能開銷大
+   - 死鎖風險增加
+
+#### 避免方法
+1. 數據傾斜防護：
+   - 合理選擇分片鍵
+   - 實現動態分片
+   - 監控數據分佈
+
+2. 跨分片查詢優化：
+   - 優化查詢語句
+   - 使用索引
+   - 實現結果緩存
+
+3. 分片擴容準備：
+   - 預留擴容空間
+   - 實現平滑遷移
+   - 制定回滾方案
+
+4. 事務處理優化：
+   - 使用分佈式事務
+   - 實現最終一致性
+   - 設置超時機制
+
+#### 處理方案
+1. 技術方案：
+   ```java
+   public class ShardingManager {
+       private ShardingDataSource dataSource;
+       private ShardingRule shardingRule;
+       private TransactionManager transactionManager;
+       
+       public void handleShardingIssue(ShardingIssue issue) {
+           switch (issue.getType()) {
+               case DATA_SKEW:
+                   handleDataSkew(issue);
+                   break;
+               case CROSS_SHARD_QUERY:
+                   handleCrossShardQuery(issue);
+                   break;
+               case SHARD_EXPANSION:
+                   handleShardExpansion(issue);
+                   break;
+               case TRANSACTION:
+                   handleTransaction(issue);
+                   break;
+           }
+       }
+       
+       private void handleDataSkew(ShardingIssue issue) {
+           // 分析數據分佈
+           DataDistribution distribution = analyzeDataDistribution();
+           // 調整分片策略
+           adjustShardingStrategy(distribution);
+           // 執行數據重平衡
+           rebalanceData();
+       }
+       
+       private void handleCrossShardQuery(ShardingIssue issue) {
+           // 優化查詢計劃
+           QueryPlan plan = optimizeQuery(issue.getQuery());
+           // 執行分佈式查詢
+           executeDistributedQuery(plan);
+           // 合併查詢結果
+           mergeResults();
+       }
+       
+       private void handleShardExpansion(ShardingIssue issue) {
+           // 準備新分片
+           prepareNewShard();
+           // 執行數據遷移
+           migrateData();
+           // 更新路由規則
+           updateRoutingRules();
+       }
+       
+       private void handleTransaction(ShardingIssue issue) {
+           // 開始分佈式事務
+           transactionManager.begin();
+           try {
+               // 執行事務操作
+               executeTransactionOperations();
+               // 提交事務
+               transactionManager.commit();
+           } catch (Exception e) {
+               // 回滾事務
+               transactionManager.rollback();
+               throw e;
+           }
+       }
+   }
+   ```
+
+2. 監控方案：
+   ```java
+   public class ShardingMonitor {
+       private MetricsCollector metricsCollector;
+       private AlertManager alertManager;
+       
+       public void monitorSharding() {
+           ShardingMetrics metrics = metricsCollector.collectMetrics();
+           
+           // 檢查數據傾斜
+           if (metrics.getDataSkew() > SKEW_THRESHOLD) {
+               alertManager.alert("數據傾斜警告", metrics.getDetails());
+           }
+           
+           // 檢查查詢性能
+           if (metrics.getQueryPerformance() < PERFORMANCE_THRESHOLD) {
+               alertManager.alert("查詢性能警告", metrics.getDetails());
+           }
+           
+           // 檢查分片負載
+           if (metrics.getShardLoad() > LOAD_THRESHOLD) {
+               alertManager.alert("分片負載警告", metrics.getDetails());
+           }
+       }
+   }
+   ```
+
+3. 最佳實踐：
+   - 合理選擇分片鍵
+   - 實現分片預熱
+   - 設置分片監控
+   - 實現平滑擴容
+   - 優化跨分片查詢
+   - 使用分佈式事務
+   - 實現數據備份
+   - 制定故障恢復方案
+
+### 5. 實戰案例
+
+#### 案例一：電商訂單分片
+```java
+public class OrderShardingService {
+    private ShardingDataSource dataSource;
+    private OrderRepository orderRepository;
+    
+    public void createOrder(Order order) {
+        // 生成訂單ID
+        Long orderId = generateOrderId();
+        order.setOrderId(orderId);
+        
+        // 根據用戶ID選擇分片
+        String shardKey = determineShardKey(order.getUserId());
+        
+        // 在對應分片創建訂單
+        orderRepository.save(order, shardKey);
+    }
+    
+    public Order getOrder(Long orderId, Long userId) {
+        // 根據用戶ID確定分片
+        String shardKey = determineShardKey(userId);
+        
+        // 從對應分片查詢訂單
+        return orderRepository.findById(orderId, shardKey);
+    }
+    
+    private String determineShardKey(Long userId) {
+        // 實現分片路由邏輯
+        return "shard_" + (userId % 4);
+    }
+}
+```
+
+#### 案例二：社交媒體用戶分片
+```java
+public class UserShardingService {
+    private ShardingDataSource dataSource;
+    private UserRepository userRepository;
+    
+    public void createUser(User user) {
+        // 生成用戶ID
+        Long userId = generateUserId();
+        user.setUserId(userId);
+        
+        // 根據地理位置選擇分片
+        String shardKey = determineShardKey(user.getLocation());
+        
+        // 在對應分片創建用戶
+        userRepository.save(user, shardKey);
+    }
+    
+    public List<User> getUsersByLocation(String location) {
+        // 根據地理位置確定分片
+        String shardKey = determineShardKey(location);
+        
+        // 從對應分片查詢用戶
+        return userRepository.findByLocation(location, shardKey);
+    }
+    
+    private String determineShardKey(String location) {
+        // 實現基於地理位置的分片路由邏輯
+        return "shard_" + location.hashCode() % 8;
+    }
+} 

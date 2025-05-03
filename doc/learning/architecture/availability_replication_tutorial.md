@@ -13,56 +13,121 @@
 - 為什麼需要資料複寫
 - 基本的資料備份概念
 
-### 2. PlantUML 圖解
-```plantuml
-@startuml
-class Document {
-    - content: String
-    + getContent()
-    + setContent()
-}
+### 2. 使用原因
+資料複寫系統的主要使用原因包括：
+1. 提高資料可用性：
+   - 確保資料持續可訪問
+   - 減少資料不可用時間
+   - 提供不間斷的資料服務
 
-class DocumentCopy {
-    - content: String
-    + update()
-    + read()
-}
+2. 增強資料可靠性：
+   - 防止資料遺失
+   - 提供資料備份
+   - 確保資料完整性
 
-Document --> DocumentCopy : 複製
-@enduml
-```
+3. 優化系統效能：
+   - 實現讀取負載均衡
+   - 提高查詢效能
+   - 支持系統擴展
 
-### 3. 分段教學步驟
+### 3. 問題表象
+常見的問題表象包括：
+1. 資料問題：
+   - 資料不一致
+   - 同步延遲
+   - 資料衝突
+
+2. 效能問題：
+   - 複寫延遲
+   - 資源消耗
+   - 網路負載
+
+3. 管理問題：
+   - 版本控制混亂
+   - 衝突解決困難
+   - 監控不足
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 實現適當的複寫策略
+   - 設計有效的同步機制
+   - 建立監控系統
+
+2. 資料管理：
+   - 定期一致性檢查
+   - 實現版本控制
+   - 優化更新策略
+
+3. 效能優化：
+   - 合理配置資源
+   - 優化網路傳輸
+   - 實現負載均衡
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 資料問題處理：
+   - 執行一致性檢查
+   - 修復不一致資料
+   - 更新複寫策略
+
+2. 效能問題處理：
+   - 優化複寫機制
+   - 調整資源配置
+   - 改進網路傳輸
+
+3. 管理問題處理：
+   - 完善版本控制
+   - 改進衝突解決
+   - 加強監控系統
+
+### 6. 分段教學步驟
 
 #### 步驟 1：基本文件系統
 ```java
 public class SimpleDocumentSystem {
     private Document original;
     private List<DocumentCopy> copies;
+    private VersionManager versionManager;
+    private ConsistencyChecker consistencyChecker;
     
     public SimpleDocumentSystem() {
         original = new Document();
         copies = new ArrayList<>();
+        versionManager = new VersionManager();
+        consistencyChecker = new ConsistencyChecker();
     }
     
     public void createCopy() {
         DocumentCopy copy = new DocumentCopy(original.getContent());
         copies.add(copy);
+        versionManager.recordVersion(copy);
         System.out.println("建立文件副本");
     }
     
     public void updateContent(String newContent) {
+        // 記錄更新前版本
+        versionManager.saveVersion(original);
+        
+        // 更新原始文件
         original.setContent(newContent);
+        
         // 更新所有副本
         for (DocumentCopy copy : copies) {
             copy.update(newContent);
+            versionManager.recordVersion(copy);
         }
+        
+        // 檢查一致性
+        consistencyChecker.checkConsistency(original, copies);
+        
         System.out.println("更新所有文件內容");
     }
 }
 
 class Document {
     private String content;
+    private String version;
     
     public String getContent() {
         return content;
@@ -70,45 +135,65 @@ class Document {
     
     public void setContent(String content) {
         this.content = content;
+        this.version = generateVersion();
+    }
+    
+    private String generateVersion() {
+        return String.valueOf(System.currentTimeMillis());
     }
 }
 
 class DocumentCopy {
     private String content;
+    private String version;
+    private boolean isValid;
     
     public DocumentCopy(String content) {
         this.content = content;
+        this.version = generateVersion();
+        this.isValid = true;
     }
     
     public void update(String newContent) {
         this.content = newContent;
+        this.version = generateVersion();
     }
     
     public String read() {
         return content;
     }
-}
-```
-
-#### 步驟 2：簡單的副本管理
-```java
-public class CopyManager {
-    private List<DocumentCopy> copies;
     
-    public void checkCopies() {
-        for (DocumentCopy copy : copies) {
-            if (copy.isValid()) {
-                System.out.println("副本有效");
-            } else {
-                System.out.println("副本無效，需要更新");
-                updateCopy(copy);
-            }
-        }
+    public boolean isValid() {
+        return isValid;
     }
     
-    private void updateCopy(DocumentCopy copy) {
-        // 更新副本內容
-        copy.update(getLatestContent());
+    private String generateVersion() {
+        return String.valueOf(System.currentTimeMillis());
+    }
+}
+
+class VersionManager {
+    private Map<String, List<String>> versions;
+    
+    public void recordVersion(DocumentCopy copy) {
+        versions.computeIfAbsent(copy.getVersion(), k -> new ArrayList<>())
+            .add(copy.toString());
+    }
+    
+    public void saveVersion(Document document) {
+        versions.put(document.getVersion(), List.of(document.toString()));
+    }
+}
+
+class ConsistencyChecker {
+    public void checkConsistency(Document original, List<DocumentCopy> copies) {
+        String originalContent = original.getContent();
+        for (DocumentCopy copy : copies) {
+            if (!copy.read().equals(originalContent)) {
+                System.out.println("發現不一致的副本");
+                // 可以添加修復邏輯
+            }
+        }
     }
 }
 ```
@@ -153,46 +238,68 @@ ReplicationManager --> UpdateHandler
 #### 步驟 1：同步管理
 ```java
 import java.util.*;
+import java.util.concurrent.*;
 
 public class SyncManager {
     private List<Node> nodes;
     private Map<String, SyncStrategy> strategies;
+    private ExecutorService executor;
+    private AlertManager alertManager;
+    
+    public SyncManager() {
+        nodes = new ArrayList<>();
+        strategies = new HashMap<>();
+        executor = Executors.newFixedThreadPool(4);
+        alertManager = new AlertManager();
+    }
     
     public void synchronize(String key, String value) {
         // 選擇同步策略
         SyncStrategy strategy = selectStrategy(key);
         
         // 執行同步
-        strategy.sync(nodes, key, value);
+        CompletableFuture<Void> syncFuture = CompletableFuture.runAsync(() -> {
+            try {
+                strategy.sync(nodes, key, value);
+            } catch (Exception e) {
+                alertManager.sendAlert("同步失敗: " + e.getMessage());
+            }
+        }, executor);
         
         // 檢查一致性
-        checkConsistency(key);
-    }
-    
-    private SyncStrategy selectStrategy(String key) {
-        return strategies.getOrDefault(key, new DefaultSyncStrategy());
-    }
-    
-    private void checkConsistency(String key) {
-        boolean isConsistent = true;
-        String expectedValue = getExpectedValue(key);
-        
-        for (Node node : nodes) {
-            if (!node.getValue(key).equals(expectedValue)) {
-                isConsistent = false;
-                break;
+        syncFuture.thenRun(() -> {
+            if (!checkConsistency(key)) {
+                alertManager.sendAlert("資料不一致: " + key);
+                repairInconsistency(key);
             }
-        }
-        
-        if (!isConsistent) {
-            System.out.println("資料不一致，需要修復");
-            repairInconsistency(key);
-        }
+        });
+    }
+    
+    private boolean checkConsistency(String key) {
+        String expectedValue = getExpectedValue(key);
+        return nodes.stream()
+            .allMatch(node -> node.getValue(key).equals(expectedValue));
+    }
+    
+    private void repairInconsistency(String key) {
+        String correctValue = getExpectedValue(key);
+        nodes.forEach(node -> {
+            if (!node.getValue(key).equals(correctValue)) {
+                node.updateValue(key, correctValue);
+            }
+        });
+    }
+    
+    public void shutdown() {
+        executor.shutdown();
     }
 }
 
-interface SyncStrategy {
-    void sync(List<Node> nodes, String key, String value);
+class AlertManager {
+    public void sendAlert(String message) {
+        System.out.println("告警: " + message);
+        // 可以實現更多的告警邏輯
+    }
 }
 ```
 
@@ -276,125 +383,264 @@ ConflictResolver --> PerformanceOptimizer
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：版本控制
+#### 步驟 1：分散式複寫
 ```java
-import java.util.*;
-
-public class VersionManager {
-    private Map<String, Version> versions;
+public class DistributedReplication {
+    private List<ReplicaNode> nodes;
+    private ConflictResolver conflictResolver;
+    private VersionManager versionManager;
+    private MonitoringSystem monitoringSystem;
     
-    public VersionManager() {
-        versions = new HashMap<>();
-    }
-    
-    public void trackChange(String key, String value) {
-        Version current = versions.get(key);
-        Version newVersion = new Version(value, current == null ? 0 : current.getNumber() + 1);
-        versions.put(key, newVersion);
-    }
-    
-    public boolean isConflict(String key, Version otherVersion) {
-        Version thisVersion = versions.get(key);
-        return thisVersion != null && thisVersion.getNumber() > otherVersion.getNumber();
-    }
-    
-    public void resolveConflict(String key, Version version1, Version version2) {
-        // 選擇較新的版本
-        Version resolved = version1.getNumber() > version2.getNumber() ? version1 : version2;
-        versions.put(key, resolved);
-    }
-}
-
-class Version {
-    private String value;
-    private int number;
-    
-    public Version(String value, int number) {
-        this.value = value;
-        this.number = number;
-    }
-    
-    public int getNumber() {
-        return number;
-    }
-    
-    public String getValue() {
-        return value;
-    }
-}
-```
-
-#### 步驟 2：衝突解決
-```java
-public class ConflictResolver {
-    private Map<String, ConflictStrategy> strategies;
-    
-    public void handleConflict(String key, Version version1, Version version2) {
-        // 檢測衝突
-        if (isConflict(version1, version2)) {
-            // 選擇解決策略
-            ConflictStrategy strategy = selectStrategy(key);
-            
-            // 解決衝突
-            Version resolved = strategy.resolve(version1, version2);
-            
-            // 應用解決方案
-            applyResolution(key, resolved);
+    public void replicateData(String key, String value) {
+        // 記錄版本
+        versionManager.recordVersion(key, value);
+        
+        // 檢查衝突
+        if (hasConflict(key, value)) {
+            conflictResolver.resolveConflict(key, value);
         }
-    }
-    
-    private boolean isConflict(Version version1, Version version2) {
-        return version1.getNumber() != version2.getNumber();
-    }
-    
-    private ConflictStrategy selectStrategy(String key) {
-        return strategies.getOrDefault(key, new DefaultConflictStrategy());
-    }
-}
-
-interface ConflictStrategy {
-    Version resolve(Version version1, Version version2);
-}
-```
-
-#### 步驟 3：效能優化
-```java
-public class PerformanceOptimizer {
-    private Map<String, PerformanceMetric> metrics;
-    
-    public void optimizeReplication() {
-        // 收集效能指標
-        collectMetrics();
         
-        // 分析效能
-        analyzePerformance();
-        
-        // 調整參數
-        tuneParameters();
-    }
-    
-    private void analyzePerformance() {
-        for (PerformanceMetric metric : metrics.values()) {
-            if (needsOptimization(metric)) {
-                // 觸發優化
-                triggerOptimization(metric);
+        // 執行複寫
+        nodes.parallelStream().forEach(node -> {
+            try {
+                node.replicate(key, value);
+                monitoringSystem.recordReplication(node.getId(), key);
+            } catch (Exception e) {
+                monitoringSystem.recordError(node.getId(), e);
+                handleReplicationError(node, key, value);
             }
-        }
+        });
+    }
+    
+    private boolean hasConflict(String key, String value) {
+        return nodes.stream()
+            .anyMatch(node -> !node.getValue(key).equals(value));
+    }
+    
+    private void handleReplicationError(ReplicaNode node, String key, String value) {
+        // 實現錯誤處理邏輯
+        System.out.println("處理複寫錯誤: " + node.getId());
+        // 可以添加重試機制
     }
 }
 
-class PerformanceMetric {
-    private String nodeId;
-    private double replicationTime;
-    private double syncTime;
-    private int conflictCount;
+class ReplicaNode {
+    private String id;
+    private Map<String, String> data;
+    private VersionManager versionManager;
     
-    public PerformanceMetric(String nodeId) {
-        this.nodeId = nodeId;
+    public void replicate(String key, String value) {
+        // 實現複寫邏輯
+        data.put(key, value);
+        versionManager.recordVersion(key, value);
     }
     
-    public boolean needsOptimization() {
-        return replicationTime > 1000 || syncTime > 500 || conflictCount > 10;
+    public String getValue(String key) {
+        return data.get(key);
+    }
+}
+
+class ConflictResolver {
+    public void resolveConflict(String key, String value) {
+        // 實現衝突解決邏輯
+        System.out.println("解決衝突: " + key);
+    }
+}
+
+class MonitoringSystem {
+    public void recordReplication(String nodeId, String key) {
+        // 記錄複寫成功
+    }
+    
+    public void recordError(String nodeId, Exception e) {
+        // 記錄錯誤
+    }
+}
+```
+
+### 4. 常見問題與解決方案
+
+#### 問題表象
+1. 資料問題：
+   - 資料不一致
+   - 同步延遲
+   - 資料衝突
+
+2. 效能問題：
+   - 複寫延遲
+   - 資源消耗
+   - 網路負載
+
+3. 管理問題：
+   - 版本控制混亂
+   - 衝突解決困難
+   - 監控不足
+
+#### 避免方法
+1. 系統設計：
+   - 實現適當的複寫策略
+   - 設計有效的同步機制
+   - 建立監控系統
+
+2. 資料管理：
+   - 定期一致性檢查
+   - 實現版本控制
+   - 優化更新策略
+
+3. 效能優化：
+   - 合理配置資源
+   - 優化網路傳輸
+   - 實現負載均衡
+
+#### 處理方案
+1. 技術方案：
+   ```java
+   public class ReplicationManager {
+       private SyncManager syncManager;
+       private VersionManager versionManager;
+       private MonitoringManager monitoringManager;
+       private AlertManager alertManager;
+       
+       public void handleReplicationIssue(ReplicationIssue issue) {
+           switch (issue.getType()) {
+               case DATA:
+                   handleDataIssue(issue);
+                   break;
+               case PERFORMANCE:
+                   handlePerformanceIssue(issue);
+                   break;
+               case MANAGEMENT:
+                   handleManagementIssue(issue);
+                   break;
+           }
+       }
+       
+       private void handleDataIssue(ReplicationIssue issue) {
+           // 檢查資料一致性
+           checkDataConsistency();
+           // 修復不一致資料
+           repairInconsistentData();
+           // 更新複寫策略
+           updateReplicationStrategy();
+       }
+       
+       private void handlePerformanceIssue(ReplicationIssue issue) {
+           // 檢查效能指標
+           checkPerformanceMetrics();
+           // 優化複寫機制
+           optimizeReplication();
+           // 調整資源配置
+           adjustResourceAllocation();
+       }
+       
+       private void handleManagementIssue(ReplicationIssue issue) {
+           // 檢查版本控制
+           checkVersionControl();
+           // 改進衝突解決
+           improveConflictResolution();
+           // 加強監控系統
+           enhanceMonitoring();
+       }
+   }
+   ```
+
+2. 監控方案：
+   ```java
+   public class ReplicationMonitor {
+       private MetricsCollector metricsCollector;
+       private ConsistencyChecker consistencyChecker;
+       private AlertManager alertManager;
+       
+       public void monitorReplication() {
+           ReplicationMetrics metrics = metricsCollector.collectMetrics();
+           ConsistencyStatus status = consistencyChecker.checkConsistency();
+           
+           // 檢查複寫延遲
+           if (metrics.getReplicationDelay() > DELAY_THRESHOLD) {
+               alertManager.alert("複寫延遲警告", metrics.getDetails());
+           }
+           
+           // 檢查資料一致性
+           if (!status.isConsistent()) {
+               alertManager.alert("資料不一致警告", status.getDetails());
+           }
+           
+           // 檢查資源使用
+           if (metrics.getResourceUsage() > RESOURCE_THRESHOLD) {
+               alertManager.alert("資源使用警告", metrics.getDetails());
+           }
+       }
+   }
+   ```
+
+3. 最佳實踐：
+   - 實現自動化複寫
+   - 配置智能同步
+   - 建立版本控制
+   - 優化衝突解決
+   - 完善監控告警
+   - 定期效能優化
+   - 保持系統文檔
+   - 建立應急流程
+
+### 5. 實戰案例
+
+#### 案例一：電商系統資料複寫
+```java
+public class ECommerceReplication {
+    private List<DatabaseNode> nodes;
+    private SyncManager syncManager;
+    private VersionManager versionManager;
+    
+    public void replicateOrder(Order order) {
+        // 記錄版本
+        versionManager.recordVersion("order", order.getId());
+        
+        // 執行複寫
+        nodes.parallelStream().forEach(node -> {
+            try {
+                node.replicateOrder(order);
+                syncManager.synchronize("order", order.getId());
+            } catch (Exception e) {
+                handleReplicationError(node, order);
+            }
+        });
+    }
+    
+    private void handleReplicationError(DatabaseNode node, Order order) {
+        // 實現錯誤處理邏輯
+        System.out.println("處理訂單複寫錯誤");
+        // 可以添加重試機制
+    }
+}
+```
+
+#### 案例二：社交媒體資料複寫
+```java
+public class SocialMediaReplication {
+    private List<DatabaseNode> nodes;
+    private SyncManager syncManager;
+    private VersionManager versionManager;
+    
+    public void replicatePost(Post post) {
+        // 記錄版本
+        versionManager.recordVersion("post", post.getId());
+        
+        // 執行複寫
+        nodes.parallelStream().forEach(node -> {
+            try {
+                node.replicatePost(post);
+                syncManager.synchronize("post", post.getId());
+            } catch (Exception e) {
+                handleReplicationError(node, post);
+            }
+        });
+    }
+    
+    private void handleReplicationError(DatabaseNode node, Post post) {
+        // 實現錯誤處理邏輯
+        System.out.println("處理貼文複寫錯誤");
+        // 可以添加重試機制
     }
 }
 ```

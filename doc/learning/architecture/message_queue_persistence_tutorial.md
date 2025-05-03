@@ -13,79 +13,261 @@
 - 為什麼需要保存訊息
 - 基本的訊息儲存概念
 
-### 2. PlantUML 圖解
-```plantuml
-@startuml
-class Message {
-    - id: String
-    - content: String
-    + getId()
-    + getContent()
-}
+### 2. 使用原因
+消息隊列訊息不丟失的主要使用原因包括：
+1. 數據可靠性：
+   - 確保消息不會丟失
+   - 保證數據完整性
+   - 防止數據錯誤
 
-class MessageBox {
-    - messages: List<Message>
-    - storage: List<Message>
-    + send()
-    + receive()
-    + save()
-}
+2. 業務連續性：
+   - 確保業務流程不中斷
+   - 保證交易完整性
+   - 維護業務一致性
 
-MessageBox --> Message
-@enduml
+3. 系統穩定性：
+   - 提高系統可靠性
+   - 確保服務可用性
+   - 優化系統效能
+
+### 3. 問題表象
+常見的問題表象包括：
+1. 數據問題：
+   - 消息丟失
+   - 數據不一致
+   - 數據錯誤
+
+2. 業務問題：
+   - 業務中斷
+   - 交易失敗
+   - 流程異常
+
+3. 效能問題：
+   - 儲存壓力
+   - 恢復延遲
+   - 資源消耗
+
+### 4. 避免方法
+避免問題的方法包括：
+1. 系統設計：
+   - 實現持久化
+   - 設計備份機制
+   - 建立恢復機制
+
+2. 數據管理：
+   - 實現消息儲存
+   - 設置備份策略
+   - 定期清理數據
+
+3. 效能優化：
+   - 優化儲存策略
+   - 實現並發控制
+   - 定期效能評估
+
+### 5. 問題處理
+遇到問題時的處理方法：
+1. 數據問題處理：
+   - 檢查數據完整性
+   - 修復數據錯誤
+   - 恢復正確狀態
+
+2. 業務問題處理：
+   - 檢查業務流程
+   - 修復業務異常
+   - 恢復正常流程
+
+3. 效能問題處理：
+   - 優化儲存策略
+   - 調整資源分配
+   - 實現動態擴展
+
+### 6. 實戰案例
+
+#### 案例一：電商訂單處理
+```java
+public class OrderMessageProcessor {
+    private MessageStore store;
+    private MessageBackup backup;
+    
+    public void processOrder(Order order) {
+        // 創建持久化消息
+        PersistentMessage message = new PersistentMessage(
+            order.getId(),
+            order.getData(),
+            System.currentTimeMillis()
+        );
+        
+        // 保存消息
+        store.save(message);
+        
+        // 備份消息
+        backup.save(message);
+        
+        // 處理消息
+        processMessage(message);
+    }
+    
+    private void processMessage(PersistentMessage message) {
+        try {
+            // 處理消息
+            processOrder(message.getContent());
+            
+            // 確認處理完成
+            store.markAsProcessed(message.getId());
+        } catch (Exception e) {
+            // 處理失敗，從備份恢復
+            backup.restore(message.getId());
+        }
+    }
+}
 ```
 
-### 3. 分段教學步驟
-
-#### 步驟 1：基本訊息儲存
+#### 案例二：金融交易處理
 ```java
-public class SimpleMessage {
-    private String id;
-    private String content;
+public class TransactionMessageProcessor {
+    private MessageStore store;
+    private MessageBackup backup;
     
-    public SimpleMessage(String content) {
-        this.id = UUID.randomUUID().toString();
-        this.content = content;
+    public void processTransaction(Transaction transaction) {
+        // 創建持久化消息
+        PersistentMessage message = new PersistentMessage(
+            transaction.getId(),
+            transaction.getData(),
+            System.currentTimeMillis()
+        );
+        
+        // 保存消息
+        store.save(message);
+        
+        // 備份消息
+        backup.save(message);
+        
+        // 處理消息
+        processMessage(message);
     }
     
-    public String getId() {
-        return id;
-    }
-    
-    public String getContent() {
-        return content;
+    private void processMessage(PersistentMessage message) {
+        try {
+            // 處理消息
+            processTransaction(message.getContent());
+            
+            // 確認處理完成
+            store.markAsProcessed(message.getId());
+        } catch (Exception e) {
+            // 處理失敗，從備份恢復
+            backup.restore(message.getId());
+        }
     }
 }
+```
 
-public class SafeMessageBox {
-    private List<SimpleMessage> messages;
-    private List<SimpleMessage> storage;
+### 7. 最佳實踐
+
+#### 1. 使用現有工具
+```java
+// 使用 RabbitMQ 實現消息持久化
+public class RabbitMQPersistentConsumer {
+    private final String queueName;
+    private final ConnectionFactory factory;
     
-    public SafeMessageBox() {
-        messages = new ArrayList<>();
-        storage = new ArrayList<>();
+    public RabbitMQPersistentConsumer(String host, String queueName) {
+        this.queueName = queueName;
+        this.factory = new ConnectionFactory();
+        this.factory.setHost(host);
     }
     
-    public void send(SimpleMessage message) {
-        System.out.println("發送消息：" + message.getContent());
-        messages.add(message);
-        // 同時保存到儲存區
-        storage.add(message);
-    }
-    
-    public SimpleMessage receive() {
-        if (!messages.isEmpty()) {
-            SimpleMessage message = messages.remove(0);
-            System.out.println("接收消息：" + message.getContent());
-            return message;
+    public void consume() throws Exception {
+        try (Connection connection = factory.newConnection();
+             Channel channel = connection.createChannel()) {
+            
+            // 設置隊列持久化
+            boolean durable = true;
+            channel.queueDeclare(queueName, durable, false, false, null);
+            
+            // 設置消息持久化
+            AMQP.BasicProperties properties = MessageProperties.PERSISTENT_TEXT_PLAIN;
+            
+            // 消費消息
+            channel.basicConsume(queueName, false, new DefaultConsumer(channel) {
+                @Override
+                public void handleDelivery(String consumerTag,
+                                         Envelope envelope,
+                                         AMQP.BasicProperties properties,
+                                         byte[] body) throws IOException {
+                    String message = new String(body, "UTF-8");
+                    System.out.println("Received: " + message);
+                    
+                    try {
+                        // 處理消息
+                        processMessage(message);
+                        
+                        // 確認消息
+                        channel.basicAck(envelope.getDeliveryTag(), false);
+                    } catch (Exception e) {
+                        // 處理失敗，拒絕消息
+                        channel.basicNack(envelope.getDeliveryTag(), false, true);
+                    }
+                }
+            });
         }
-        return null;
     }
+}
+```
+
+#### 2. 監控與告警
+```java
+public class MessageMonitor {
+    private MetricsCollector metricsCollector;
+    private AlertManager alertManager;
+    
+    public void monitor() {
+        MessageMetrics metrics = metricsCollector.collectMetrics();
+        
+        // 檢查消息狀態
+        if (!metrics.isMessageConsistent()) {
+            alertManager.alert("消息警告", metrics.getDetails());
+        }
+        
+        // 檢查儲存狀態
+        if (metrics.getStorageStatus() != StorageStatus.NORMAL) {
+            alertManager.alert("儲存警告", metrics.getDetails());
+        }
+        
+        // 檢查效能狀態
+        if (metrics.getPerformanceStatus() != PerformanceStatus.OPTIMAL) {
+            alertManager.alert("效能警告", metrics.getDetails());
+        }
+    }
+}
+```
+
+#### 3. 錯誤處理與恢復
+```java
+public class MessageRecovery {
+    private MessageStore store;
+    private MessageBackup backup;
     
     public void recover() {
-        // 如果消息丟失了，從儲存區恢復
-        messages.addAll(storage);
-        System.out.println("已恢復所有消息");
+        // 檢查消息狀態
+        checkMessageState();
+        
+        // 修復消息錯誤
+        fixMessageIssues();
+        
+        // 恢復處理流程
+        restoreProcessing();
+    }
+    
+    private void checkMessageState() {
+        // 實現消息狀態檢查邏輯
+    }
+    
+    private void fixMessageIssues() {
+        // 實現消息修復邏輯
+    }
+    
+    private void restoreProcessing() {
+        // 實現處理流程恢復邏輯
     }
 }
 ```
