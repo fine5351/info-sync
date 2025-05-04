@@ -1,18 +1,27 @@
-# 單一職責教學
+# 單一職責教學 - 以班級管理為例
 
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-單一職責就像是在學校裡，每個同學都有自己負責的工作：
+單一職責就像是在班級裡，每個同學都有自己負責的工作：
 - 班長負責管理班級事務
 - 衛生股長負責打掃工作
 - 學藝股長負責布置教室
-- 每個人只需要專注做好自己的事情
 
-初級學習者需要了解：
-- 什麼是單一職責
-- 為什麼需要單一職責
-- 基本的職責分離概念
+**為什麼需要單一職責？**
+- 避免一個人做太多事情，容易出錯
+- 當有問題時，可以快速找到負責的人
+- 讓每個人都能專注做好自己的工作
+
+**常見問題：**
+- 一個同學同時負責太多工作，忙不過來
+- 工作分配不清楚，大家互相推卸責任
+- 當需要修改某項工作時，會影響到其他工作
+
+**如何避免：**
+- 每個人只負責一項主要工作
+- 工作內容要明確寫下來
+- 定期檢查工作分配是否合理
 
 ### 2. PlantUML 圖解
 ```plantuml
@@ -40,7 +49,7 @@ Student <|-- CleanLeader
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：基本學生類別
+#### 步驟 1：認識基本學生類別
 ```java
 public class Student {
     private String name;
@@ -69,7 +78,7 @@ public class Student {
 }
 ```
 
-#### 步驟 2：職責分離
+#### 步驟 2：將工作分開
 ```java
 public class ClassLeader extends Student {
     public ClassLeader(String name) {
@@ -106,10 +115,24 @@ public class CleanLeader extends Student {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 職責分離的實現方式
-- 模組化設計
-- 介面定義
-- 職責邊界
+- 如何用程式碼來組織不同的工作
+- 為什麼要使用介面（Interface）
+- 如何讓程式更容易維護和擴展
+
+**使用介面的好處：**
+- 可以清楚地定義每個角色應該做什麼
+- 讓程式更容易測試和修改
+- 可以輕鬆添加新的角色
+
+**常見問題：**
+- 角色之間的工作有重複
+- 新增角色時需要修改很多地方
+- 很難測試每個角色的工作
+
+**解決方法：**
+- 使用介面定義工作內容
+- 將具體工作交給專門的類別處理
+- 使用依賴注入來管理角色
 
 ### 2. PlantUML 圖解
 ```plantuml
@@ -144,7 +167,7 @@ ArtLeader --> ArtManager
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：介面定義
+#### 步驟 1：定義工作介面
 ```java
 public interface ClassRole {
     void doWork();
@@ -181,7 +204,7 @@ public class CleanLeader implements ClassRole {
 }
 ```
 
-#### 步驟 2：職責管理
+#### 步驟 2：管理工作
 ```java
 public class ClassManager {
     public void manageClass(String name) {
@@ -202,10 +225,24 @@ public class CleanManager {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 職責分離的進階應用
-- 依賴注入
-- 職責組合
-- 職責擴展
+- 如何設計可擴展的系統
+- 如何使用工廠模式來創建角色
+- 如何管理多個角色
+
+**進階概念：**
+- 工廠模式：統一創建角色的地方
+- 依賴注入：讓角色更容易測試和修改
+- 職責組合：可以組合多個角色
+
+**常見問題：**
+- 系統難以擴展
+- 角色之間的關係複雜
+- 測試困難
+
+**解決方法：**
+- 使用工廠模式創建角色
+- 使用依賴注入管理角色
+- 設計清晰的角色關係
 
 ### 2. PlantUML 圖解
 ```plantuml
@@ -248,7 +285,7 @@ RoleManager --> Role
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：職責工廠
+#### 步驟 1：角色工廠
 ```java
 public interface Role {
     void doWork();
@@ -285,7 +322,7 @@ public class ClassLeader implements Role {
 }
 ```
 
-#### 步驟 2：職責管理
+#### 步驟 2：角色管理
 ```java
 public class RoleManager {
     private List<Role> roles;
@@ -306,7 +343,7 @@ public class RoleManager {
 }
 ```
 
-#### 步驟 3：職責擴展
+#### 步驟 3：擴展角色
 ```java
 public class ArtLeader implements Role {
     private String name;

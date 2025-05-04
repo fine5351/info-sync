@@ -3,34 +3,33 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-分庫分表就像學校的圖書館：
-- 如果所有書都放在一個書架上，找書會很慢
-- 我們可以把書分成不同類別，放在不同區域
-- 這樣找書會更快，管理也更容易
+想像你有一個超大的玩具箱，裡面裝滿了各種玩具。如果所有玩具都混在一起，找玩具會很困難。這時候我們可以：
+- 把玩具分類：例如積木放一箱、娃娃放一箱
+- 在每個箱子外面貼標籤
+- 這樣找玩具就會快很多
 
 初級學習者需要了解：
-- 什麼是分庫分表
-- 為什麼需要分庫分表
-- 基本的資料分割概念
+- 為什麼要分庫分表（就像為什麼要分類玩具）
+- 基本的資料分類概念
+- 簡單的資料查詢方式
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class Table {
-    - name: String
-    - data: List<Object>
-    + getName()
-    + addData()
-    + getData()
+class 玩具箱 {
+    - 名稱: 字串
+    - 玩具列表: 列表
+    + 放玩具()
+    + 找玩具()
 }
 
-class ShardedTable {
-    - tables: List<Table>
-    + addData()
-    + getData()
+class 分類玩具箱 {
+    - 玩具箱列表: 列表
+    + 放玩具()
+    + 找玩具()
 }
 
-ShardedTable --> Table
+分類玩具箱 --> 玩具箱
 @enduml
 ```
 
@@ -38,560 +37,288 @@ ShardedTable --> Table
 
 #### 步驟 1：基本分表實現
 ```yaml
-# application-sharding.yaml
-spring:
-  shardingsphere:
-    datasource:
-      names: ds0,ds1
-      ds0:
-        type: com.zaxxer.hikari.HikariDataSource
-        driver-class-name: com.mysql.jdbc.Driver
-        jdbc-url: jdbc:mysql://localhost:3306/db0
-        username: root
-        password: root
-      ds1:
-        type: com.zaxxer.hikari.HikariDataSource
-        driver-class-name: com.mysql.jdbc.Driver
-        jdbc-url: jdbc:mysql://localhost:3306/db1
-        username: root
-        password: root
-    sharding:
-      tables:
-        t_order:
-          actual-data-nodes: ds$->{0..1}.t_order$->{0..1}
-          table-strategy:
-            inline:
-              sharding-column: order_id
-              algorithm-expression: t_order$->{order_id % 2}
-          key-generator:
-            column: order_id
-            type: SNOWFLAKE
+# 設定檔
+資料庫:
+  玩具箱1:
+    位置: localhost:3306/玩具箱1
+    使用者: root
+    密碼: root
+  玩具箱2:
+    位置: localhost:3306/玩具箱2
+    使用者: root
+    密碼: root
 ```
 
 ```java
-// 實體類
-@Data
-@Table(name = "t_order")
-public class Order {
-    @Id
-    @Column(name = "order_id")
-    private Long orderId;
-    
-    @Column(name = "user_id")
-    private Long userId;
-    
-    @Column(name = "status")
-    private String status;
+// 玩具類別
+public class 玩具 {
+    private Long 玩具編號;
+    private String 玩具名稱;
+    private String 玩具類型;
 }
 
-// 數據訪問層
-@Repository
-public class OrderRepository {
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-    
-    public void save(Order order) {
-        String sql = "INSERT INTO t_order (order_id, user_id, status) VALUES (?, ?, ?)";
-        jdbcTemplate.update(sql, order.getOrderId(), order.getUserId(), order.getStatus());
+// 玩具管理員
+public class 玩具管理員 {
+    public void 放玩具(玩具 新玩具) {
+        // 根據玩具編號決定放哪個玩具箱
+        String 玩具箱 = "玩具箱" + (新玩具.玩具編號 % 2);
+        // 把玩具放到對應的玩具箱
     }
     
-    public Order findById(Long orderId) {
-        String sql = "SELECT * FROM t_order WHERE order_id = ?";
-        return jdbcTemplate.queryForObject(sql, new Object[]{orderId}, 
-            (rs, rowNum) -> {
-                Order order = new Order();
-                order.setOrderId(rs.getLong("order_id"));
-                order.setUserId(rs.getLong("user_id"));
-                order.setStatus(rs.getString("status"));
-                return order;
-            });
+    public 玩具 找玩具(Long 玩具編號) {
+        // 根據玩具編號找到對應的玩具箱
+        String 玩具箱 = "玩具箱" + (玩具編號 % 2);
+        // 從玩具箱中找出玩具
     }
 }
-```
-
-### 4. 配置說明
-
-#### Maven 依賴配置
-```xml
-<dependencies>
-    <dependency>
-        <groupId>org.apache.shardingsphere</groupId>
-        <artifactId>sharding-jdbc-spring-boot-starter</artifactId>
-        <version>5.3.2</version>
-    </dependency>
-    <dependency>
-        <groupId>com.zaxxer</groupId>
-        <artifactId>HikariCP</artifactId>
-        <version>4.0.3</version>
-    </dependency>
-    <dependency>
-        <groupId>mysql</groupId>
-        <artifactId>mysql-connector-java</artifactId>
-        <version>8.0.33</version>
-    </dependency>
-</dependencies>
 ```
 
 ## 中級（Intermediate）層級
 
 ### 1. 概念說明
 中級學習者需要理解：
-- ShardingSphere 的架構和組件
-- 分片策略和算法
-- 分佈式事務
-- 讀寫分離
+- 玩具箱的組織方式（資料庫結構）
+- 如何快速找到玩具（索引）
+- 玩具的分類規則（分片策略）
+- 多個玩具箱的管理（讀寫分離）
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class ShardingSphere {
-    - shardingDataSource: ShardingDataSource
-    - shardingRule: ShardingRule
-    + executeQuery()
-    + executeUpdate()
+class 玩具管理系統 {
+    - 主玩具箱: 玩具箱
+    - 備用玩具箱: 玩具箱
+    + 放玩具()
+    + 找玩具()
 }
 
-class ShardingRule {
-    - tableRules: List<TableRule>
-    - bindingTableRules: List<BindingTableRule>
-    + getTableRule()
-    + getBindingTableRule()
+class 玩具箱 {
+    - 玩具列表: 列表
+    - 索引表: 地圖
+    + 放玩具()
+    + 找玩具()
 }
 
-class TableRule {
-    - logicTable: String
-    - actualDataNodes: List<String>
-    - tableShardingStrategy: ShardingStrategy
-    + getActualDataNodes()
-    + getTableShardingStrategy()
-}
-
-ShardingSphere --> ShardingRule
-ShardingRule --> TableRule
+玩具管理系統 --> 玩具箱
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分片策略配置
+#### 步驟 1：玩具分類規則
 ```yaml
-# application-sharding.yaml
-spring:
-  shardingsphere:
-    sharding:
-      tables:
-        t_order:
-          actual-data-nodes: ds$->{0..1}.t_order$->{0..1}
-          database-strategy:
-            inline:
-              sharding-column: user_id
-              algorithm-expression: ds$->{user_id % 2}
-          table-strategy:
-            inline:
-              sharding-column: order_id
-              algorithm-expression: t_order$->{order_id % 2}
-          key-generator:
-            column: order_id
-            type: SNOWFLAKE
+# 設定檔
+玩具管理:
+  玩具箱:
+    - 玩具箱1
+    - 玩具箱2
+  分類規則:
+    根據: 玩具編號
+    規則: 玩具箱$->{玩具編號 % 2}
 ```
 
-#### 步驟 2：讀寫分離配置
+#### 步驟 2：讀寫分離設定
 ```yaml
-# application-sharding.yaml
-spring:
-  shardingsphere:
-    datasource:
-      names: master,slave0,slave1
-      master:
-        type: com.zaxxer.hikari.HikariDataSource
-        driver-class-name: com.mysql.jdbc.Driver
-        jdbc-url: jdbc:mysql://localhost:3306/master
-        username: root
-        password: root
-      slave0:
-        type: com.zaxxer.hikari.HikariDataSource
-        driver-class-name: com.mysql.jdbc.Driver
-        jdbc-url: jdbc:mysql://localhost:3306/slave0
-        username: root
-        password: root
-      slave1:
-        type: com.zaxxer.hikari.HikariDataSource
-        driver-class-name: com.mysql.jdbc.Driver
-        jdbc-url: jdbc:mysql://localhost:3306/slave1
-        username: root
-        password: root
-    masterslave:
-      name: ms
-      master-data-source-name: master
-      slave-data-source-names: slave0,slave1
-      load-balance-algorithm-type: ROUND_ROBIN
+# 設定檔
+玩具箱:
+  主要玩具箱:
+    位置: localhost:3306/主要玩具箱
+  備用玩具箱:
+    - localhost:3306/備用玩具箱1
+    - localhost:3306/備用玩具箱2
 ```
 
 ## 高級（Advanced）層級
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分佈式事務
-- 數據加密
-- 數據脫敏
-- 監控和治理
+- 多個玩具箱的同步（分佈式事務）
+- 玩具的安全保護（數據加密）
+- 玩具的隱私保護（數據脫敏）
+- 玩具箱的監控（系統監控）
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階 ShardingSphere 系統" {
-    class DistributedTransaction {
-        - transactionManager: TransactionManager
-        + begin()
-        + commit()
-        + rollback()
+package "進階玩具管理系統" {
+    class 玩具同步器 {
+        - 同步管理器: 管理器
+        + 開始同步()
+        + 完成同步()
+        + 取消同步()
     }
     
-    class EncryptRule {
-        - encryptors: Map<String, Encryptor>
-        - tables: Map<String, EncryptTable>
-        + encrypt()
-        + decrypt()
+    class 玩具保護器 {
+        - 加密器: 加密器
+        - 脫敏器: 脫敏器
+        + 加密玩具()
+        + 解密玩具()
     }
     
-    class Governance {
-        - registryCenter: RegistryCenter
-        - configCenter: ConfigCenter
-        + register()
-        + updateConfig()
+    class 玩具監控器 {
+        - 監控中心: 中心
+        - 配置中心: 中心
+        + 註冊玩具箱()
+        + 更新配置()
     }
 }
 
-DistributedTransaction --> Governance
-EncryptRule --> Governance
+玩具同步器 --> 玩具監控器
+玩具保護器 --> 玩具監控器
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分佈式事務配置
+#### 步驟 1：玩具同步設定
 ```yaml
-# application-sharding.yaml
-spring:
-  shardingsphere:
-    transaction:
-      type: XA
-      props:
-        defaultTimeout: 60
-        maxTimeout: 60
-        rollbackTimeout: 30
+# 設定檔
+玩具同步:
+  類型: XA
+  設定:
+    超時時間: 60秒
+    最大超時: 60秒
+    取消超時: 30秒
 ```
 
 ```java
-@Service
-public class OrderService {
-    @Autowired
-    private OrderRepository orderRepository;
-    
-    @ShardingTransactionType(TransactionType.XA)
-    @Transactional(rollbackFor = Exception.class)
-    public void createOrder(Order order) {
-        orderRepository.save(order);
-        // 其他業務邏輯
+public class 玩具管理員 {
+    @玩具同步類型(同步類型.XA)
+    public void 放新玩具(玩具 新玩具) {
+        // 開始同步
+        開始同步();
+        try {
+            // 放玩具
+            放玩具(新玩具);
+            // 完成同步
+            完成同步();
+        } catch (Exception e) {
+            // 取消同步
+            取消同步();
+            throw e;
+        }
     }
 }
 ```
 
-#### 步驟 2：數據加密配置
+#### 步驟 2：玩具保護設定
 ```yaml
-# application-sharding.yaml
-spring:
-  shardingsphere:
-    encrypt:
-      encryptors:
-        aes_encryptor:
-          type: AES
-          props:
-            aes-key-value: 123456
-      tables:
-        t_order:
-          columns:
-            user_id:
-              plainColumn: user_id
-              cipherColumn: user_id_cipher
-              encryptor: aes_encryptor
+# 設定檔
+玩具保護:
+  加密器:
+    類型: AES
+    金鑰: 123456
+  玩具表:
+    玩具編號:
+      原始欄位: 玩具編號
+      加密欄位: 玩具編號_加密
+      加密器: aes_加密器
 ```
-
-#### 步驟 3：數據脫敏配置
-```yaml
-# application-sharding.yaml
-spring:
-  shardingsphere:
-    encrypt:
-      encryptors:
-        mobile_encryptor:
-          type: MASK
-          props:
-            mask-char: '*'
-            mask-length: 4
-      tables:
-        t_order:
-          columns:
-            mobile:
-              plainColumn: mobile
-              cipherColumn: mobile_cipher
-              encryptor: mobile_encryptor
-```
-
-### 4. 進階配置
-
-#### 監控配置（使用 Prometheus）
-```yaml
-# application-sharding.yaml
-spring:
-  shardingsphere:
-    metrics:
-      enabled: true
-      name: prometheus
-      host: 127.0.0.1
-      port: 9190
-      props:
-        jvm-information: true
-```
-
-#### 治理配置
-```yaml
-# application-sharding.yaml
-spring:
-  shardingsphere:
-    governance:
-      name: governance_ds
-      registry-center:
-        type: ZOOKEEPER
-        server-lists: localhost:2181
-        namespace: governance_ds
-      overwrite: false
-```
-
-這個擴展提供了動態縮容擴容的分庫分表方案，主要包含以下功能：
-
-1. 動態監控：通過 `ShardMetrics` 類收集分片的使用情況
-2. 自動擴容：當分片使用率超過閾值時，自動創建新的分片並重新平衡資料
-3. 自動縮容：當分片使用率低於閾值時，自動將資料遷移到其他分片並移除該分片
-4. 平滑遷移：在擴縮容過程中確保資料的完整性和一致性
-
-使用這個方案，系統可以根據實際負載情況自動調整分片數量，實現更好的資源利用和性能優化。
-
-這個教學文件提供了從基礎到進階的資料庫分庫分表學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的資料分割開始，中級學習者可以學習分片策略和路由機制，而高級學習者則可以掌握分散式分片、一致性雜湊和跨分片事務等進階功能。 
 
 ### 4. 常見問題與解決方案
 
 #### 問題表象
-1. 數據傾斜：
-   - 某些分片數據量過大
-   - 查詢性能不均衡
-   - 存儲空間分配不均
+1. 玩具分佈不均：
+   - 某些玩具箱太滿
+   - 找玩具速度不一樣
+   - 空間使用不均
 
-2. 跨分片查詢：
-   - 查詢性能下降
-   - 結果合併複雜
-   - 內存消耗增加
+2. 跨玩具箱找玩具：
+   - 找玩具變慢
+   - 結果要合併
+   - 記憶體用太多
 
-3. 分片擴容：
-   - 數據遷移困難
-   - 服務中斷風險
-   - 一致性難以保證
+3. 玩具箱擴充：
+   - 搬玩具困難
+   - 可能暫停服務
+   - 玩具可能不一致
 
-4. 事務處理：
-   - 跨分片事務複雜
-   - 性能開銷大
-   - 死鎖風險增加
+4. 玩具同步：
+   - 多個玩具箱同步複雜
+   - 速度變慢
+   - 可能卡住
 
 #### 避免方法
-1. 數據傾斜防護：
-   - 合理選擇分片鍵
-   - 實現動態分片
-   - 監控數據分佈
+1. 玩具分佈不均防護：
+   - 選擇好的分類規則
+   - 動態調整分類
+   - 監控玩具分佈
 
-2. 跨分片查詢優化：
-   - 優化查詢語句
+2. 跨玩具箱找玩具優化：
+   - 優化找玩具方法
    - 使用索引
-   - 實現結果緩存
+   - 使用快取
 
-3. 分片擴容準備：
-   - 預留擴容空間
-   - 實現平滑遷移
-   - 制定回滾方案
+3. 玩具箱擴充準備：
+   - 預留擴充空間
+   - 準備搬玩具方案
+   - 準備回退方案
 
-4. 事務處理優化：
-   - 使用分佈式事務
+4. 玩具同步優化：
+   - 使用分佈式同步
    - 實現最終一致性
-   - 設置超時機制
+   - 設定超時機制
 
 #### 處理方案
 1. 技術方案：
-   ```java
-   public class ShardingManager {
-       private ShardingDataSource dataSource;
-       private ShardingRule shardingRule;
-       private TransactionManager transactionManager;
-       
-       public void handleShardingIssue(ShardingIssue issue) {
-           switch (issue.getType()) {
-               case DATA_SKEW:
-                   handleDataSkew(issue);
-                   break;
-               case CROSS_SHARD_QUERY:
-                   handleCrossShardQuery(issue);
-                   break;
-               case SHARD_EXPANSION:
-                   handleShardExpansion(issue);
-                   break;
-               case TRANSACTION:
-                   handleTransaction(issue);
-                   break;
-           }
-       }
-       
-       private void handleDataSkew(ShardingIssue issue) {
-           // 分析數據分佈
-           DataDistribution distribution = analyzeDataDistribution();
-           // 調整分片策略
-           adjustShardingStrategy(distribution);
-           // 執行數據重平衡
-           rebalanceData();
-       }
-       
-       private void handleCrossShardQuery(ShardingIssue issue) {
-           // 優化查詢計劃
-           QueryPlan plan = optimizeQuery(issue.getQuery());
-           // 執行分佈式查詢
-           executeDistributedQuery(plan);
-           // 合併查詢結果
-           mergeResults();
-       }
-       
-       private void handleShardExpansion(ShardingIssue issue) {
-           // 準備新分片
-           prepareNewShard();
-           // 執行數據遷移
-           migrateData();
-           // 更新路由規則
-           updateRoutingRules();
-       }
-       
-       private void handleTransaction(ShardingIssue issue) {
-           // 開始分佈式事務
-           transactionManager.begin();
-           try {
-               // 執行事務操作
-               executeTransactionOperations();
-               // 提交事務
-               transactionManager.commit();
-           } catch (Exception e) {
-               // 回滾事務
-               transactionManager.rollback();
-               throw e;
-           }
-       }
-   }
-   ```
-
-2. 監控方案：
-   ```java
-   public class ShardingMonitor {
-       private MetricsCollector metricsCollector;
-       private AlertManager alertManager;
-       
-       public void monitorSharding() {
-           ShardingMetrics metrics = metricsCollector.collectMetrics();
-           
-           // 檢查數據傾斜
-           if (metrics.getDataSkew() > SKEW_THRESHOLD) {
-               alertManager.alert("數據傾斜警告", metrics.getDetails());
-           }
-           
-           // 檢查查詢性能
-           if (metrics.getQueryPerformance() < PERFORMANCE_THRESHOLD) {
-               alertManager.alert("查詢性能警告", metrics.getDetails());
-           }
-           
-           // 檢查分片負載
-           if (metrics.getShardLoad() > LOAD_THRESHOLD) {
-               alertManager.alert("分片負載警告", metrics.getDetails());
-           }
-       }
-   }
-   ```
-
-3. 最佳實踐：
-   - 合理選擇分片鍵
-   - 實現分片預熱
-   - 設置分片監控
-   - 實現平滑擴容
-   - 優化跨分片查詢
-   - 使用分佈式事務
-   - 實現數據備份
-   - 制定故障恢復方案
-
-### 5. 實戰案例
-
-#### 案例一：電商訂單分片
 ```java
-public class OrderShardingService {
-    private ShardingDataSource dataSource;
-    private OrderRepository orderRepository;
+public class 玩具管理員 {
+    private 玩具箱 主要玩具箱;
+    private 玩具箱 備用玩具箱;
+    private 同步管理器 同步管理器;
     
-    public void createOrder(Order order) {
-        // 生成訂單ID
-        Long orderId = generateOrderId();
-        order.setOrderId(orderId);
-        
-        // 根據用戶ID選擇分片
-        String shardKey = determineShardKey(order.getUserId());
-        
-        // 在對應分片創建訂單
-        orderRepository.save(order, shardKey);
-    }
-    
-    public Order getOrder(Long orderId, Long userId) {
-        // 根據用戶ID確定分片
-        String shardKey = determineShardKey(userId);
-        
-        // 從對應分片查詢訂單
-        return orderRepository.findById(orderId, shardKey);
-    }
-    
-    private String determineShardKey(Long userId) {
-        // 實現分片路由邏輯
-        return "shard_" + (userId % 4);
+    public void 處理問題(問題 玩具問題) {
+        switch (玩具問題.類型) {
+            case 玩具分佈不均:
+                處理玩具分佈不均(玩具問題);
+                break;
+            case 跨玩具箱找玩具:
+                處理跨玩具箱找玩具(玩具問題);
+                break;
+            case 玩具箱擴充:
+                處理玩具箱擴充(玩具問題);
+                break;
+            case 玩具同步:
+                處理玩具同步(玩具問題);
+                break;
+        }
     }
 }
 ```
 
-#### 案例二：社交媒體用戶分片
+2. 監控方案：
 ```java
-public class UserShardingService {
-    private ShardingDataSource dataSource;
-    private UserRepository userRepository;
+public class 玩具監控員 {
+    private 指標收集器 收集器;
+    private 警告管理器 警告管理器;
     
-    public void createUser(User user) {
-        // 生成用戶ID
-        Long userId = generateUserId();
-        user.setUserId(userId);
+    public void 監控玩具箱() {
+        玩具指標 指標 = 收集器.收集指標();
         
-        // 根據地理位置選擇分片
-        String shardKey = determineShardKey(user.getLocation());
+        // 檢查玩具分佈
+        if (指標.玩具分佈不均 > 不均閾值) {
+            警告管理器.警告("玩具分佈不均警告", 指標.詳細資料);
+        }
         
-        // 在對應分片創建用戶
-        userRepository.save(user, shardKey);
-    }
-    
-    public List<User> getUsersByLocation(String location) {
-        // 根據地理位置確定分片
-        String shardKey = determineShardKey(location);
+        // 檢查找玩具速度
+        if (指標.找玩具速度 < 速度閾值) {
+            警告管理器.警告("找玩具速度警告", 指標.詳細資料);
+        }
         
-        // 從對應分片查詢用戶
-        return userRepository.findByLocation(location, shardKey);
+        // 檢查玩具箱負載
+        if (指標.玩具箱負載 > 負載閾值) {
+            警告管理器.警告("玩具箱負載警告", 指標.詳細資料);
+        }
     }
-    
-    private String determineShardKey(String location) {
-        // 實現基於地理位置的分片路由邏輯
-        return "shard_" + location.hashCode() % 8;
-    }
-} 
+}
+```
+
+3. 最佳實踐：
+   - 選擇好的分類規則
+   - 準備玩具箱
+   - 設定監控
+   - 準備擴充
+   - 優化找玩具
+   - 使用同步機制
+   - 備份玩具
+   - 準備故障恢復方案 

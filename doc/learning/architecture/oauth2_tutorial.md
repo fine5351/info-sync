@@ -3,7 +3,7 @@
 ## 初級：理解 OAuth2.0 的基本概念
 
 ### 概念說明
-OAuth2.0 就像是一個「授權代理人」系統，讓我們可以用一個帳號（例如 Google 帳號）登入其他網站，而不需要重新註冊。
+OAuth2.0 就像是一個「數位鑰匙」系統，讓我們可以用一個帳號（例如 Google 帳號）登入其他網站，就像用一把鑰匙可以開很多門一樣。
 
 想像一下：
 - 你是一個學生，想要借學校圖書館的書
@@ -12,68 +12,56 @@ OAuth2.0 就像是一個「授權代理人」系統，讓我們可以用一個�
 - 圖書館看到學生證就相信你是學生，不需要再問其他問題
 
 可能遇到的問題：
-1. 忘記登入：使用者可能忘記自己用哪個帳號登入
-2. 權限問題：某些功能需要額外授權
-3. 安全性問題：授權碼可能被竊取
+1. 忘記登入：就像忘記帶學生證一樣，可能忘記用哪個帳號登入
+2. 權限問題：就像有些書需要老師同意才能借，某些功能需要額外授權
+3. 安全性問題：就像學生證可能被偷，授權碼也可能被竊取
 
 解決方法：
-1. 提供清楚的登入提示
-2. 明確告知需要哪些權限
-3. 使用 HTTPS 確保安全傳輸
+1. 提供清楚的登入提示，就像圖書館的借書規則
+2. 明確告知需要哪些權限，就像借書前先說明規定
+3. 使用 HTTPS 確保安全傳輸，就像把學生證放在安全的地方
 
 ### PlantUML 圖解
 ```plantuml
 @startuml
-actor User
-participant "App" as App
-participant "OAuth Server" as OAuth
-participant "Resource Server" as Resource
+skinparam backgroundColor white
+skinparam handwritten true
 
-User -> App: 點擊「使用 Google 登入」
-App -> OAuth: 請求授權
-OAuth -> User: 顯示登入頁面
-User -> OAuth: 輸入帳號密碼
-OAuth -> App: 發送授權碼
-App -> OAuth: 用授權碼換取令牌
-OAuth -> App: 發送訪問令牌
-App -> Resource: 使用令牌請求資料
-Resource -> App: 返回資料
-App -> User: 顯示資料
+actor "學生" as Student
+participant "圖書館" as Library
+participant "學生證" as ID
+participant "書本" as Book
+
+Student -> Library: 想要借書
+Library -> Student: 請出示學生證
+Student -> ID: 拿出學生證
+ID -> Library: 確認身份
+Library -> Book: 允許借書
+Book -> Student: 成功借到書
+
 @enduml
 ```
 
 ### 分段教學步驟
-1. 了解什麼是 OAuth2.0
-2. 認識基本的授權流程
-3. 了解令牌（Token）的作用
-4. 學習如何安全地使用 OAuth2.0
+1. 了解什麼是 OAuth2.0（數位鑰匙系統）
+2. 認識基本的授權流程（出示學生證的過程）
+3. 了解令牌（Token）的作用（學生證的有效期限）
+4. 學習如何安全地使用 OAuth2.0（保管好學生證）
 
 ### 實作範例
 ```java
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-
-public class SimpleOAuthClient {
+// 這是一個簡單的登入按鈕範例
+public class LoginButton {
     public static void main(String[] args) {
-        // 設定 OAuth 參數
-        String clientId = "your_client_id";
-        String redirectUri = "http://localhost:8080/callback";
-        String scope = "profile email";
-        
-        // 構建授權 URL
-        String authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
-            "?client_id=" + clientId +
-            "&redirect_uri=" + redirectUri +
+        // 設定 Google 登入按鈕
+        String googleLoginUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
+            "?client_id=你的應用程式ID" +
+            "&redirect_uri=http://你的網站/callback" +
             "&response_type=code" +
-            "&scope=" + scope;
-        
-        System.out.println("請訪問以下 URL 進行授權：");
-        System.out.println(authUrl);
-        
-        // 這裡需要實作接收授權碼的回調處理
-        // 實際應用中會使用 Web 伺服器來處理
+            "&scope=email profile";
+            
+        System.out.println("點擊這裡登入：");
+        System.out.println(googleLoginUrl);
     }
 }
 ```
@@ -81,166 +69,115 @@ public class SimpleOAuthClient {
 ## 中級：實作 OAuth2.0 客戶端
 
 ### 概念說明
-在這個層級，我們要學習如何實作一個 OAuth2.0 客戶端。這就像是一個「授權代理人」的具體實作。
+在這個層級，我們要學習如何建立一個可以讓使用者用 Google 帳號登入的網站。就像建立一個圖書館的借書系統。
 
 主要概念：
-- 客戶端 ID 和密鑰：就像是代理人的身份證
-- 授權碼：臨時的授權證明
-- 訪問令牌：實際用來存取資源的鑰匙
-- 重新整理令牌：用來取得新的訪問令牌
+- 客戶端 ID：就像是圖書館的借書證號碼
+- 授權碼：臨時的借書許可
+- 訪問令牌：實際用來借書的卡片
+- 重新整理令牌：用來更新借書卡片的工具
 
 可能遇到的問題：
-1. 令牌過期：訪問令牌有使用期限
-2. 權限不足：需要更多權限時怎麼辦
-3. 安全性問題：如何安全地儲存令牌
+1. 令牌過期：就像借書證過期了
+2. 權限不足：就像想借的書需要更高權限
+3. 安全性問題：如何保護使用者的資料
 
 解決方法：
 1. 使用重新整理令牌更新訪問令牌
 2. 實作權限請求機制
-3. 使用安全的儲存方式（如加密）
+3. 使用安全的儲存方式
 
 ### PlantUML 圖解
 ```plantuml
 @startuml
-class OAuthClient {
-    -clientId: String
-    -clientSecret: String
-    -redirectUri: String
-    -accessToken: String
-    -refreshToken: String
-    +getAuthorizationUrl(): String
-    +handleCallback(code: String): void
-    +getAccessToken(): String
-    +refreshToken(): void
+skinparam backgroundColor white
+skinparam handwritten true
+
+class "登入系統" as LoginSystem {
+    - 應用程式ID
+    - 應用程式密鑰
+    - 回調網址
+    + 建立登入按鈕()
+    + 處理登入回調()
+    + 取得使用者資料()
 }
 
-class TokenManager {
-    -tokens: Map<String, String>
-    +storeToken(type: String, token: String): void
-    +getToken(type: String): String
-    +removeToken(type: String): void
+class "令牌管理員" as TokenManager {
+    - 訪問令牌
+    - 重新整理令牌
+    + 儲存令牌()
+    + 取得令牌()
+    + 更新令牌()
 }
 
-class ResourceClient {
-    -baseUrl: String
-    -oauthClient: OAuthClient
-    +getUserProfile(): UserProfile
-    +getUserEmail(): String
+class "使用者資料" as UserData {
+    - 姓名
+    - 電子郵件
+    - 頭像
+    + 取得個人資料()
+    + 更新個人資料()
 }
 
-OAuthClient "1" *-- "1" TokenManager
-ResourceClient "1" *-- "1" OAuthClient
+LoginSystem "1" *-- "1" TokenManager
+LoginSystem "1" *-- "1" UserData
 
 @enduml
 ```
 
 ### 分段教學步驟
-1. 設定 OAuth 客戶端
-2. 實作授權流程
-3. 處理令牌管理
-4. 實作資源存取
-5. 處理錯誤情況
+1. 設定 Google 開發者帳號
+2. 建立登入按鈕
+3. 處理登入回調
+4. 取得使用者資料
+5. 實作登出功能
 
 ### 實作範例
 ```java
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.HashMap;
-import java.util.Map;
-import com.google.gson.Gson;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
 
-public class OAuthClient {
-    private final String clientId;
-    private final String clientSecret;
-    private final String redirectUri;
-    private final TokenManager tokenManager;
+public class GoogleLogin {
+    private static final String CLIENT_ID = "你的應用程式ID";
+    private static final String CLIENT_SECRET = "你的應用程式密鑰";
     
-    public OAuthClient(String clientId, String clientSecret, String redirectUri) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.redirectUri = redirectUri;
-        this.tokenManager = new TokenManager();
-    }
-    
-    public String getAuthorizationUrl() {
-        return "https://accounts.google.com/o/oauth2/v2/auth" +
-            "?client_id=" + clientId +
-            "&redirect_uri=" + redirectUri +
-            "&response_type=code" +
-            "&scope=profile email" +
-            "&access_type=offline";
-    }
-    
-    public void handleCallback(String code) {
-        // 使用授權碼換取令牌
-        Map<String, String> params = new HashMap<>();
-        params.put("code", code);
-        params.put("client_id", clientId);
-        params.put("client_secret", clientSecret);
-        params.put("redirect_uri", redirectUri);
-        params.put("grant_type", "authorization_code");
-        
-        // 發送請求獲取令牌
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("https://oauth2.googleapis.com/token"))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .POST(HttpRequest.BodyPublishers.ofString(buildFormData(params)))
+    public static void main(String[] args) {
+        // 建立 Google 登入流程
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+            new NetHttpTransport(),
+            JacksonFactory.getDefaultInstance(),
+            CLIENT_ID,
+            CLIENT_SECRET,
+            Arrays.asList("email", "profile"))
             .build();
             
-        try {
-            HttpResponse<String> response = client.send(request, 
-                HttpResponse.BodyHandlers.ofString());
+        // 建立登入 URL
+        String url = flow.newAuthorizationUrl()
+            .setRedirectUri("http://你的網站/callback")
+            .build();
             
-            // 解析回應並儲存令牌
-            Gson gson = new Gson();
-            TokenResponse tokenResponse = gson.fromJson(response.body(), 
-                TokenResponse.class);
-            
-            tokenManager.storeToken("access_token", tokenResponse.accessToken);
-            tokenManager.storeToken("refresh_token", tokenResponse.refreshToken);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        System.out.println("請訪問以下網址登入：");
+        System.out.println(url);
     }
-    
-    private String buildFormData(Map<String, String> params) {
-        StringBuilder result = new StringBuilder();
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            if (result.length() > 0) result.append("&");
-            result.append(entry.getKey())
-                  .append("=")
-                  .append(entry.getValue());
-        }
-        return result.toString();
-    }
-}
-
-class TokenResponse {
-    String accessToken;
-    String refreshToken;
-    String tokenType;
-    int expiresIn;
 }
 ```
 
 ## 高級：實作 OAuth2.0 伺服器
 
 ### 概念說明
-在這個層級，我們要學習如何實作一個完整的 OAuth2.0 伺服器。這就像是一個「授權中心」的實作。
+在這個層級，我們要學習如何建立一個完整的授權系統。就像建立一個新的圖書館系統，可以讓其他學校的學生也來借書。
 
 主要概念：
-- 授權伺服器：處理授權請求
-- 資源伺服器：保護和提供資源
-- 令牌管理：產生和驗證令牌
-- 安全性考慮：防止攻擊和濫用
+- 授權伺服器：處理借書申請的櫃台
+- 資源伺服器：存放書本的書架
+- 令牌管理：管理借書證的系統
+- 安全性考慮：防止有人偷書或冒用身份
 
 可能遇到的問題：
-1. 效能問題：大量請求時的處理
-2. 安全性問題：各種攻擊防護
-3. 擴展性問題：如何支援更多客戶端
+1. 效能問題：太多人同時借書
+2. 安全性問題：防止有人偷書
+3. 擴展性問題：如何讓更多學校加入
 
 解決方法：
 1. 使用快取和負載平衡
@@ -250,132 +187,86 @@ class TokenResponse {
 ### PlantUML 圖解
 ```plantuml
 @startuml
-package "OAuth Server" {
-    class AuthorizationServer {
-        -clientRegistry: ClientRegistry
-        -tokenService: TokenService
-        +handleAuthorizationRequest()
-        +handleTokenRequest()
-        +validateToken()
+skinparam backgroundColor white
+skinparam handwritten true
+
+package "圖書館系統" {
+    class "借書櫃台" as Counter {
+        - 借書證資料庫
+        - 借書規則
+        + 處理借書申請()
+        + 發放借書證()
+        + 更新借書證()
     }
     
-    class ClientRegistry {
-        -clients: Map<String, Client>
-        +registerClient()
-        +validateClient()
-        +getClient()
+    class "書架管理" as Shelf {
+        - 書本目錄
+        - 借閱記錄
+        + 查詢書本()
+        + 更新借閱狀態()
     }
     
-    class TokenService {
-        -tokenStore: TokenStore
-        +generateToken()
-        +validateToken()
-        +revokeToken()
-    }
-    
-    class TokenStore {
-        -tokens: Map<String, TokenInfo>
-        +storeToken()
-        +getToken()
-        +removeToken()
+    class "安全系統" as Security {
+        - 監視器
+        - 警報器
+        + 檢查身份()
+        + 防止偷書()
     }
 }
 
-package "Resource Server" {
-    class ResourceServer {
-        -tokenValidator: TokenValidator
-        -resourceManager: ResourceManager
-        +validateRequest()
-        +serveResource()
-    }
-    
-    class TokenValidator {
-        +validateToken()
-        +getTokenInfo()
-    }
-    
-    class ResourceManager {
-        -resources: Map<String, Resource>
-        +getResource()
-        +updateResource()
-    }
+package "其他學校" {
+    class "學生" as Student
+    class "老師" as Teacher
 }
 
-AuthorizationServer "1" *-- "1" ClientRegistry
-AuthorizationServer "1" *-- "1" TokenService
-TokenService "1" *-- "1" TokenStore
-ResourceServer "1" *-- "1" TokenValidator
-ResourceServer "1" *-- "1" ResourceManager
+Counter "1" *-- "1" Shelf
+Counter "1" *-- "1" Security
+Student --> Counter
+Teacher --> Counter
+
 @enduml
 ```
 
 ### 分段教學步驟
-1. 設計授權伺服器架構
-2. 實作客戶端註冊
+1. 設計授權系統架構
+2. 實作使用者註冊
 3. 實作令牌管理
-4. 實作資源伺服器
-5. 實作安全性機制
-6. 實作監控和日誌
+4. 實作資源保護
+5. 實作安全機制
+6. 實作監控系統
 
 ### 實作範例
 ```java
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
-import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
-import org.springframework.security.oauth2.provider.token.TokenStore;
-import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
-import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
 
 @SpringBootApplication
 @EnableAuthorizationServer
-public class OAuthServerApplication {
+public class LibrarySystem {
     public static void main(String[] args) {
-        SpringApplication.run(OAuthServerApplication.class, args);
+        SpringApplication.run(LibrarySystem.class, args);
     }
     
-    @Bean
-    public TokenStore tokenStore() {
-        return new JwtTokenStore(accessTokenConverter());
-    }
-    
-    @Bean
-    public JwtAccessTokenConverter accessTokenConverter() {
-        JwtAccessTokenConverter converter = new JwtAccessTokenConverter();
-        converter.setSigningKey("your-secret-key");
-        return converter;
-    }
-}
-
-@Configuration
-@EnableResourceServer
-public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
-        http
-            .authorizeRequests()
-            .antMatchers("/api/public/**").permitAll()
-            .antMatchers("/api/private/**").authenticated();
-    }
-}
-
-@RestController
-@RequestMapping("/api/private")
-public class ResourceController {
-    @GetMapping("/user")
-    public UserProfile getUserProfile(Principal principal) {
-        // 根據 principal 獲取用戶資料
-        return new UserProfile(principal.getName());
+    @Configuration
+    public class SecurityConfig extends WebSecurityConfigurerAdapter {
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http
+                .authorizeRequests()
+                .antMatchers("/public/**").permitAll()  // 公開區域
+                .antMatchers("/private/**").authenticated()  // 需要登入
+                .and()
+                .oauth2Login();  // 啟用 OAuth2 登入
+        }
     }
 }
 ```
 
 ## 總結
 
-這份教學文件從 OAuth2.0 的基本概念開始，逐步引導學生學習更複雜的實作細節。每個難度層級都包含了必要的理論知識和實作範例，並使用 PlantUML 圖表來幫助理解系統架構。
+這份教學文件從 OAuth2.0 的基本概念開始，用圖書館借書的例子來解釋複雜的概念。每個難度層級都包含了必要的理論知識和實作範例，並使用簡單的圖表來幫助理解。
 
-初級課程著重於理解 OAuth2.0 的基本概念和流程，中級課程學習如何實作 OAuth2.0 客戶端，高級課程則涵蓋完整的 OAuth2.0 伺服器實作。這樣的學習路徑可以幫助學生逐步建立對 OAuth2.0 的深入理解。 
+初級課程著重於理解 OAuth2.0 的基本概念，就像學習如何使用學生證借書。中級課程學習如何建立登入系統，就像建立圖書館的借書系統。高級課程則涵蓋完整的授權系統實作，就像建立一個可以讓多所學校共用的圖書館系統。 

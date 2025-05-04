@@ -3,283 +3,145 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-消息隊列訊息不丟失就像學校的作業本：
-- 老師發的作業本要好好保存
-- 如果作業本不見了，就沒辦法寫作業
-- 所以我們要把作業本放在安全的地方
+消息隊列就像學校的傳紙條系統：
+- 當你要傳紙條給同學時，需要確保紙條不會弄丟
+- 如果紙條不見了，對方就收不到訊息
+- 所以我們需要一個安全的地方來保存這些紙條
 
 初級學習者需要了解：
 - 什麼是訊息不丟失
-- 為什麼需要保存訊息
+- 為什麼要保存訊息
 - 基本的訊息儲存概念
 
 ### 2. 使用原因
-消息隊列訊息不丟失的主要使用原因包括：
-1. 數據可靠性：
-   - 確保消息不會丟失
-   - 保證數據完整性
-   - 防止數據錯誤
+為什麼我們需要保存訊息：
+1. 確保訊息不會消失：
+   - 就像老師發的作業本要好好保存
+   - 如果作業本不見了，就沒辦法寫作業
+   - 所以我們要把作業本放在安全的地方
 
-2. 業務連續性：
-   - 確保業務流程不中斷
-   - 保證交易完整性
-   - 維護業務一致性
+2. 讓事情順利進行：
+   - 確保每個人都收到訊息
+   - 不會漏掉重要的事情
+   - 可以追蹤訊息的狀態
 
-3. 系統穩定性：
-   - 提高系統可靠性
-   - 確保服務可用性
-   - 優化系統效能
+3. 系統穩定運作：
+   - 讓電腦系統更可靠
+   - 不會因為訊息不見而出錯
+   - 可以處理更多訊息
 
 ### 3. 問題表象
-常見的問題表象包括：
-1. 數據問題：
-   - 消息丟失
-   - 數據不一致
-   - 數據錯誤
+可能會遇到的問題：
+1. 訊息不見了：
+   - 傳送的訊息消失了
+   - 收不到重要訊息
+   - 訊息順序混亂
 
-2. 業務問題：
-   - 業務中斷
-   - 交易失敗
-   - 流程異常
+2. 系統出問題：
+   - 電腦當機
+   - 網路斷線
+   - 儲存空間不足
 
-3. 效能問題：
-   - 儲存壓力
-   - 恢復延遲
-   - 資源消耗
+3. 效能變慢：
+   - 處理訊息變慢
+   - 系統反應遲鈍
+   - 儲存空間不夠
 
 ### 4. 避免方法
-避免問題的方法包括：
-1. 系統設計：
-   - 實現持久化
-   - 設計備份機制
-   - 建立恢復機制
+如何避免這些問題：
+1. 好好保存訊息：
+   - 把訊息存在安全的地方
+   - 定期備份訊息
+   - 檢查訊息是否完整
 
-2. 數據管理：
-   - 實現消息儲存
-   - 設置備份策略
-   - 定期清理數據
+2. 監控系統狀態：
+   - 檢查系統是否正常
+   - 監控儲存空間
+   - 定期維護系統
 
-3. 效能優化：
-   - 優化儲存策略
-   - 實現並發控制
-   - 定期效能評估
+3. 優化系統效能：
+   - 清理不需要的訊息
+   - 優化儲存方式
+   - 定期檢查系統
 
-### 5. 問題處理
-遇到問題時的處理方法：
-1. 數據問題處理：
-   - 檢查數據完整性
-   - 修復數據錯誤
-   - 恢復正確狀態
+### 5. 實作範例
 
-2. 業務問題處理：
-   - 檢查業務流程
-   - 修復業務異常
-   - 恢復正常流程
-
-3. 效能問題處理：
-   - 優化儲存策略
-   - 調整資源分配
-   - 實現動態擴展
-
-### 6. 實戰案例
-
-#### 案例一：電商訂單處理
+#### 簡單的訊息儲存系統
 ```java
-public class OrderMessageProcessor {
-    private MessageStore store;
-    private MessageBackup backup;
+public class SimpleMessageStore {
+    // 用來存放訊息的列表
+    private List<String> messages = new ArrayList<>();
     
-    public void processOrder(Order order) {
-        // 創建持久化消息
-        PersistentMessage message = new PersistentMessage(
-            order.getId(),
-            order.getData(),
-            System.currentTimeMillis()
-        );
-        
-        // 保存消息
-        store.save(message);
-        
-        // 備份消息
-        backup.save(message);
-        
-        // 處理消息
-        processMessage(message);
+    // 儲存訊息
+    public void saveMessage(String message) {
+        messages.add(message);
+        System.out.println("已儲存訊息：" + message);
     }
     
-    private void processMessage(PersistentMessage message) {
-        try {
-            // 處理消息
-            processOrder(message.getContent());
-            
-            // 確認處理完成
-            store.markAsProcessed(message.getId());
-        } catch (Exception e) {
-            // 處理失敗，從備份恢復
-            backup.restore(message.getId());
+    // 讀取訊息
+    public String getMessage(int index) {
+        if (index < messages.size()) {
+            return messages.get(index);
         }
+        return null;
+    }
+    
+    // 備份所有訊息
+    public List<String> backupMessages() {
+        return new ArrayList<>(messages);
     }
 }
 ```
 
-#### 案例二：金融交易處理
+#### 使用範例
 ```java
-public class TransactionMessageProcessor {
-    private MessageStore store;
-    private MessageBackup backup;
-    
-    public void processTransaction(Transaction transaction) {
-        // 創建持久化消息
-        PersistentMessage message = new PersistentMessage(
-            transaction.getId(),
-            transaction.getData(),
-            System.currentTimeMillis()
-        );
+public class MessageExample {
+    public static void main(String[] args) {
+        // 創建訊息儲存系統
+        SimpleMessageStore store = new SimpleMessageStore();
         
-        // 保存消息
-        store.save(message);
+        // 儲存一些訊息
+        store.saveMessage("你好！");
+        store.saveMessage("今天天氣真好！");
+        store.saveMessage("記得寫作業！");
         
-        // 備份消息
-        backup.save(message);
+        // 讀取訊息
+        String message = store.getMessage(0);
+        System.out.println("讀取到的訊息：" + message);
         
-        // 處理消息
-        processMessage(message);
-    }
-    
-    private void processMessage(PersistentMessage message) {
-        try {
-            // 處理消息
-            processTransaction(message.getContent());
-            
-            // 確認處理完成
-            store.markAsProcessed(message.getId());
-        } catch (Exception e) {
-            // 處理失敗，從備份恢復
-            backup.restore(message.getId());
-        }
+        // 備份訊息
+        List<String> backup = store.backupMessages();
+        System.out.println("備份的訊息數量：" + backup.size());
     }
 }
 ```
 
-### 7. 最佳實踐
-
-#### 1. 使用現有工具
-```java
-// 使用 RabbitMQ 實現消息持久化
-public class RabbitMQPersistentConsumer {
-    private final String queueName;
-    private final ConnectionFactory factory;
-    
-    public RabbitMQPersistentConsumer(String host, String queueName) {
-        this.queueName = queueName;
-        this.factory = new ConnectionFactory();
-        this.factory.setHost(host);
-    }
-    
-    public void consume() throws Exception {
-        try (Connection connection = factory.newConnection();
-             Channel channel = connection.createChannel()) {
-            
-            // 設置隊列持久化
-            boolean durable = true;
-            channel.queueDeclare(queueName, durable, false, false, null);
-            
-            // 設置消息持久化
-            AMQP.BasicProperties properties = MessageProperties.PERSISTENT_TEXT_PLAIN;
-            
-            // 消費消息
-            channel.basicConsume(queueName, false, new DefaultConsumer(channel) {
-                @Override
-                public void handleDelivery(String consumerTag,
-                                         Envelope envelope,
-                                         AMQP.BasicProperties properties,
-                                         byte[] body) throws IOException {
-                    String message = new String(body, "UTF-8");
-                    System.out.println("Received: " + message);
-                    
-                    try {
-                        // 處理消息
-                        processMessage(message);
-                        
-                        // 確認消息
-                        channel.basicAck(envelope.getDeliveryTag(), false);
-                    } catch (Exception e) {
-                        // 處理失敗，拒絕消息
-                        channel.basicNack(envelope.getDeliveryTag(), false, true);
-                    }
-                }
-            });
-        }
-    }
+### 6. PlantUML 圖解
+```plantuml
+@startuml
+class SimpleMessageStore {
+    - messages: List<String>
+    + saveMessage(message: String)
+    + getMessage(index: int): String
+    + backupMessages(): List<String>
 }
-```
 
-#### 2. 監控與告警
-```java
-public class MessageMonitor {
-    private MetricsCollector metricsCollector;
-    private AlertManager alertManager;
-    
-    public void monitor() {
-        MessageMetrics metrics = metricsCollector.collectMetrics();
-        
-        // 檢查消息狀態
-        if (!metrics.isMessageConsistent()) {
-            alertManager.alert("消息警告", metrics.getDetails());
-        }
-        
-        // 檢查儲存狀態
-        if (metrics.getStorageStatus() != StorageStatus.NORMAL) {
-            alertManager.alert("儲存警告", metrics.getDetails());
-        }
-        
-        // 檢查效能狀態
-        if (metrics.getPerformanceStatus() != PerformanceStatus.OPTIMAL) {
-            alertManager.alert("效能警告", metrics.getDetails());
-        }
-    }
+class MessageExample {
+    + main(args: String[])
 }
-```
 
-#### 3. 錯誤處理與恢復
-```java
-public class MessageRecovery {
-    private MessageStore store;
-    private MessageBackup backup;
-    
-    public void recover() {
-        // 檢查消息狀態
-        checkMessageState();
-        
-        // 修復消息錯誤
-        fixMessageIssues();
-        
-        // 恢復處理流程
-        restoreProcessing();
-    }
-    
-    private void checkMessageState() {
-        // 實現消息狀態檢查邏輯
-    }
-    
-    private void fixMessageIssues() {
-        // 實現消息修復邏輯
-    }
-    
-    private void restoreProcessing() {
-        // 實現處理流程恢復邏輯
-    }
-}
+MessageExample --> SimpleMessageStore
+@enduml
 ```
 
 ## 中級（Intermediate）層級
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 訊息持久化
-- 備份機制
-- 恢復機制
-- 狀態檢查
+- 訊息持久化：把訊息永久保存下來
+- 備份機制：準備第二份備用的訊息
+- 恢復機制：當訊息不見時可以找回來
+- 狀態檢查：確認訊息是否正常
 
 ### 2. PlantUML 圖解
 ```plantuml
@@ -288,16 +150,16 @@ class Message {
     - id: String
     - content: String
     - timestamp: long
-    + getId()
-    + getContent()
-    + getTimestamp()
+    + getId(): String
+    + getContent(): String
+    + getTimestamp(): long
 }
 
 class MessageStore {
     - messages: List<Message>
     - backup: List<Message>
-    + save()
-    + load()
+    + save(message: Message)
+    + load(id: String): Message
     + backup()
     + restore()
 }
@@ -305,9 +167,9 @@ class MessageStore {
 class MessageManager {
     - store: MessageStore
     - status: Status
-    + send()
-    + receive()
-    + checkStatus()
+    + send(message: Message)
+    + receive(id: String): Message
+    + checkStatus(): Status
 }
 
 MessageManager --> MessageStore
@@ -317,14 +179,14 @@ MessageStore --> Message
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：訊息持久化
+#### 步驟 1：建立訊息類別
 ```java
-public class PersistentMessage {
+public class Message {
     private String id;
     private String content;
     private long timestamp;
     
-    public PersistentMessage(String content) {
+    public Message(String content) {
         this.id = UUID.randomUUID().toString();
         this.content = content;
         this.timestamp = System.currentTimeMillis();
@@ -344,25 +206,25 @@ public class PersistentMessage {
 }
 ```
 
-#### 步驟 2：訊息儲存管理
+#### 步驟 2：建立訊息儲存系統
 ```java
 public class MessageStore {
-    private List<PersistentMessage> messages;
-    private List<PersistentMessage> backup;
+    private List<Message> messages;
+    private List<Message> backup;
     
     public MessageStore() {
         messages = new ArrayList<>();
         backup = new ArrayList<>();
     }
     
-    public void save(PersistentMessage message) {
+    public void save(Message message) {
         messages.add(message);
         // 同時備份
         backup.add(message);
-        System.out.println("已保存消息：" + message.getContent());
+        System.out.println("已儲存訊息：" + message.getContent());
     }
     
-    public PersistentMessage load(String messageId) {
+    public Message load(String messageId) {
         return messages.stream()
             .filter(m -> m.getId().equals(messageId))
             .findFirst()
@@ -372,7 +234,33 @@ public class MessageStore {
     public void restore() {
         messages.clear();
         messages.addAll(backup);
-        System.out.println("已從備份恢復所有消息");
+        System.out.println("已從備份恢復所有訊息");
+    }
+}
+```
+
+#### 步驟 3：建立訊息管理器
+```java
+public class MessageManager {
+    private MessageStore store;
+    private Status status;
+    
+    public MessageManager() {
+        store = new MessageStore();
+        status = Status.NORMAL;
+    }
+    
+    public void send(Message message) {
+        store.save(message);
+        System.out.println("已發送訊息：" + message.getContent());
+    }
+    
+    public Message receive(String messageId) {
+        return store.load(messageId);
+    }
+    
+    public Status checkStatus() {
+        return status;
     }
 }
 ```
@@ -381,34 +269,34 @@ public class MessageStore {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式儲存
-- 事務日誌
-- 檢查點機制
-- 容錯處理
+- 分散式儲存：在多台電腦上儲存訊息
+- 事務日誌：記錄所有操作的日記
+- 檢查點機制：定期保存系統狀態
+- 容錯處理：當系統出問題時如何處理
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階消息儲存系統" {
+package "進階訊息儲存系統" {
     class DistributedStore {
         - nodes: List<Node>
         - coordinator: Coordinator
         - logger: Logger
-        + save()
-        + load()
+        + save(message: Message)
+        + load(id: String): Message
         + replicate()
     }
     
     class Coordinator {
         - transactions: Map
-        + begin()
-        + commit()
-        + rollback()
+        + begin(): Transaction
+        + commit(tx: Transaction)
+        + rollback(tx: Transaction)
     }
     
     class Logger {
         - log: List<LogEntry>
-        + append()
+        + append(entry: LogEntry)
         + replay()
     }
     
@@ -428,7 +316,7 @@ DistributedStore --> Checkpoint
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分散式儲存
+#### 步驟 1：建立分散式儲存系統
 ```java
 public class DistributedStore {
     private List<Node> nodes;
@@ -449,7 +337,7 @@ public class DistributedStore {
             // 記錄日誌
             logger.append(new LogEntry("SAVE", message));
             
-            // 保存到所有節點
+            // 儲存到所有節點
             for (Node node : nodes) {
                 node.save(message);
             }
@@ -473,7 +361,7 @@ public class DistributedStore {
 }
 ```
 
-#### 步驟 2：事務日誌
+#### 步驟 2：建立日誌系統
 ```java
 public class Logger {
     private List<LogEntry> log;
@@ -512,7 +400,7 @@ public class LogEntry {
 }
 ```
 
-#### 步驟 3：檢查點機制
+#### 步驟 3：建立檢查點機制
 ```java
 public class Checkpoint {
     private long timestamp;
@@ -534,4 +422,4 @@ public class Checkpoint {
 }
 ```
 
-這個教學文件提供了從基礎到進階的消息隊列訊息不丟失學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的訊息儲存開始，中級學習者可以學習持久化和備份機制，而高級學習者則可以掌握分散式儲存和容錯處理等進階功能。 
+這個教學文件提供了從基礎到進階的訊息儲存學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的訊息儲存開始，中級學習者可以學習持久化和備份機制，而高級學習者則可以掌握分散式儲存和容錯處理等進階功能。 

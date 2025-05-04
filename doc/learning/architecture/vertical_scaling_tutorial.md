@@ -1,12 +1,12 @@
-# 垂直擴展教學
+# 垂直擴展教學：讓你的程式跑得更快
 
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-垂直擴展就像是在學校裡，當一個班級的學生越來越多時，我們可以：
-- 增加教室的容量（增加記憶體）
-- 換更大的教室（升級 CPU）
-- 增加更多的設備（增加硬碟空間）
+想像你在玩一個線上遊戲，當越來越多人加入時，遊戲可能會變慢。垂直擴展就像是：
+- 升級你的電腦（增加記憶體）
+- 換更好的顯示卡（升級 CPU）
+- 買更大的硬碟（增加儲存空間）
 
 初級學習者需要了解：
 - 什麼是垂直擴展
@@ -14,253 +14,148 @@
 - 基本的擴展方式
 
 ### 2. 使用原因
-垂直擴展的主要使用原因包括：
+就像玩遊戲需要更好的電腦一樣，程式也需要更好的資源：
 1. 效能需求：
-   - 處理更多請求
-   - 提高運算速度
-   - 增加數據處理能力
+   - 處理更多玩家
+   - 遊戲運行更順暢
+   - 載入地圖更快
 
-2. 業務增長：
-   - 用戶數量增加
-   - 數據量增長
-   - 業務複雜度提升
+2. 遊戲成長：
+   - 玩家越來越多
+   - 地圖越來越大
+   - 遊戲內容更豐富
 
-3. 系統穩定性：
-   - 提高系統可靠性
-   - 減少系統瓶頸
-   - 優化資源利用
+3. 遊戲體驗：
+   - 減少卡頓
+   - 避免當機
+   - 讓遊戲更穩定
 
 ### 3. 問題表象
-常見的問題表象包括：
+當遊戲變慢時，你可能會看到：
 1. 效能問題：
-   - CPU 使用率過高
-   - 記憶體不足
-   - 磁碟 I/O 瓶頸
+   - 遊戲畫面卡頓
+   - 載入時間變長
+   - 操作反應變慢
 
 2. 成本問題：
-   - 硬體成本增加
-   - 維護成本上升
-   - 能源消耗增加
+   - 需要更好的電腦
+   - 電費變多
+   - 維護成本增加
 
 3. 擴展限制：
-   - 單機硬體限制
-   - 擴展成本遞增
-   - 維護複雜度增加
+   - 電腦有極限
+   - 升級越來越貴
+   - 維護越來越難
 
 ### 4. 避免方法
-避免問題的方法包括：
-1. 系統設計：
-   - 合理規劃資源需求
-   - 預留擴展空間
-   - 實現資源監控
+如何避免遊戲變慢：
+1. 遊戲設計：
+   - 預留升級空間
+   - 監控遊戲效能
+   - 優化遊戲資源
 
-2. 實現階段：
-   - 使用資源管理工具
-   - 實現效能監控
-   - 優化資源使用
+2. 遊戲開發：
+   - 使用效能監控工具
+   - 定期檢查遊戲狀態
+   - 優化遊戲程式碼
 
-3. 維護階段：
-   - 定期效能評估
-   - 及時資源調整
-   - 監控成本效益
+3. 遊戲維護：
+   - 定期更新
+   - 及時修復問題
+   - 監控玩家體驗
 
-### 5. 問題處理
-遇到問題時的處理方法：
-1. 效能問題處理：
-   - 分析效能瓶頸
-   - 優化資源配置
-   - 升級硬體設備
+### 5. 實戰案例
 
-2. 成本問題處理：
-   - 評估成本效益
-   - 優化資源使用
-   - 考慮替代方案
-
-3. 擴展限制處理：
-   - 評估擴展需求
-   - 考慮水平擴展
-   - 優化系統架構
-
-### 6. 實戰案例
-
-#### 案例一：使用 Spring Boot Actuator 監控
+#### 案例一：簡單的效能監控
 ```java
-@SpringBootApplication
-@EnableActuator
-public class MonitoringApplication {
+public class GameMonitor {
     public static void main(String[] args) {
-        SpringApplication.run(MonitoringApplication.class, args);
-    }
-}
-
-@RestController
-public class ResourceController {
-    @Autowired
-    private SystemMetrics metrics;
-    
-    @GetMapping("/metrics")
-    public Map<String, Object> getMetrics() {
-        Map<String, Object> result = new HashMap<>();
-        result.put("cpu", metrics.getCPUUsage());
-        result.put("memory", metrics.getMemoryUsage());
-        result.put("disk", metrics.getDiskUsage());
-        return result;
-    }
-}
-```
-
-#### 案例二：使用 Micrometer 監控
-```java
-@Configuration
-public class MetricsConfig {
-    @Bean
-    public MeterRegistry meterRegistry() {
-        return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-    }
-}
-
-@Service
-public class ResourceMonitor {
-    private final MeterRegistry registry;
-    
-    public ResourceMonitor(MeterRegistry registry) {
-        this.registry = registry;
+        // 檢查電腦效能
+        System.out.println("CPU 使用率: " + getCPUUsage() + "%");
+        System.out.println("記憶體使用: " + getMemoryUsage() + "MB");
+        System.out.println("硬碟空間: " + getDiskSpace() + "GB");
     }
     
-    public void monitorResources() {
-        // CPU 使用率
-        registry.gauge("system.cpu.usage", 
-            Runtime.getRuntime().availableProcessors(),
-            Runtime.getRuntime()::availableProcessors);
-            
-        // 記憶體使用率
-        registry.gauge("system.memory.usage",
-            Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory(),
-            value -> value);
-            
-        // 磁碟使用率
-        File root = new File("/");
-        registry.gauge("system.disk.usage",
-            root.getTotalSpace() - root.getFreeSpace(),
-            value -> value);
+    private static int getCPUUsage() {
+        // 簡單的 CPU 使用率檢查
+        return 50; // 範例值
+    }
+    
+    private static int getMemoryUsage() {
+        // 簡單的記憶體使用檢查
+        return 1024; // 範例值
+    }
+    
+    private static int getDiskSpace() {
+        // 簡單的硬碟空間檢查
+        return 500; // 範例值
     }
 }
 ```
 
-### 7. 最佳實踐
+### 6. PlantUML 圖解
+```plantuml
+@startuml
+skinparam backgroundColor white
+skinparam classBackgroundColor lightblue
 
-#### 1. 使用現有工具
-```java
-// 使用 Dropwizard Metrics
-public class SystemMetrics {
-    private final MetricRegistry metrics = new MetricRegistry();
-    private final JmxReporter reporter;
-    
-    public SystemMetrics() {
-        reporter = JmxReporter.forRegistry(metrics).build();
-        reporter.start();
-        
-        // 註冊 CPU 使用率計量
-        metrics.register("cpu.usage", (Gauge<Double>) () -> 
-            ManagementFactory.getOperatingSystemMXBean().getSystemLoadAverage());
-            
-        // 註冊記憶體使用率計量
-        metrics.register("memory.usage", (Gauge<Long>) () -> 
-            Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
-    }
+class Game {
+    - players: List
+    - resources: Map
+    + startGame()
+    + addPlayer()
+    + checkPerformance()
 }
-```
 
-#### 2. 監控與警報
-```java
-public class ResourceAlert {
-    private final AlertManager alertManager;
-    private final ResourceMonitor monitor;
-    
-    public void checkResources() {
-        // CPU 警報
-        if (monitor.getCPUUsage() > 80) {
-            alertManager.alert("CPU 使用率過高", 
-                "當前 CPU 使用率: " + monitor.getCPUUsage() + "%");
-        }
-        
-        // 記憶體警報
-        if (monitor.getMemoryUsage() > 85) {
-            alertManager.alert("記憶體使用率過高",
-                "當前記憶體使用率: " + monitor.getMemoryUsage() + "%");
-        }
-        
-        // 磁碟警報
-        if (monitor.getDiskUsage() > 90) {
-            alertManager.alert("磁碟空間不足",
-                "當前磁碟使用率: " + monitor.getDiskUsage() + "%");
-        }
-    }
+class Monitor {
+    - cpu: int
+    - memory: int
+    - disk: int
+    + checkCPU()
+    + checkMemory()
+    + checkDisk()
 }
-```
 
-#### 3. 自動擴展
-```java
-public class AutoScaler {
-    private final ResourceMonitor monitor;
-    private final ScalingManager scalingManager;
-    
-    public void evaluateScaling() {
-        // 評估是否需要擴展
-        if (shouldScaleUp()) {
-            scalingManager.scaleUp();
-        } else if (shouldScaleDown()) {
-            scalingManager.scaleDown();
-        }
-    }
-    
-    private boolean shouldScaleUp() {
-        return monitor.getCPUUsage() > 80 || 
-               monitor.getMemoryUsage() > 85 ||
-               monitor.getDiskUsage() > 90;
-    }
-    
-    private boolean shouldScaleDown() {
-        return monitor.getCPUUsage() < 30 && 
-               monitor.getMemoryUsage() < 40 &&
-               monitor.getDiskUsage() < 50;
-    }
-}
+Game --> Monitor
+@enduml
 ```
 
 ## 中級（Intermediate）層級
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 系統資源管理
-- 效能監控
-- 擴展策略
-- 成本效益分析
+- 如何管理遊戲資源
+- 如何監控遊戲效能
+- 如何規劃升級策略
+- 如何計算升級成本
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class ResourceManager {
+skinparam backgroundColor white
+skinparam classBackgroundColor lightgreen
+
+class GameManager {
     - resources: Map
     + allocateResource()
     + releaseResource()
     + monitorUsage()
 }
 
-class PerformanceMonitor {
+class PerformanceTracker {
     - metrics: List
     + collectMetrics()
     + analyzePerformance()
 }
 
-class ScalingStrategy {
+class UpgradePlanner {
     - thresholds: Map
     + evaluate()
     + recommend()
 }
 
-ResourceManager --> PerformanceMonitor
-PerformanceMonitor --> ScalingStrategy
+GameManager --> PerformanceTracker
+PerformanceTracker --> UpgradePlanner
 @enduml
 ```
 
@@ -268,31 +163,52 @@ PerformanceMonitor --> ScalingStrategy
 
 #### 步驟 1：資源管理
 ```java
-import java.util.*;
-
-public class ResourceManager {
+public class GameResourceManager {
     private Map<String, Integer> resources;
+    
+    public GameResourceManager() {
+        resources = new HashMap<>();
+    }
+    
+    public void addResource(String type, int amount) {
+        int current = resources.getOrDefault(type, 0);
+        resources.put(type, current + amount);
+        System.out.println("已增加 " + amount + " 單位的 " + type);
+    }
+    
+    public void useResource(String type, int amount) {
+        int current = resources.getOrDefault(type, 0);
+        if (current >= amount) {
+            resources.put(type, current - amount);
+            System.out.println("已使用 " + amount + " 單位的 " + type);
+        } else {
+            System.out.println("資源不足！");
+        }
+    }
+    
+    public void checkResources() {
+        for (Map.Entry<String, Integer> entry : resources.entrySet()) {
+            System.out.println(entry.getKey() + " 剩餘: " + entry.getValue());
+        }
+    }
+}
+```
+
+#### 步驟 2：效能監控
+```java
+public class GamePerformanceMonitor {
     private List<PerformanceMetric> metrics;
     
-    public ResourceManager() {
-        resources = new HashMap<>();
-        metrics = new ArrayList<>();
+    public void checkGamePerformance() {
+        // 收集遊戲效能數據
+        metrics.add(new PerformanceMetric("FPS", getFPS()));
+        metrics.add(new PerformanceMetric("Ping", getPing()));
+        metrics.add(new PerformanceMetric("Players", getPlayerCount()));
     }
     
-    public void allocateResource(String resourceType, int amount) {
-        resources.put(resourceType, resources.getOrDefault(resourceType, 0) + amount);
-        System.out.println("已分配 " + amount + " 單位的 " + resourceType);
-    }
-    
-    public void releaseResource(String resourceType, int amount) {
-        int current = resources.getOrDefault(resourceType, 0);
-        resources.put(resourceType, Math.max(0, current - amount));
-        System.out.println("已釋放 " + amount + " 單位的 " + resourceType);
-    }
-    
-    public void monitorUsage() {
-        for (Map.Entry<String, Integer> entry : resources.entrySet()) {
-            System.out.println(entry.getKey() + " 使用量: " + entry.getValue());
+    public void showPerformance() {
+        for (PerformanceMetric metric : metrics) {
+            System.out.println(metric.getName() + ": " + metric.getValue());
         }
     }
 }
@@ -300,32 +216,10 @@ public class ResourceManager {
 class PerformanceMetric {
     private String name;
     private int value;
-    private Date timestamp;
     
     public PerformanceMetric(String name, int value) {
         this.name = name;
         this.value = value;
-        this.timestamp = new Date();
-    }
-}
-```
-
-#### 步驟 2：效能監控
-```java
-public class PerformanceMonitor {
-    private List<PerformanceMetric> metrics;
-    
-    public void collectMetrics() {
-        // 收集各種效能指標
-        metrics.add(new PerformanceMetric("CPU", getCPUUsage()));
-        metrics.add(new PerformanceMetric("Memory", getMemoryUsage()));
-        metrics.add(new PerformanceMetric("Storage", getStorageUsage()));
-    }
-    
-    public void analyzePerformance() {
-        for (PerformanceMetric metric : metrics) {
-            System.out.println(metric.getName() + " 效能分析: " + metric.getValue());
-        }
     }
 }
 ```
@@ -334,22 +228,25 @@ public class PerformanceMonitor {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 自動化擴展
-- 負載平衡
-- 資源預測
-- 成本優化
+- 自動化升級系統
+- 玩家負載平衡
+- 資源需求預測
+- 成本效益分析
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階擴展系統" {
-    class AutoScaler {
+skinparam backgroundColor white
+skinparam classBackgroundColor lightyellow
+
+package "進階遊戲系統" {
+    class AutoUpgrader {
         - policies: List
         + evaluate()
-        + scale()
+        + upgrade()
     }
     
-    class LoadBalancer {
+    class PlayerBalancer {
         - servers: List
         + distribute()
         + monitor()
@@ -361,132 +258,81 @@ package "進階擴展系統" {
         + optimize()
     }
     
-    class CostOptimizer {
+    class CostAnalyzer {
         - costs: Map
         + calculate()
         + optimize()
     }
 }
 
-AutoScaler --> LoadBalancer
-LoadBalancer --> ResourcePredictor
-ResourcePredictor --> CostOptimizer
+AutoUpgrader --> PlayerBalancer
+PlayerBalancer --> ResourcePredictor
+ResourcePredictor --> CostAnalyzer
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：自動化擴展
+#### 步驟 1：自動化升級
 ```java
-import java.util.*;
-import java.time.*;
-
-public class AutoScaler {
-    private List<ScalingPolicy> policies;
+public class GameAutoUpgrader {
+    private List<UpgradePolicy> policies;
     private ResourcePredictor predictor;
-    private CostOptimizer optimizer;
+    private CostAnalyzer analyzer;
     
-    public AutoScaler() {
-        policies = new ArrayList<>();
-        predictor = new ResourcePredictor();
-        optimizer = new CostOptimizer();
-    }
-    
-    public void evaluate() {
-        // 預測未來資源需求
+    public void checkUpgrade() {
+        // 預測未來需求
         Map<String, Integer> predictions = predictor.predict();
         
-        // 計算成本效益
-        Map<String, Double> costs = optimizer.calculate(predictions);
+        // 計算升級成本
+        Map<String, Double> costs = analyzer.calculate(predictions);
         
-        // 根據策略決定是否擴展
-        for (ScalingPolicy policy : policies) {
-            if (policy.shouldScale(predictions, costs)) {
-                scale(policy.getResourceType(), policy.getAmount());
+        // 決定是否升級
+        for (UpgradePolicy policy : policies) {
+            if (policy.shouldUpgrade(predictions, costs)) {
+                upgrade(policy.getResourceType(), policy.getAmount());
             }
         }
     }
     
-    private void scale(String resourceType, int amount) {
-        System.out.println("自動擴展 " + resourceType + " 增加 " + amount + " 單位");
-    }
-}
-
-class ScalingPolicy {
-    private String resourceType;
-    private int threshold;
-    private int amount;
-    
-    public boolean shouldScale(Map<String, Integer> predictions, Map<String, Double> costs) {
-        return predictions.getOrDefault(resourceType, 0) > threshold;
+    private void upgrade(String type, int amount) {
+        System.out.println("自動升級 " + type + " 增加 " + amount + " 單位");
     }
 }
 ```
 
-#### 步驟 2：負載平衡
+#### 步驟 2：玩家平衡
 ```java
-public class LoadBalancer {
-    private List<Server> servers;
-    private Map<Server, Integer> loadMap;
+public class GameServerBalancer {
+    private List<GameServer> servers;
+    private Map<GameServer, Integer> playerCount;
     
-    public void distribute(Request request) {
-        // 找出負載最低的伺服器
-        Server target = findLeastLoadedServer();
+    public void addPlayer(Player player) {
+        // 找出玩家最少的伺服器
+        GameServer target = findBestServer();
         
-        // 分配請求
-        target.handleRequest(request);
+        // 分配玩家
+        target.addPlayer(player);
         
-        // 更新負載狀態
-        updateLoad(target);
+        // 更新玩家數量
+        updatePlayerCount(target);
     }
     
-    private Server findLeastLoadedServer() {
+    private GameServer findBestServer() {
         return servers.stream()
-            .min((s1, s2) -> loadMap.get(s1) - loadMap.get(s2))
+            .min((s1, s2) -> playerCount.get(s1) - playerCount.get(s2))
             .orElseThrow();
     }
-    
-    private void updateLoad(Server server) {
-        loadMap.put(server, loadMap.get(server) + 1);
-    }
 }
 
-class Server {
-    public void handleRequest(Request request) {
-        // 處理請求
+class GameServer {
+    private List<Player> players;
+    
+    public void addPlayer(Player player) {
+        players.add(player);
     }
 }
 ```
 
-#### 步驟 3：資源預測
-```java
-public class ResourcePredictor {
-    private List<ResourceUsage> history;
-    
-    public Map<String, Integer> predict() {
-        Map<String, Integer> predictions = new HashMap<>();
-        
-        // 使用歷史數據預測未來需求
-        for (ResourceUsage usage : history) {
-            int predicted = predictNextValue(usage);
-            predictions.put(usage.getResourceType(), predicted);
-        }
-        
-        return predictions;
-    }
-    
-    private int predictNextValue(ResourceUsage usage) {
-        // 使用簡單的線性回歸預測
-        return usage.getCurrentValue() + 
-               (usage.getCurrentValue() - usage.getPreviousValue());
-    }
-}
-
-class ResourceUsage {
-    private String resourceType;
-    private int currentValue;
-    private int previousValue;
-}
-```
-
+這個教學文件提供了從基礎到進階的遊戲效能優化學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的效能監控開始，中級學習者可以學習資源管理和效能追蹤，而高級學習者則可以掌握自動化升級和玩家平衡等進階功能。 
 這個教學文件提供了從基礎到進階的垂直擴展學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的系統監控開始，中級學習者可以學習資源管理和效能監控，而高級學習者則可以掌握自動化擴展和負載平衡等進階功能。 

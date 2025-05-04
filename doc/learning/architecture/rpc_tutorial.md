@@ -1,360 +1,148 @@
-# RPC 教學
+# RPC 遠端呼叫教學
 
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-RPC（遠端程序呼叫）就像是在學校裡，當你需要其他班級的同學幫忙時：
-- 你可以請班長幫忙傳話給其他班級
-- 其他班級的同學收到訊息後，會幫你完成任務
-- 完成後，他們會把結果傳回來給你
+RPC（遠端程序呼叫）就像是在學校裡傳紙條：
+- 你想問隔壁班的同學問題
+- 你寫好問題，請班長幫忙傳過去
+- 隔壁班同學收到後回答問題
+- 班長再把答案傳回來給你
 
-#### 原因分析
-1. 系統設計需求：
-   - 服務解耦
-   - 跨進程通信
-   - 分布式系統
+#### 為什麼需要 RPC？
+1. 就像不同班級需要互相溝通：
+   - 不同程式需要互相幫忙
+   - 有些工作要請其他電腦幫忙
+   - 可以讓程式分工合作
 
-2. 業務場景：
-   - 微服務架構
-   - 跨語言調用
-   - 高性能通信
+2. 可能遇到的問題：
+   - 傳紙條可能被弄丟（網路問題）
+   - 對方可能不在教室（服務當機）
+   - 答案可能寫不清楚（資料格式不對）
 
-#### 問題表象
-1. 性能問題：
-   - 網絡延遲
-   - 序列化開銷
-   - 資源消耗
-
-2. 業務影響：
-   - 調用失敗
-   - 數據不一致
-   - 系統複雜度
-
-#### 避免方法
-1. 基礎防護：
-   - 超時控制
-   - 重試機制
-   - 錯誤處理
-
-2. 數據處理：
-   - 序列化優化
-   - 壓縮傳輸
-   - 緩存結果
-
-#### 處理方案
-1. 技術方案：
-   - 使用 RPC 框架
-   - 實現負載均衡
-   - 添加監控機制
-
-2. 運維方案：
-   - 服務治理
-   - 性能監控
-   - 故障處理
-
-初級學習者需要了解：
-- 什麼是 RPC
-- 為什麼需要 RPC
-- 基本的遠端呼叫概念
+3. 如何避免問題：
+   - 寫清楚問題（資料格式要正確）
+   - 多準備幾張紙條（重試機制）
+   - 設定等待時間（超時控制）
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class Client {
-    - name: String
-    + sendRequest()
-    + receiveResponse()
+class 學生A {
+    + 寫問題()
+    + 收答案()
 }
 
-class Server {
-    - name: String
-    + handleRequest()
-    + sendResponse()
+class 班長 {
+    + 傳紙條()
+    + 收紙條()
 }
 
-Client --> Server : 請求
-Server --> Client : 回應
+class 學生B {
+    + 看問題()
+    + 寫答案()
+}
+
+學生A --> 班長 : 傳問題
+班長 --> 學生B : 送問題
+學生B --> 班長 : 回答案
+班長 --> 學生A : 送答案
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：定義服務接口（Protocol Buffers）
-```protobuf
-syntax = "proto3";
-
-package com.example.rpc;
-
-service SimpleService {
-  rpc ProcessRequest (Request) returns (Response) {}
-}
-
-message Request {
-  string data = 1;
-}
-
-message Response {
-  string result = 1;
-}
-```
-
-#### 步驟 2：實現服務端
+#### 步驟 1：寫一個簡單的 RPC 服務
 ```java
-public class SimpleServiceImpl extends SimpleServiceGrpc.SimpleServiceImplBase {
-    @Override
-    public void processRequest(Request request, StreamObserver<Response> responseObserver) {
-        String result = "處理完成：" + request.getData();
-        Response response = Response.newBuilder()
-            .setResult(result)
-            .build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+// 定義服務接口
+public interface 計算服務 {
+    int 加法(int 數字1, int 數字2);
+}
+
+// 實現服務
+public class 計算服務實現 implements 計算服務 {
+    public int 加法(int 數字1, int 數字2) {
+        return 數字1 + 數字2;
     }
 }
 
-public class RPCServer {
-    public static void main(String[] args) throws IOException, InterruptedException {
-        Server server = ServerBuilder.forPort(50051)
-            .addService(new SimpleServiceImpl())
-            .build()
-            .start();
-        
-        System.out.println("服務器啟動，監聽端口 50051");
-        server.awaitTermination();
-    }
-}
-```
-
-#### 步驟 3：實現客戶端
-```java
-public class RPCClient {
-    private final SimpleServiceGrpc.SimpleServiceBlockingStub blockingStub;
-
-    public RPCClient(Channel channel) {
-        blockingStub = SimpleServiceGrpc.newBlockingStub(channel);
-    }
-
-    public void callService(String requestData) {
-        Request request = Request.newBuilder()
-            .setData(requestData)
-            .build();
-        
-        Response response = blockingStub.processRequest(request);
-        System.out.println("服務調用結果：" + response.getResult());
-    }
-
+// 使用服務
+public class 主程式 {
     public static void main(String[] args) {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
-            .usePlaintext()
-            .build();
-        
-        try {
-            RPCClient client = new RPCClient(channel);
-            client.callService("測試請求");
-        } finally {
-            channel.shutdown();
-        }
+        計算服務 服務 = new 計算服務實現();
+        int 結果 = 服務.加法(5, 3);
+        System.out.println("5 + 3 = " + 結果);
     }
 }
-```
-
-### 4. 配置說明
-
-#### Maven 依賴配置
-```xml
-<dependencies>
-    <dependency>
-        <groupId>io.grpc</groupId>
-        <artifactId>grpc-netty-shaded</artifactId>
-        <version>1.58.0</version>
-    </dependency>
-    <dependency>
-        <groupId>io.grpc</groupId>
-        <artifactId>grpc-protobuf</artifactId>
-        <version>1.58.0</version>
-    </dependency>
-    <dependency>
-        <groupId>io.grpc</groupId>
-        <artifactId>grpc-stub</artifactId>
-        <version>1.58.0</version>
-    </dependency>
-</dependencies>
-```
-
-#### 編譯 Protocol Buffers
-```xml
-<build>
-    <extensions>
-        <extension>
-            <groupId>kr.motd.maven</groupId>
-            <artifactId>os-maven-plugin</artifactId>
-            <version>1.7.1</version>
-        </extension>
-    </extensions>
-    <plugins>
-        <plugin>
-            <groupId>org.xolstice.maven.plugins</groupId>
-            <artifactId>protobuf-maven-plugin</artifactId>
-            <version>0.6.1</version>
-            <configuration>
-                <protocArtifact>com.google.protobuf:protoc:3.21.7:exe:${os.detected.classifier}</protocArtifact>
-                <pluginId>grpc-java</pluginId>
-                <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.58.0:exe:${os.detected.classifier}</pluginArtifact>
-            </configuration>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>compile</goal>
-                        <goal>compile-custom</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-</build>
 ```
 
 ## 中級（Intermediate）層級
 
 ### 1. 概念說明
-中級學習者需要理解：
-- gRPC 的實現機制
-- Protocol Buffers 序列化
-- 服務註冊與發現
-- 錯誤處理
+中級學習者需要了解：
+- 如何讓不同電腦互相溝通
+- 資料如何安全傳輸
+- 錯誤時該怎麼辦
 
-#### gRPC 架構詳解
-1. 核心組件：
-   - Channel：通信通道
-   - Stub：客戶端存根
-   - Service：服務實現
-   - Interceptor：攔截器
+#### 進階概念
+1. 資料傳輸：
+   - 就像寫信要貼郵票（序列化）
+   - 信封要寫對地址（網路位址）
+   - 要確認對方收到信（確認機制）
 
-2. 優缺點：
-   - 優點：高性能、跨語言、流式處理
-   - 缺點：學習曲線陡、配置複雜
-
-3. 使用場景：
-   - 微服務通信
-   - 實時數據流
-   - 跨語言調用
-
-#### Protocol Buffers 詳解
-1. 消息定義：
-   - 字段類型
-   - 嵌套消息
-   - 枚舉類型
-
-2. 序列化特性：
-   - 二進制格式
-   - 向後兼容
-   - 跨語言支持
-
-#### 服務註冊與發現
-1. 實現方式：
-   - 服務註冊
-   - 健康檢查
-   - 負載均衡
-
-2. 注意事項：
-   - 服務狀態
-   - 故障轉移
-   - 配置管理
-
-#### 錯誤處理詳解
-1. 錯誤類型：
-   - 網絡錯誤
-   - 業務錯誤
-   - 系統錯誤
-
-2. 處理策略：
-   - 重試機制
-   - 熔斷降級
-   - 錯誤日誌
+2. 錯誤處理：
+   - 信可能寄丟（網路問題）
+   - 地址可能寫錯（連接錯誤）
+   - 對方可能不在家（服務當機）
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class gRPCClient {
-    - channel: ManagedChannel
-    - stub: SimpleServiceGrpc.SimpleServiceBlockingStub
-    + call()
-    + handleResponse()
+class 客戶端 {
+    - 連線: 網路連線
+    + 發送請求()
+    + 處理回應()
 }
 
-class gRPCServer {
-    - server: Server
-    - service: SimpleServiceImpl
-    + start()
-    + stop()
+class 伺服器 {
+    - 服務: 計算服務
+    + 接收請求()
+    + 回傳結果()
 }
 
-class ServiceRegistry {
-    - services: Map
-    + register()
-    + discover()
-}
-
-gRPCClient --> ServiceRegistry
-gRPCServer --> ServiceRegistry
+客戶端 --> 伺服器 : 請求
+伺服器 --> 客戶端 : 回應
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：服務註冊與發現
+#### 步驟 1：使用 gRPC 框架
 ```java
-// 使用 etcd 作為服務註冊中心
-public class ServiceRegistry {
-    private final Client etcdClient;
-    
-    public ServiceRegistry(String etcdUrl) {
-        this.etcdClient = Client.builder()
-            .endpoints(etcdUrl)
-            .build();
-    }
-    
-    public void registerService(String serviceName, String serviceUrl) {
-        String key = "/services/" + serviceName;
-        etcdClient.putKV()
-            .key(key)
-            .value(serviceUrl)
-            .lease(60) // 60秒租約
-            .sync();
-    }
-    
-    public String discoverService(String serviceName) {
-        String key = "/services/" + serviceName;
-        GetResponse response = etcdClient.getKV()
-            .key(key)
-            .sync();
-        return response.getKvs().get(0).getValue().toString();
-    }
+// 定義服務
+service 計算機服務 {
+    rpc 加法 (加法請求) returns (加法回應) {}
 }
-```
 
-#### 步驟 2：錯誤處理
-```java
-public class RPCClient {
-    private final SimpleServiceGrpc.SimpleServiceBlockingStub blockingStub;
-    
-    public void callService(String requestData) {
-        try {
-            Request request = Request.newBuilder()
-                .setData(requestData)
-                .build();
-            
-            Response response = blockingStub.processRequest(request);
-            System.out.println("服務調用結果：" + response.getResult());
-        } catch (StatusRuntimeException e) {
-            if (e.getStatus().getCode() == Status.Code.UNAVAILABLE) {
-                // 處理服務不可用錯誤
-                System.err.println("服務不可用，正在重試...");
-            } else {
-                // 處理其他錯誤
-                System.err.println("RPC 失敗: " + e.getStatus());
-            }
-        }
+message 加法請求 {
+    int32 數字1 = 1;
+    int32 數字2 = 2;
+}
+
+message 加法回應 {
+    int32 結果 = 1;
+}
+
+// 實現服務
+public class 計算機服務實現 extends 計算機服務Grpc.計算機服務ImplBase {
+    @Override
+    public void 加法(加法請求 請求, StreamObserver<加法回應> 回應觀察者) {
+        int 結果 = 請求.get數字1() + 請求.get數字2();
+        加法回應 回應 = 加法回應.newBuilder()
+            .set結果(結果)
+            .build();
+        回應觀察者.onNext(回應);
+        回應觀察者.onCompleted();
     }
 }
 ```
@@ -363,198 +151,76 @@ public class RPCClient {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分布式事務
-- 服務治理
-- 性能優化
-- 監控和告警
+- 如何讓多台電腦一起工作
+- 如何處理大量請求
+- 如何確保服務穩定
 
-#### 分布式事務詳解
-1. 實現方式：
-   - 兩階段提交
-   - 最終一致性
-   - 補償事務
+#### 進階概念
+1. 分散式系統：
+   - 像是一個班級分成多個小組
+   - 每個小組負責不同工作
+   - 需要互相配合完成任務
 
-2. 注意事項：
-   - 性能影響
-   - 一致性要求
-   - 異常處理
-
-#### 服務治理詳解
-1. 治理內容：
-   - 服務註冊
-   - 配置管理
-   - 流量控制
-
-2. 實現策略：
-   - 服務網格
-   - 限流熔斷
-   - 負載均衡
-
-#### 性能優化詳解
-1. 優化方向：
-   - 序列化
-   - 網絡傳輸
-   - 資源利用
-
-2. 優化手段：
-   - 連接池
-   - 異步調用
-   - 批量處理
-
-#### 監控和告警詳解
-1. 監控指標：
-   - 調用延遲
-   - 錯誤率
-   - 資源使用
-
-2. 告警策略：
-   - 多級告警
-   - 智能降噪
-   - 自動處理
+2. 效能優化：
+   - 像排隊買東西要有效率
+   - 避免大家擠在一起
+   - 合理分配工作
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階 gRPC 系統" {
-    class AsyncRPCClient {
-        - channel: ManagedChannel
-        - stub: SimpleServiceGrpc.SimpleServiceStub
-        + callAsync()
-        + handleCallback()
-    }
-    
-    class StreamRPCClient {
-        - channel: ManagedChannel
-        - stub: SimpleServiceGrpc.SimpleServiceStub
-        + streamRequest()
-        + handleStream()
-    }
-    
-    class LoadBalancer {
-        - channel: ManagedChannel
-        + selectEndpoint()
-        + updateWeights()
-    }
+class 負載平衡器 {
+    - 伺服器列表: List
+    + 分配請求()
+    + 監控狀態()
 }
 
-AsyncRPCClient --> LoadBalancer
-StreamRPCClient --> LoadBalancer
+class 伺服器群組 {
+    - 伺服器1: 伺服器
+    - 伺服器2: 伺服器
+    - 伺服器3: 伺服器
+    + 處理請求()
+}
+
+負載平衡器 --> 伺服器群組 : 分配工作
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：非同步調用
+#### 步驟 1：實現負載平衡
 ```java
-public class AsyncRPCClient {
-    private final SimpleServiceGrpc.SimpleServiceStub asyncStub;
+public class 負載平衡器 {
+    private List<伺服器> 伺服器列表;
+    private int 當前索引 = 0;
     
-    public void callAsync(String requestData) {
-        Request request = Request.newBuilder()
-            .setData(requestData)
-            .build();
-        
-        asyncStub.processRequest(request, new StreamObserver<Response>() {
-            @Override
-            public void onNext(Response response) {
-                System.out.println("收到回應：" + response.getResult());
-            }
-            
-            @Override
-            public void onError(Throwable t) {
-                System.err.println("RPC 失敗: " + t);
-            }
-            
-            @Override
-            public void onCompleted() {
-                System.out.println("RPC 完成");
-            }
-        });
+    public 負載平衡器() {
+        伺服器列表 = new ArrayList<>();
+        // 加入多台伺服器
+        伺服器列表.add(new 伺服器("伺服器1"));
+        伺服器列表.add(new 伺服器("伺服器2"));
+        伺服器列表.add(new 伺服器("伺服器3"));
+    }
+    
+    public 伺服器 取得下一個伺服器() {
+        伺服器 伺服器 = 伺服器列表.get(當前索引);
+        當前索引 = (當前索引 + 1) % 伺服器列表.size();
+        return 伺服器;
     }
 }
-```
 
-#### 步驟 2：流式 RPC
-```java
-// 定義流式服務
-service StreamService {
-    rpc StreamProcess (stream Request) returns (stream Response) {}
-}
-
-// 實現流式客戶端
-public class StreamRPCClient {
-    private final StreamServiceGrpc.StreamServiceStub asyncStub;
-    
-    public void streamRequests(List<String> requests) {
-        StreamObserver<Request> requestObserver = asyncStub.streamProcess(
-            new StreamObserver<Response>() {
-                @Override
-                public void onNext(Response response) {
-                    System.out.println("收到回應：" + response.getResult());
-                }
-                
-                @Override
-                public void onError(Throwable t) {
-                    System.err.println("RPC 失敗: " + t);
-                }
-                
-                @Override
-                public void onCompleted() {
-                    System.out.println("流式 RPC 完成");
-                }
-            });
+// 使用負載平衡器
+public class 主程式 {
+    public static void main(String[] args) {
+        負載平衡器 平衡器 = new 負載平衡器();
         
-        for (String requestData : requests) {
-            Request request = Request.newBuilder()
-                .setData(requestData)
-                .build();
-            requestObserver.onNext(request);
+        // 模擬多個請求
+        for (int i = 0; i < 10; i++) {
+            伺服器 伺服器 = 平衡器.取得下一個伺服器();
+            System.out.println("請求 " + i + " 分配給 " + 伺服器.取得名稱());
         }
-        requestObserver.onCompleted();
     }
 }
 ```
 
-#### 步驟 3：負載平衡配置
-```java
-// 使用 gRPC 的負載平衡功能
-ManagedChannel channel = ManagedChannelBuilder.forTarget("dns:///my-service")
-    .defaultLoadBalancingPolicy("round_robin")
-    .usePlaintext()
-    .build();
-```
-
-### 4. 進階配置
-
-#### 服務網格集成（使用 Istio）
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: grpc-service
-spec:
-  hosts:
-  - grpc-service
-  http:
-  - route:
-    - destination:
-        host: grpc-service
-        subset: v1
-      weight: 80
-    - destination:
-        host: grpc-service
-        subset: v2
-      weight: 20
-```
-
-#### 監控配置（使用 Prometheus）
-```yaml
-# prometheus.yml
-scrape_configs:
-  - job_name: 'grpc-service'
-    static_configs:
-      - targets: ['localhost:9090']
-    metrics_path: '/metrics'
-```
-
-這個教學文件提供了從基礎到進階的 RPC 學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的請求回應開始，中級學習者可以學習序列化和請求處理，而高級學習者則可以掌握非同步調用和容錯處理等進階功能。 
+這個教學文件從基礎到進階，用國中生容易理解的方式解釋 RPC 的概念。初級學習者可以從基本的請求回應開始，中級學習者可以學習如何讓不同電腦互相溝通，而高級學習者則可以掌握如何讓多台電腦一起工作。 

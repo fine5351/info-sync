@@ -1,93 +1,67 @@
-# CAP 理論教學
+# 程式設計入門教學
 
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-CAP 理論就像是在學校裡，當我們需要傳遞訊息時：
-- 一致性（Consistency）：確保所有同學收到的訊息都一樣
-- 可用性（Availability）：確保訊息隨時都能被傳遞
-- 分區容錯性（Partition tolerance）：即使有同學暫時不在，系統也能運作
+想像你在玩一個簡單的猜數字遊戲：
+- 變數：用來儲存數字
+- 條件：判斷猜的數字是太大還是太小
+- 迴圈：讓玩家可以一直猜，直到猜對為止
 
 初級學習者需要了解：
-- 什麼是 CAP 理論
-- 為什麼需要 CAP 理論
-- 基本的系統特性
+- 為什麼需要寫程式
+- 程式的基本組成
+- 如何讓程式動起來
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class System {
-    - nodes: List
-    + sendMessage()
-    + receiveMessage()
+class GuessNumberGame {
+    - secretNumber: int
+    + startGame()
+    + checkGuess()
 }
 
-class Message {
-    - content: String
-    - timestamp: Date
+class Player {
+    - name: String
+    + makeGuess()
 }
 
-System --> Message : 傳遞
+GuessNumberGame --> Player : 檢查猜測
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：基本訊息傳遞
+#### 步驟 1：基本遊戲設定
 ```java
-public class SimpleMessageSystem {
-    private List<Node> nodes;
+public class GuessNumberGame {
+    private int secretNumber;
     
-    public SimpleMessageSystem() {
-        nodes = new ArrayList<>();
+    public GuessNumberGame() {
+        // 產生一個 1-100 的隨機數字
+        secretNumber = (int)(Math.random() * 100) + 1;
     }
     
-    public void addNode(Node node) {
-        nodes.add(node);
-        System.out.println("加入節點: " + node.getId());
-    }
-    
-    public void sendMessage(String message) {
-        for (Node node : nodes) {
-            node.receiveMessage(message);
-            System.out.println("傳送訊息到節點: " + node.getId());
-        }
-    }
-}
-
-class Node {
-    private String id;
-    private List<String> messages;
-    
-    public Node(String id) {
-        this.id = id;
-        this.messages = new ArrayList<>();
-    }
-    
-    public void receiveMessage(String message) {
-        messages.add(message);
-        System.out.println("節點 " + id + " 收到訊息: " + message);
-    }
-    
-    public String getId() {
-        return id;
+    public void startGame() {
+        System.out.println("歡迎來到猜數字遊戲！");
+        System.out.println("我已經想好了一個 1-100 之間的數字");
     }
 }
 ```
 
-#### 步驟 2：簡單的系統監控
+#### 步驟 2：遊戲邏輯
 ```java
-public class SystemMonitor {
-    private SimpleMessageSystem system;
+public class GuessNumberGame {
+    // ... 前面的程式碼 ...
     
-    public void checkSystem() {
-        // 檢查系統是否正常運作
-        boolean isWorking = system.isWorking();
-        
-        if (isWorking) {
-            System.out.println("系統運作正常！");
+    public void checkGuess(int guess) {
+        if (guess < secretNumber) {
+            System.out.println("太小了！再試一次");
+        } else if (guess > secretNumber) {
+            System.out.println("太大了！再試一次");
         } else {
-            System.out.println("系統需要檢查！");
+            System.out.println("恭喜你猜對了！");
         }
     }
 }
@@ -97,114 +71,85 @@ public class SystemMonitor {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 一致性（Consistency）的實現
-- 可用性（Availability）的確保
-- 分區容錯性（Partition tolerance）的處理
-- 三者之間的取捨
+- 如何把程式分成不同部分
+- 如何讓程式更容易維護
+- 如何處理不同的遊戲狀態
+- 如何讓程式更有彈性
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class DistributedSystem {
-    - nodes: List
-    + ensureConsistency()
-    + ensureAvailability()
-    + handlePartition()
+class GameManager {
+    - gameState: GameState
+    + startGame()
+    + handleGuess()
 }
 
-class ConsistencyManager {
-    - rules: List
-    + validate()
-    + synchronize()
+class GameState {
+    - secretNumber: int
+    - attempts: int
+    + checkGuess()
+    + getAttempts()
 }
 
-class AvailabilityManager {
-    - strategies: Map
-    + maintain()
-    + recover()
+class Player {
+    - name: String
+    - score: int
+    + makeGuess()
 }
 
-DistributedSystem --> ConsistencyManager
-DistributedSystem --> AvailabilityManager
+GameManager --> GameState
+GameManager --> Player
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：一致性管理
+#### 步驟 1：遊戲狀態管理
 ```java
-import java.util.*;
-
-public class ConsistencyManager {
-    private List<Node> nodes;
-    private Map<String, String> data;
+public class GameState {
+    private int secretNumber;
+    private int attempts;
     
-    public void ensureConsistency(String key, String value) {
-        // 確保所有節點都有相同的資料
-        for (Node node : nodes) {
-            node.updateData(key, value);
+    public GameState() {
+        secretNumber = (int)(Math.random() * 100) + 1;
+        attempts = 0;
+    }
+    
+    public String checkGuess(int guess) {
+        attempts++;
+        if (guess < secretNumber) {
+            return "太小了！";
+        } else if (guess > secretNumber) {
+            return "太大了！";
+        } else {
+            return "恭喜你猜對了！總共猜了 " + attempts + " 次";
         }
-        
-        // 等待所有節點確認
-        waitForConfirmation();
-    }
-    
-    private void waitForConfirmation() {
-        boolean allConfirmed = false;
-        while (!allConfirmed) {
-            allConfirmed = true;
-            for (Node node : nodes) {
-                if (!node.isConfirmed()) {
-                    allConfirmed = false;
-                    break;
-                }
-            }
-        }
-    }
-}
-
-class Node {
-    private String id;
-    private Map<String, String> data;
-    private boolean confirmed;
-    
-    public void updateData(String key, String value) {
-        data.put(key, value);
-        confirmed = true;
-    }
-    
-    public boolean isConfirmed() {
-        return confirmed;
     }
 }
 ```
 
-#### 步驟 2：可用性管理
+#### 步驟 2：玩家管理
 ```java
-public class AvailabilityManager {
-    private List<Node> nodes;
-    private Map<String, AvailabilityStrategy> strategies;
+public class Player {
+    private String name;
+    private int score;
     
-    public void ensureAvailability() {
-        for (Node node : nodes) {
-            if (!node.isAvailable()) {
-                // 使用備用策略
-                AvailabilityStrategy strategy = strategies.get(node.getId());
-                strategy.handleUnavailable(node);
-            }
-        }
+    public Player(String name) {
+        this.name = name;
+        this.score = 0;
     }
-}
-
-interface AvailabilityStrategy {
-    void handleUnavailable(Node node);
-}
-
-class BackupStrategy implements AvailabilityStrategy {
-    @Override
-    public void handleU~navailable(Node node) {
-        // 使用備用節點
-        System.out.println("使用備用節點替代: " + node.getId());
+    
+    public void updateScore(int points) {
+        score += points;
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
+    public int getScore() {
+        return score;
     }
 }
 ```
@@ -213,300 +158,214 @@ class BackupStrategy implements AvailabilityStrategy {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式系統設計
-- CAP 取捨策略
-- 系統優化
-- 容錯處理
+- 如何設計完整的遊戲系統
+- 如何讓系統容易擴充
+- 如何處理多人遊戲
+- 如何讓遊戲更有趣
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階 CAP 系統" {
-    class CAPSystem {
-        - nodes: List
-        + balanceCAP()
-        + optimize()
+package "進階遊戲系統" {
+    class GameSystem {
+        - players: List
+        - gameMode: GameMode
+        + startGame()
+        + handlePlayerAction()
     }
     
-    class CAPStrategy {
-        - rules: List
-        + chooseStrategy()
-        + apply()
+    class GameMode {
+        - difficulty: int
+        + getRules()
+        + calculateScore()
     }
     
-    class SystemOptimizer {
-        - metrics: Map
-        + optimize()
-        + tune()
+    class PlayerManager {
+        - players: List
+        + addPlayer()
+        + removePlayer()
+        + updateScores()
     }
     
-    class FaultHandler {
-        - strategies: Map
-        + handle()
-        + recover()
+    class ScoreSystem {
+        - scores: Map
+        + calculateScore()
+        + updateLeaderboard()
     }
 }
 
-CAPSystem --> CAPStrategy
-CAPStrategy --> SystemOptimizer
-SystemOptimizer --> FaultHandler
+GameSystem --> GameMode
+GameSystem --> PlayerManager
+PlayerManager --> ScoreSystem
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：CAP 平衡策略
+#### 步驟 1：遊戲系統設計
 ```java
-import java.util.*;
-
-public class CAPSystem {
-    private List<Node> nodes;
-    private CAPStrategy strategy;
+public class GameSystem {
+    private List<Player> players;
+    private GameMode gameMode;
+    private ScoreSystem scoreSystem;
     
-    public void balanceCAP(OperationType type) {
-        // 根據操作類型選擇策略
-        CAPStrategy selectedStrategy = strategy.chooseStrategy(type);
-        
-        // 應用策略
-        selectedStrategy.apply(nodes);
+    public GameSystem() {
+        players = new ArrayList<>();
+        gameMode = new GameMode();
+        scoreSystem = new ScoreSystem();
     }
     
-    public void optimize() {
-        // 收集系統指標
-        SystemMetrics metrics = collectMetrics();
-        
-        // 分析並優化
-        analyzeAndOptimize(metrics);
-    }
-}
-
-enum OperationType {
-    READ, WRITE, UPDATE
-}
-
-class CAPStrategy {
-    private Map<OperationType, Strategy> strategies;
-    
-    public Strategy chooseStrategy(OperationType type) {
-        return strategies.get(type);
-    }
-}
-
-interface Strategy {
-    void apply(List<Node> nodes);
-}
-```
-
-#### 步驟 2：系統優化
-```java
-public class SystemOptimizer {
-    private CAPSystem system;
-    private List<PerformanceMetric> metrics;
-    
-    public void optimize() {
-        // 收集效能指標
-        collectMetrics();
-        
-        // 分析系統效能
-        analyzePerformance();
-        
-        // 調整系統參數
-        tuneSystem();
+    public void startGame() {
+        // 初始化遊戲
+        gameMode.initialize();
+        scoreSystem.reset();
     }
     
-    private void analyzePerformance() {
-        for (PerformanceMetric metric : metrics) {
-            if (needsOptimization(metric)) {
-                // 觸發優化
-                triggerOptimization(metric);
-            }
-        }
-    }
-}
-
-class PerformanceMetric {
-    private String nodeId;
-    private double consistencyScore;
-    private double availabilityScore;
-    private double partitionToleranceScore;
-    private Date timestamp;
-    
-    public PerformanceMetric(String nodeId, double consistency, double availability, double partitionTolerance) {
-        this.nodeId = nodeId;
-        this.consistencyScore = consistency;
-        this.availabilityScore = availability;
-        this.partitionToleranceScore = partitionTolerance;
-        this.timestamp = new Date();
+    public void handlePlayerAction(Player player, String action) {
+        // 處理玩家動作
+        int score = gameMode.calculateScore(action);
+        scoreSystem.updateScore(player, score);
     }
 }
 ```
 
-#### 步驟 3：容錯處理
+#### 步驟 2：分數系統
 ```java
-public class FaultHandler {
-    private CAPSystem system;
-    private List<FaultStrategy> strategies;
+public class ScoreSystem {
+    private Map<Player, Integer> scores;
+    private List<Player> leaderboard;
     
-    public void handleFault(FaultType type) {
-        // 分析故障類型
-        FaultAnalysis analysis = analyzeFault(type);
-        
-        // 選擇處理策略
-        FaultStrategy strategy = selectStrategy(analysis);
-        
-        // 執行處理
-        strategy.execute(system);
+    public ScoreSystem() {
+        scores = new HashMap<>();
+        leaderboard = new ArrayList<>();
     }
     
-    private FaultStrategy selectStrategy(FaultAnalysis analysis) {
-        return strategies.stream()
-            .filter(s -> s.isApplicable(analysis))
-            .max((s1, s2) -> Double.compare(
-                s1.getScore(analysis),
-                s2.getScore(analysis)
-            ))
-            .orElseThrow();
+    public void updateScore(Player player, int points) {
+        int currentScore = scores.getOrDefault(player, 0);
+        scores.put(player, currentScore + points);
+        updateLeaderboard();
     }
-}
-
-interface FaultStrategy {
-    boolean isApplicable(FaultAnalysis analysis);
-    double getScore(FaultAnalysis analysis);
-    void execute(CAPSystem system);
+    
+    private void updateLeaderboard() {
+        leaderboard.clear();
+        leaderboard.addAll(scores.keySet());
+        leaderboard.sort((p1, p2) -> 
+            scores.get(p2) - scores.get(p1));
+    }
 }
 ```
 
 ### 4. 常見問題與解決方案
 
 #### 問題表象
-1. 一致性問題：
-   - 數據不一致
-   - 讀取到過期數據
-   - 並發寫入衝突
+1. 程式問題：
+   - 程式跑不動
+   - 結果不對
+   - 程式當掉
 
-2. 可用性問題：
-   - 系統響應慢
-   - 服務不可用
-   - 節點故障
+2. 遊戲問題：
+   - 遊戲太難
+   - 遊戲太簡單
+   - 遊戲不好玩
 
-3. 分區容錯問題：
-   - 網絡分區
-   - 節點間通信中斷
-   - 數據同步延遲
+3. 系統問題：
+   - 遊戲變慢
+   - 多人遊戲不同步
+   - 分數計算錯誤
 
 #### 避免方法
-1. 一致性優化：
-   - 實現強一致性協議（如 Paxos、Raft）
-   - 使用版本控制機制
-   - 實現樂觀鎖或悲觀鎖
+1. 程式設計：
+   - 寫程式前先想清楚
+   - 把程式分成小部分
+   - 多測試程式
 
-2. 可用性提升：
-   - 實現負載均衡
-   - 使用健康檢查機制
-   - 實現自動故障轉移
+2. 遊戲設計：
+   - 調整遊戲難度
+   - 加入有趣的功能
+   - 讓遊戲有挑戰性
 
-3. 分區容錯處理：
-   - 實現心跳檢測
-   - 使用超時機制
-   - 實現自動重連
+3. 系統設計：
+   - 使用好的資料結構
+   - 優化程式碼
+   - 加入錯誤處理
 
 #### 處理方案
-1. 技術方案：
+1. 程式問題：
    ```java
-   public class CAPSystem {
-       private ConsistencyManager consistencyManager;
-       private AvailabilityManager availabilityManager;
-       private PartitionToleranceManager partitionToleranceManager;
+   public class GameSystem {
+       private ErrorHandler errorHandler;
        
-       public void handleSystemIssue(IssueType issue) {
-           switch (issue) {
-               case CONSISTENCY:
-                   consistencyManager.handleConsistencyIssue();
-                   break;
-               case AVAILABILITY:
-                   availabilityManager.handleAvailabilityIssue();
-                   break;
-               case PARTITION:
-                   partitionToleranceManager.handlePartitionIssue();
-                   break;
+       public void handleError(String error) {
+           errorHandler.logError(error);
+           System.out.println("發生錯誤：" + error);
+       }
+   }
+   ```
+
+2. 遊戲問題：
+   ```java
+   public class GameMode {
+       private int difficulty;
+       
+       public void adjustDifficulty() {
+           // 根據玩家表現調整難度
+           if (playerIsDoingWell()) {
+               difficulty++;
+           } else {
+               difficulty--;
            }
        }
    }
    ```
 
-2. 監控方案：
+3. 系統問題：
    ```java
-   public class SystemMonitor {
-       private MetricsCollector metricsCollector;
-       private AlertManager alertManager;
+   public class GameMonitor {
+       private PerformanceTracker tracker;
        
-       public void monitorSystem() {
-           // 收集系統指標
-           SystemMetrics metrics = metricsCollector.collectMetrics();
-           
-           // 檢查系統狀態
-           if (metrics.isConsistencyDegraded()) {
-               alertManager.alert("一致性問題", metrics.getConsistencyDetails());
-           }
-           
-           if (metrics.isAvailabilityDegraded()) {
-               alertManager.alert("可用性問題", metrics.getAvailabilityDetails());
-           }
-           
-           if (metrics.isPartitionToleranceDegraded()) {
-               alertManager.alert("分區容錯問題", metrics.getPartitionToleranceDetails());
+       public void checkPerformance() {
+           if (tracker.isGameSlow()) {
+               System.out.println("遊戲變慢了，正在優化...");
+               optimizeGame();
            }
        }
    }
    ```
-
-3. 最佳實踐：
-   - 根據業務需求選擇合適的 CAP 組合
-   - 實現分層架構，不同層級採用不同的 CAP 策略
-   - 定期進行系統評估和優化
-   - 建立完善的監控和告警機制
-   - 制定詳細的故障處理流程
 
 ### 5. 實戰案例
 
-#### 案例一：電商系統
+#### 案例一：多人猜數字遊戲
 ```java
-public class ECommerceSystem {
-    private ProductService productService;
-    private OrderService orderService;
-    private InventoryService inventoryService;
+public class MultiplayerGame {
+    private List<Player> players;
+    private GameState gameState;
     
-    public void handleOrder(Order order) {
-        // 使用最終一致性處理訂單
-        orderService.createOrder(order);
+    public void handlePlayerGuess(Player player, int guess) {
+        String result = gameState.checkGuess(guess);
+        System.out.println(player.getName() + "：" + result);
         
-        // 使用強一致性處理庫存
-        inventoryService.updateInventory(order.getProductId(), order.getQuantity());
-        
-        // 使用高可用性處理支付
-        paymentService.processPayment(order);
+        if (result.contains("猜對了")) {
+            endRound(player);
+        }
     }
 }
 ```
 
-#### 案例二：社交媒體系統
+#### 案例二：計分版遊戲
 ```java
-public class SocialMediaSystem {
-    private PostService postService;
-    private CommentService commentService;
-    private LikeService likeService;
+public class ScoreboardGame {
+    private ScoreSystem scoreSystem;
+    private List<Player> players;
     
-    public void handlePost(Post post) {
-        // 使用高可用性處理發文
-        postService.createPost(post);
+    public void updateGame() {
+        for (Player player : players) {
+            int score = calculatePlayerScore(player);
+            scoreSystem.updateScore(player, score);
+        }
         
-        // 使用最終一致性處理評論
-        commentService.addComment(post.getId(), comment);
-        
-        // 使用分區容錯處理點讚
-        likeService.handleLike(post.getId(), userId);
+        displayLeaderboard();
     }
 }
 ```
 
-這個教學文件提供了從基礎到進階的 CAP 理論學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的系統特性開始，中級學習者可以學習 CAP 的實現方式，而高級學習者則可以掌握 CAP 的平衡策略和系統優化等進階功能。 
+這個教學文件提供了從基礎到進階的程式設計學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的猜數字遊戲開始，中級學習者可以學習如何組織程式碼，而高級學習者則可以掌握完整的遊戲系統設計。 

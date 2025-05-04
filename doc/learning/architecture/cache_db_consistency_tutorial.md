@@ -109,11 +109,11 @@ SimpleCache --> CacheItem
 #### 步驟 1：基本快取實現
 ```java
 public class SimpleCacheItem {
-    private String key;
-    private Object value;
-    private int version;
-    private long lastUpdateTime;
-    private boolean isValid;
+    private String key;        // 快取的鍵值
+    private Object value;      // 快取的值
+    private int version;       // 版本號
+    private long lastUpdateTime;  // 最後更新時間
+    private boolean isValid;   // 是否有效
     
     public SimpleCacheItem(String key, Object value) {
         this.key = key;

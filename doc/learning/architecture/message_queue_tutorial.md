@@ -3,361 +3,241 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-消息隊列就像學校的傳話筒：
+消息隊列就像學校的傳話筒遊戲：
 - 當你有話要告訴同學時，可以寫在紙條上
 - 把紙條放進傳話筒裡
 - 同學可以從傳話筒裡取出紙條來看
 
-#### 原因分析
-1. 系統設計需求：
-   - 解耦系統組件
-   - 異步處理請求
-   - 削峰填谷
+#### 為什麼需要消息隊列？
+1. 簡單來說：
+   - 當很多人同時要傳訊息時，不會混亂
+   - 可以先把訊息存起來，等有空再處理
+   - 如果系統出問題，訊息不會消失
 
-2. 業務場景：
-   - 高並發處理
-   - 延遲任務
-   - 事件驅動
+2. 生活例子：
+   - 就像學校的聯絡簿
+   - 老師寫完後，學生可以慢慢看
+   - 不會因為學生還沒看，就影響老師繼續寫
 
-#### 問題表象
-1. 性能問題：
-   - 系統響應慢
-   - 資源利用率低
-   - 擴展性受限
+#### 可能遇到的問題
+1. 簡單問題：
+   - 訊息太多，來不及處理
+   - 訊息可能重複收到
+   - 系統太慢
 
-2. 業務影響：
-   - 用戶體驗差
-   - 系統穩定性低
-   - 維護成本高
-
-#### 避免方法
-1. 基礎防護：
-   - 合理設置隊列大小
-   - 實現基本的監控
-   - 添加錯誤處理
-
-2. 數據處理：
-   - 消息持久化
-   - 消息重試機制
-   - 死信隊列處理
-
-#### 處理方案
-1. 技術方案：
-   - 使用消息隊列
-   - 實現消息確認
-   - 添加監控機制
-
-2. 運維方案：
-   - 監控隊列狀態
-   - 設置告警閾值
-   - 定期優化配置
-
-初級學習者需要了解：
-- 什麼是消息隊列
-- 為什麼需要消息隊列
-- 基本的消息發送和接收概念
+2. 解決方法：
+   - 設定訊息數量上限
+   - 檢查是否重複
+   - 定期清理舊訊息
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class MessageQueue {
-    - messages: List
-    + sendMessage()
-    + receiveMessage()
+class 傳話筒 {
+    - 訊息列表: List
+    + 放入訊息()
+    + 取出訊息()
 }
 
-class Sender {
-    - name: String
-    + send()
+class 發送者 {
+    - 名字: String
+    + 發送()
 }
 
-class Receiver {
-    - name: String
-    + receive()
+class 接收者 {
+    - 名字: String
+    + 接收()
 }
 
-Sender --> MessageQueue : 發送消息
-MessageQueue --> Receiver : 接收消息
+發送者 --> 傳話筒 : 放入訊息
+傳話筒 --> 接收者 : 取出訊息
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：基本消息隊列
+#### 步驟 1：建立簡單的訊息系統
 ```java
-// 生產者配置
-Properties producerProps = new Properties();
-producerProps.put("bootstrap.servers", "localhost:9092");
-producerProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-producerProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-
-// 消費者配置
-Properties consumerProps = new Properties();
-consumerProps.put("bootstrap.servers", "localhost:9092");
-consumerProps.put("group.id", "test-group");
-consumerProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-consumerProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-
-// 生產者示例
-public class KafkaProducerExample {
-    private final Producer<String, String> producer;
+// 簡單的訊息類別
+public class 訊息 {
+    private String 內容;
+    private String 發送者;
     
-    public KafkaProducerExample() {
-        this.producer = new KafkaProducer<>(producerProps);
+    public 訊息(String 內容, String 發送者) {
+        this.內容 = 內容;
+        this.發送者 = 發送者;
     }
     
-    public void sendMessage(String topic, String message) {
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, message);
-        producer.send(record, (metadata, exception) -> {
-            if (exception != null) {
-                System.err.println("發送消息失敗：" + exception.getMessage());
-            } else {
-                System.out.println("消息發送到分區：" + metadata.partition() + 
-                    ", 偏移量：" + metadata.offset());
-            }
-        });
+    public String 取得內容() {
+        return 內容;
     }
     
-    public void close() {
-        producer.close();
+    public String 取得發送者() {
+        return 發送者;
     }
 }
 
-// 消費者示例
-public class KafkaConsumerExample {
-    private final Consumer<String, String> consumer;
+// 簡單的訊息隊列
+public class 訊息隊列 {
+    private List<訊息> 訊息列表 = new ArrayList<>();
     
-    public KafkaConsumerExample() {
-        this.consumer = new KafkaConsumer<>(consumerProps);
+    public void 放入訊息(訊息 新訊息) {
+        訊息列表.add(新訊息);
     }
     
-    public void consumeMessages(String topic) {
-        consumer.subscribe(Collections.singletonList(topic));
-        
-        while (true) {
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-            for (ConsumerRecord<String, String> record : records) {
-                System.out.println("收到消息：" + record.value() + 
-                    ", 分區：" + record.partition() + 
-                    ", 偏移量：" + record.offset());
-            }
+    public 訊息 取出訊息() {
+        if (訊息列表.isEmpty()) {
+            return null;
+        }
+        return 訊息列表.remove(0);
+    }
+}
+```
+
+#### 步驟 2：使用訊息隊列
+```java
+public class 訊息系統 {
+    private 訊息隊列 隊列 = new 訊息隊列();
+    
+    public void 發送訊息(String 內容, String 發送者) {
+        訊息 新訊息 = new 訊息(內容, 發送者);
+        隊列.放入訊息(新訊息);
+        System.out.println("已發送訊息：" + 內容);
+    }
+    
+    public void 接收訊息() {
+        訊息 收到的訊息 = 隊列.取出訊息();
+        if (收到的訊息 != null) {
+            System.out.println("收到來自 " + 收到的訊息.取得發送者() + 
+                " 的訊息：" + 收到的訊息.取得內容());
         }
     }
-    
-    public void close() {
-        consumer.close();
-    }
 }
-```
-
-#### 步驟 2：簡單的消息發送和接收
-```java
-public class MessageSystem {
-    private final KafkaProducerExample producer;
-    private final KafkaConsumerExample consumer;
-    private final String topic;
-    
-    public MessageSystem(String topic) {
-        this.producer = new KafkaProducerExample();
-        this.consumer = new KafkaConsumerExample();
-        this.topic = topic;
-    }
-    
-    public void send(String message) {
-        producer.sendMessage(topic, message);
-    }
-    
-    public void startConsuming() {
-        new Thread(() -> consumer.consumeMessages(topic)).start();
-    }
-    
-    public void close() {
-        producer.close();
-        consumer.close();
-    }
-}
-```
-
-### 4. 配置說明
-
-#### Maven 依賴配置
-```xml
-<dependencies>
-    <dependency>
-        <groupId>org.apache.kafka</groupId>
-        <artifactId>kafka-clients</artifactId>
-        <version>3.6.0</version>
-    </dependency>
-</dependencies>
-```
-
-#### Kafka 服務器配置
-```properties
-# server.properties
-broker.id=0
-listeners=PLAINTEXT://:9092
-log.dirs=/tmp/kafka-logs
-num.partitions=3
-default.replication.factor=1
 ```
 
 ## 中級（Intermediate）層級
 
 ### 1. 概念說明
 中級學習者需要理解：
-- Kafka 的架構和組件
-- 消息格式和序列化
-- 消費者組和分區
-- 錯誤處理和重試機制
+- 訊息如何分類和組織
+- 如何處理多個接收者
+- 如何處理錯誤情況
 
-#### Kafka 架構詳解
-1. 核心組件：
-   - Broker：消息代理服務器
-   - Topic：消息主題
-   - Partition：分區
-   - Producer：生產者
-   - Consumer：消費者
+#### 訊息分類
+1. 主題（Topic）：
+   - 就像學校的不同社團
+   - 每個社團有自己的公告欄
+   - 學生可以選擇要關注哪些社團
 
-2. 優缺點：
-   - 優點：高吞吐量、可擴展性強
-   - 缺點：配置複雜、資源消耗大
+2. 群組（Group）：
+   - 就像班級分組
+   - 每組可以一起處理訊息
+   - 避免重複處理
 
-3. 使用場景：
-   - 日誌收集
-   - 流式處理
-   - 事件溯源
+#### 錯誤處理
+1. 常見錯誤：
+   - 訊息發送失敗
+   - 接收者離線
+   - 系統當機
 
-#### 消息格式詳解
-1. 消息結構：
-   - Key：分區路由
-   - Value：消息內容
-   - Headers：元數據
-   - Timestamp：時間戳
-
-2. 序列化方式：
-   - String
-   - JSON
-   - Avro
-   - Protobuf
-
-#### 消費者組詳解
-1. 工作原理：
-   - 組內負載均衡
-   - 分區分配策略
-   - 消費進度管理
-
-2. 注意事項：
-   - 組內消費者數量
-   - 分區分配策略
-   - 消費進度提交
-
-#### 錯誤處理詳解
-1. 錯誤類型：
-   - 網絡錯誤
-   - 序列化錯誤
-   - 處理錯誤
-
-2. 處理策略：
-   - 重試機制
-   - 死信隊列
-   - 錯誤日誌
+2. 解決方法：
+   - 重試發送
+   - 儲存備份
+   - 錯誤通知
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class KafkaProducer {
-    - config: Properties
-    - producer: Producer
-    + send()
-    + close()
+class 主題 {
+    - 名稱: String
+    - 訊息列表: List
+    + 新增訊息()
+    + 取得訊息()
 }
 
-class KafkaConsumer {
-    - config: Properties
-    - consumer: Consumer
-    + consume()
-    + close()
+class 群組 {
+    - 名稱: String
+    - 成員: List
+    + 加入成員()
+    + 處理訊息()
 }
 
-class Topic {
-    - name: String
-    - partitions: List
+class 錯誤處理器 {
+    - 錯誤日誌: List
+    + 記錄錯誤()
+    + 重試處理()
 }
 
-class Partition {
-    - id: int
-    - leader: Broker
-    - replicas: List
-}
-
-KafkaProducer --> Topic
-KafkaConsumer --> Topic
-Topic --> Partition
+主題 --> 群組 : 發送訊息
+群組 --> 錯誤處理器 : 處理錯誤
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：消息格式和序列化
+#### 步驟 1：主題和群組
 ```java
-// 自定義消息格式
-public class CustomMessage {
-    private String id;
-    private String content;
-    private long timestamp;
+public class 主題 {
+    private String 名稱;
+    private List<訊息> 訊息列表 = new ArrayList<>();
     
-    // 序列化器
-    public static class CustomSerializer implements Serializer<CustomMessage> {
-        @Override
-        public byte[] serialize(String topic, CustomMessage data) {
-            try {
-                return new ObjectMapper().writeValueAsBytes(data);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-        }
+    public 主題(String 名稱) {
+        this.名稱 = 名稱;
     }
     
-    // 反序列化器
-    public static class CustomDeserializer implements Deserializer<CustomMessage> {
-        @Override
-        public CustomMessage deserialize(String topic, byte[] data) {
-            try {
-                return new ObjectMapper().readValue(data, CustomMessage.class);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+    public void 新增訊息(訊息 新訊息) {
+        訊息列表.add(新訊息);
+    }
+    
+    public 訊息 取得訊息() {
+        if (訊息列表.isEmpty()) {
+            return null;
+        }
+        return 訊息列表.remove(0);
+    }
+}
+
+public class 群組 {
+    private String 名稱;
+    private List<接收者> 成員 = new ArrayList<>();
+    
+    public 群組(String 名稱) {
+        this.名稱 = 名稱;
+    }
+    
+    public void 加入成員(接收者 新成員) {
+        成員.add(新成員);
+    }
+    
+    public void 處理訊息(主題 主題) {
+        訊息 訊息 = 主題.取得訊息();
+        if (訊息 != null) {
+            for (接收者 成員 : 成員) {
+                成員.接收(訊息);
             }
         }
     }
 }
 ```
 
-#### 步驟 2：消費者組和分區
+#### 步驟 2：錯誤處理
 ```java
-public class ConsumerGroupExample {
-    private final Consumer<String, String> consumer;
+public class 錯誤處理器 {
+    private List<String> 錯誤日誌 = new ArrayList<>();
     
-    public ConsumerGroupExample(String groupId) {
-        Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
-        props.put("group.id", groupId);
-        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        
-        this.consumer = new KafkaConsumer<>(props);
+    public void 記錄錯誤(String 錯誤訊息) {
+        錯誤日誌.add(錯誤訊息);
+        System.out.println("記錄錯誤：" + 錯誤訊息);
     }
     
-    public void consumeWithPartition(String topic) {
-        consumer.subscribe(Collections.singletonList(topic));
-        
-        while (true) {
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-            for (TopicPartition partition : records.partitions()) {
-                List<ConsumerRecord<String, String>> partitionRecords = records.records(partition);
-                for (ConsumerRecord<String, String> record : partitionRecords) {
-                    System.out.println("分區 " + partition.partition() + 
-                        " 收到消息：" + record.value());
-                }
+    public void 重試處理(訊息 訊息, int 重試次數) {
+        for (int i = 0; i < 重試次數; i++) {
+            try {
+                // 嘗試處理訊息
+                System.out.println("重試處理訊息：" + 訊息.取得內容());
+                break;
+            } catch (Exception e) {
+                記錄錯誤("處理失敗：" + e.getMessage());
             }
         }
     }
@@ -368,390 +248,136 @@ public class ConsumerGroupExample {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分布式事務
-- 消息順序保證
-- 消息回溯
-- 監控和告警
+- 如何確保訊息順序
+- 如何處理大量訊息
+- 如何監控系統狀態
 
-#### 分布式事務詳解
-1. 實現方式：
-   - 兩階段提交
-   - 最終一致性
-   - 事務消息
+#### 訊息順序
+1. 重要性：
+   - 確保訊息按正確順序處理
+   - 避免混亂和錯誤
+   - 維持系統一致性
 
-2. 注意事項：
-   - 性能影響
-   - 一致性要求
-   - 異常處理
+2. 實現方法：
+   - 使用序號標記
+   - 按順序處理
+   - 等待前序訊息
 
-#### 消息順序詳解
-1. 保證方式：
-   - 單分區
-   - 消息鍵
-   - 順序消費
+#### 效能優化
+1. 處理大量訊息：
+   - 分批處理
+   - 平行處理
+   - 快取機制
 
-2. 實現策略：
-   - 分區選擇
-   - 消費控制
-   - 重試機制
-
-#### 消息回溯詳解
-1. 回溯方式：
-   - 時間回溯
-   - 偏移量回溯
-   - 分區回溯
-
-2. 使用場景：
-   - 數據修復
-   - 重放測試
-   - 故障恢復
-
-#### 監控和告警詳解
-1. 監控指標：
-   - 生產者指標
-   - 消費者指標
-   - 集群指標
-
-2. 告警策略：
-   - 多級告警
-   - 智能降噪
-   - 自動處理
+2. 監控系統：
+   - 追蹤訊息數量
+   - 監控處理速度
+   - 設定警告機制
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階 Kafka 系統" {
-    class TransactionalProducer {
-        - producer: Producer
-        + beginTransaction()
-        + commitTransaction()
-        + abortTransaction()
-    }
-    
-    class CompressedProducer {
-        - producer: Producer
-        + sendCompressed()
-    }
-    
-    class FilteredConsumer {
-        - consumer: Consumer
-        + filterMessages()
-    }
-    
-    class MetricsCollector {
-        - metrics: Map
-        + collectMetrics()
-        + reportMetrics()
-    }
+class 順序管理器 {
+    - 訊息序號: Map
+    + 檢查順序()
+    + 更新序號()
 }
 
-TransactionalProducer --> MetricsCollector
-CompressedProducer --> MetricsCollector
-FilteredConsumer --> MetricsCollector
+class 效能優化器 {
+    - 處理批次: int
+    - 快取大小: int
+    + 優化處理()
+    + 調整參數()
+}
+
+class 監控系統 {
+    - 計數器: Map
+    - 警告閾值: int
+    + 更新計數()
+    + 檢查警告()
+}
+
+順序管理器 --> 效能優化器 : 提供順序
+效能優化器 --> 監控系統 : 回報狀態
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：事務性消息
+#### 步驟 1：順序管理
 ```java
-public class TransactionalProducerExample {
-    private final Producer<String, String> producer;
+public class 順序管理器 {
+    private Map<String, Long> 訊息序號 = new HashMap<>();
     
-    public TransactionalProducerExample() {
-        Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
-        props.put("transactional.id", "my-transactional-id");
-        props.put("enable.idempotence", "true");
-        
-        this.producer = new KafkaProducer<>(props);
-        producer.initTransactions();
+    public boolean 檢查順序(String 主題, long 序號) {
+        Long 最後序號 = 訊息序號.getOrDefault(主題, 0L);
+        if (序號 <= 最後序號) {
+            return false; // 序號不正確
+        }
+        訊息序號.put(主題, 序號);
+        return true;
     }
     
-    public void sendTransactionalMessages(String topic, List<String> messages) {
-        try {
-            producer.beginTransaction();
-            
-            for (String message : messages) {
-                producer.send(new ProducerRecord<>(topic, message));
-            }
-            
-            producer.commitTransaction();
-        } catch (Exception e) {
-            producer.abortTransaction();
-            throw new RuntimeException("事務失敗", e);
+    public void 更新序號(String 主題, long 序號) {
+        訊息序號.put(主題, 序號);
+    }
+}
+
+public class 有序訊息 extends 訊息 {
+    private long 序號;
+    
+    public 有序訊息(String 內容, String 發送者, long 序號) {
+        super(內容, 發送者);
+        this.序號 = 序號;
+    }
+    
+    public long 取得序號() {
+        return 序號;
+    }
+}
+```
+
+#### 步驟 2：效能優化
+```java
+public class 效能優化器 {
+    private int 處理批次 = 100;
+    private int 快取大小 = 1000;
+    
+    public void 優化處理(List<訊息> 訊息列表) {
+        // 分批處理
+        for (int i = 0; i < 訊息列表.size(); i += 處理批次) {
+            List<訊息> 批次 = 訊息列表.subList(i, 
+                Math.min(i + 處理批次, 訊息列表.size()));
+            處理批次(批次);
         }
     }
-}
-```
-
-#### 步驟 2：消息壓縮
-```java
-public class CompressedProducerExample {
-    private final Producer<String, String> producer;
     
-    public CompressedProducerExample() {
-        Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
-        props.put("compression.type", "gzip");
-        
-        this.producer = new KafkaProducer<>(props);
-    }
-    
-    public void sendCompressedMessage(String topic, String message) {
-        producer.send(new ProducerRecord<>(topic, message));
+    private void 處理批次(List<訊息> 批次) {
+        // 平行處理批次中的訊息
+        批次.parallelStream().forEach(訊息 -> {
+            System.out.println("處理訊息：" + 訊息.取得內容());
+        });
     }
 }
 ```
 
-#### 步驟 3：消息過濾
+#### 步驟 3：監控系統
 ```java
-public class FilteredConsumerExample {
-    private final Consumer<String, String> consumer;
+public class 監控系統 {
+    private Map<String, Integer> 計數器 = new HashMap<>();
+    private int 警告閾值 = 1000;
     
-    public FilteredConsumerExample() {
-        Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
-        props.put("group.id", "filtered-group");
+    public void 更新計數(String 指標, int 數量) {
+        int 當前數量 = 計數器.getOrDefault(指標, 0) + 數量;
+        計數器.put(指標, 當前數量);
         
-        this.consumer = new KafkaConsumer<>(props);
-    }
-    
-    public void consumeWithFilter(String topic, Predicate<String> filter) {
-        consumer.subscribe(Collections.singletonList(topic));
-        
-        while (true) {
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-            for (ConsumerRecord<String, String> record : records) {
-                if (filter.test(record.value())) {
-                    System.out.println("過濾後的消息：" + record.value());
-                }
-            }
+        if (當前數量 > 警告閾值) {
+            發出警告(指標, 當前數量);
         }
     }
-}
-```
-
-### 4. 進階配置
-
-#### 監控配置（使用 Prometheus）
-```yaml
-# prometheus.yml
-scrape_configs:
-  - job_name: 'kafka'
-    static_configs:
-      - targets: ['localhost:7071']
-    metrics_path: '/metrics'
-```
-
-#### 性能優化配置
-```properties
-# producer.properties
-compression.type=gzip
-batch.size=16384
-linger.ms=5
-buffer.memory=33554432
-
-# consumer.properties
-fetch.min.bytes=1
-fetch.max.wait.ms=500
-max.partition.fetch.bytes=1048576
-```
-
-### 4. 常見問題與解決方案
-
-#### 問題表象
-1. 消息丟失：
-   - 生產者發送失敗
-   - 消息隊列崩潰
-   - 消費者處理失敗
-
-2. 消息重複：
-   - 生產者重試
-   - 消費者重試
-   - 網絡問題導致重發
-
-3. 消息堆積：
-   - 消費者處理速度慢
-   - 生產者發送速度過快
-   - 系統資源不足
-
-4. 順序問題：
-   - 消息亂序
-   - 並發處理導致順序錯亂
-   - 分區分配不均
-
-#### 避免方法
-1. 消息可靠性：
-   - 實現消息確認機制
-   - 使用持久化存儲
-   - 實現冪等性處理
-
-2. 性能優化：
-   - 合理設置批處理大小
-   - 優化網絡配置
-   - 實現負載均衡
-
-3. 監控告警：
-   - 設置消息堆積閾值
-   - 監控消費延遲
-   - 跟蹤錯誤率
-
-#### 處理方案
-1. 技術方案：
-   ```java
-   public class MessageQueueManager {
-       private Producer producer;
-       private Consumer consumer;
-       private DeadLetterQueue deadLetterQueue;
-       private MetricsCollector metricsCollector;
-       
-       public void handleMessageIssue(MessageIssue issue) {
-           switch (issue.getType()) {
-               case LOST:
-                   handleLostMessage(issue);
-                   break;
-               case DUPLICATE:
-                   handleDuplicateMessage(issue);
-                   break;
-               case STACKED:
-                   handleStackedMessages(issue);
-                   break;
-               case OUT_OF_ORDER:
-                   handleOutOfOrderMessages(issue);
-                   break;
-           }
-       }
-       
-       private void handleLostMessage(MessageIssue issue) {
-           // 重試發送
-           producer.retrySend(issue.getMessage());
-           // 記錄日誌
-           metricsCollector.recordLostMessage();
-       }
-       
-       private void handleDuplicateMessage(MessageIssue issue) {
-           // 檢查冪等性
-           if (!isMessageProcessed(issue.getMessage())) {
-               consumer.processMessage(issue.getMessage());
-           }
-       }
-       
-       private void handleStackedMessages(MessageIssue issue) {
-           // 增加消費者數量
-           scaleConsumers();
-           // 調整消費速度
-           adjustConsumptionRate();
-       }
-       
-       private void handleOutOfOrderMessages(MessageIssue issue) {
-           // 使用順序隊列
-           useOrderedQueue();
-           // 實現消息排序
-           sortMessages();
-       }
-   }
-   ```
-
-2. 監控方案：
-   ```java
-   public class MessageQueueMonitor {
-       private MetricsCollector metricsCollector;
-       private AlertManager alertManager;
-       
-       public void monitorQueue() {
-           QueueMetrics metrics = metricsCollector.collectMetrics();
-           
-           // 檢查消息堆積
-           if (metrics.getMessageCount() > THRESHOLD) {
-               alertManager.alert("消息堆積警告", metrics.getDetails());
-           }
-           
-           // 檢查消費延遲
-           if (metrics.getConsumptionDelay() > MAX_DELAY) {
-               alertManager.alert("消費延遲警告", metrics.getDetails());
-           }
-           
-           // 檢查錯誤率
-           if (metrics.getErrorRate() > ERROR_THRESHOLD) {
-               alertManager.alert("錯誤率過高", metrics.getDetails());
-           }
-       }
-   }
-   ```
-
-3. 最佳實踐：
-   - 實現消息冪等性處理
-   - 使用死信隊列處理失敗消息
-   - 實現消息重試機制
-   - 合理設置消息過期時間
-   - 實現消息優先級處理
-   - 使用消息壓縮減少網絡開銷
-   - 實現消息過濾機制
-   - 定期清理過期消息
-
-### 5. 實戰案例
-
-#### 案例一：訂單處理系統
-```java
-public class OrderProcessingSystem {
-    private MessageQueue orderQueue;
-    private OrderProcessor orderProcessor;
-    private PaymentProcessor paymentProcessor;
-    private InventoryManager inventoryManager;
     
-    public void processOrder(Order order) {
-        // 發送訂單消息
-        orderQueue.send(new OrderMessage(order));
-        
-        // 處理訂單
-        orderProcessor.processOrder(order);
-        
-        // 處理支付
-        paymentProcessor.processPayment(order);
-        
-        // 更新庫存
-        inventoryManager.updateInventory(order);
-    }
-    
-    public void handleFailedOrder(Order order) {
-        // 將失敗訂單發送到死信隊列
-        orderQueue.sendToDeadLetterQueue(new OrderMessage(order));
-        
-        // 通知運維人員
-        notifyOperations(order);
+    private void 發出警告(String 指標, int 數量) {
+        System.out.println("警告！" + 指標 + " 數量超過閾值：" + 數量);
     }
 }
-```
-
-#### 案例二：日誌收集系統
-```java
-public class LogCollectionSystem {
-    private MessageQueue logQueue;
-    private LogProcessor logProcessor;
-    private StorageManager storageManager;
-    
-    public void collectLogs(LogMessage log) {
-        // 發送日誌消息
-        logQueue.send(log);
-        
-        // 處理日誌
-        logProcessor.processLog(log);
-        
-        // 存儲日誌
-        storageManager.storeLog(log);
-    }
-    
-    public void handleLogBacklog() {
-        // 檢查日誌堆積
-        if (logQueue.getMessageCount() > BACKLOG_THRESHOLD) {
-            // 增加處理能力
-            scaleProcessors();
-            // 優化存儲策略
-            optimizeStorage();
-        }
-    }
-}
-```
-
-這個教學文件提供了從基礎到進階的消息隊列學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的消息發送和接收開始，中級學習者可以學習消息格式和處理，而高級學習者則可以掌握非同步處理和負載平衡等進階功能。 
+``` 

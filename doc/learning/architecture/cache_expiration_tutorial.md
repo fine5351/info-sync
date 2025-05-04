@@ -3,10 +3,10 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-快取過期策略就像學校的便當：
-- 便當放太久會壞掉
-- 我們要定期檢查便當是否過期
-- 過期的便當要丟掉，換新的
+快取過期就像你手機裡的遊戲：
+- 遊戲太久沒玩會被自動刪除
+- 我們要定期檢查哪些遊戲沒在玩
+- 沒在玩的遊戲要刪掉，讓手機有更多空間
 
 初級學習者需要了解：
 - 什麼是快取過期
@@ -15,201 +15,151 @@
 
 ### 2. 使用原因
 快取過期策略的主要使用原因包括：
-1. 資源管理：
-   - 避免記憶體洩漏
-   - 控制快取大小
-   - 優化資源使用
+1. 空間管理：
+   - 避免手機空間不夠
+   - 控制遊戲數量
+   - 讓手機跑得更快
 
 2. 資料正確性：
-   - 確保資料時效性
-   - 避免使用過期資料
-   - 保持資料一致性
+   - 確保遊戲是最新版本
+   - 避免玩到舊版本
+   - 保持遊戲資料正確
 
 3. 效能優化：
-   - 減少無效快取
-   - 提高快取命中率
-   - 優化系統效能
+   - 減少沒在玩的遊戲
+   - 提高手機速度
+   - 讓手機更順暢
 
 ### 3. 問題表象
 常見的問題表象包括：
-1. 資源問題：
-   - 記憶體使用過高
-   - 快取空間不足
-   - 系統效能下降
+1. 空間問題：
+   - 手機空間不夠
+   - 遊戲裝不下
+   - 手機變很慢
 
 2. 資料問題：
-   - 使用過期資料
-   - 資料不一致
-   - 快取擊穿
+   - 遊戲版本太舊
+   - 遊戲資料錯誤
+   - 遊戲打不開
 
 3. 管理問題：
-   - 過期策略不當
-   - 清理機制失效
-   - 監控不足
+   - 不知道哪些遊戲要刪
+   - 刪錯遊戲
+   - 忘記檢查
 
 ### 4. 避免方法
 避免問題的方法包括：
 1. 系統設計：
-   - 實現適當的過期策略
-   - 設計有效的清理機制
-   - 建立監控系統
+   - 設定自動檢查
+   - 設計提醒功能
+   - 建立備份系統
 
-2. 資源管理：
-   - 定期清理過期快取
-   - 控制快取大小
-   - 優化資源使用
+2. 空間管理：
+   - 定期清理遊戲
+   - 控制遊戲數量
+   - 優化空間使用
 
 3. 效能優化：
-   - 合理設置過期時間
-   - 優化清理頻率
-   - 實現負載均衡
+   - 合理設定檢查時間
+   - 優化檢查頻率
+   - 保持手機順暢
 
 ### 5. 問題處理
 遇到問題時的處理方法：
-1. 資源問題處理：
-   - 檢查記憶體使用
-   - 清理過期快取
-   - 優化快取策略
+1. 空間問題處理：
+   - 檢查手機空間
+   - 清理沒在玩的遊戲
+   - 優化遊戲管理
 
 2. 資料問題處理：
-   - 檢查資料時效性
-   - 更新過期資料
-   - 修復不一致資料
+   - 檢查遊戲版本
+   - 更新舊遊戲
+   - 修復錯誤資料
 
 3. 管理問題處理：
-   - 調整過期策略
-   - 改進清理機制
-   - 加強監控系統
+   - 調整檢查設定
+   - 改進提醒功能
+   - 加強備份系統
 
 ### 6. PlantUML 圖解
 ```plantuml
 @startuml
-class CacheItem {
-    - key: String
-    - value: Object
-    - expireTime: long
-    + getKey()
-    + getValue()
-    + isExpired()
+class Game {
+    - name: String
+    - lastPlayTime: long
+    - size: int
+    + getName()
+    + getLastPlayTime()
+    + getSize()
 }
 
-class SimpleCache {
-    - items: Map<String, CacheItem>
-    + put()
-    + get()
-    + removeExpired()
+class GameManager {
+    - games: Map<String, Game>
+    + addGame()
+    + removeGame()
+    + checkGames()
 }
 
-SimpleCache --> CacheItem
+GameManager --> Game
 @enduml
 ```
 
 ### 7. 分段教學步驟
 
-#### 步驟 1：基本過期檢查
+#### 步驟 1：基本遊戲檢查
 ```java
-public class SimpleCacheItem {
-    private String key;
-    private Object value;
-    private long expireTime;
-    private long lastAccessTime;
-    private boolean isValid;
+public class Game {
+    private String name;
+    private long lastPlayTime;
+    private int size;
     
-    public SimpleCacheItem(String key, Object value, long expireTime) {
-        this.key = key;
-        this.value = value;
-        this.expireTime = expireTime;
-        this.lastAccessTime = System.currentTimeMillis();
-        this.isValid = true;
+    public Game(String name, int size) {
+        this.name = name;
+        this.lastPlayTime = System.currentTimeMillis();
+        this.size = size;
     }
     
-    public String getKey() {
-        return key;
+    public String getName() {
+        return name;
     }
     
-    public Object getValue() {
-        return value;
+    public long getLastPlayTime() {
+        return lastPlayTime;
     }
     
-    public boolean isExpired() {
-        return System.currentTimeMillis() > expireTime;
+    public int getSize() {
+        return size;
     }
     
-    public void updateAccessTime() {
-        lastAccessTime = System.currentTimeMillis();
-    }
-    
-    public boolean isValid() {
-        return isValid;
-    }
-    
-    public void invalidate() {
-        this.isValid = false;
+    public void updatePlayTime() {
+        lastPlayTime = System.currentTimeMillis();
     }
 }
 
-public class SimpleCache {
-    private Map<String, SimpleCacheItem> items;
-    private ExpirationManager expirationManager;
-    private MonitoringManager monitoringManager;
+public class GameManager {
+    private Map<String, Game> games;
     
-    public SimpleCache() {
-        items = new HashMap<>();
-        expirationManager = new ExpirationManager();
-        monitoringManager = new MonitoringManager();
+    public GameManager() {
+        games = new HashMap<>();
     }
     
-    public void put(String key, Object value, long expireTime) {
-        SimpleCacheItem item = new SimpleCacheItem(key, value, 
-            System.currentTimeMillis() + expireTime);
-        items.put(key, item);
-        monitoringManager.recordCacheOperation("put", key);
-        System.out.println("存入快取：" + key);
+    public void addGame(String name, int size) {
+        Game game = new Game(name, size);
+        games.put(name, game);
+        System.out.println("新增遊戲：" + name);
     }
     
-    public Object get(String key) {
-        SimpleCacheItem item = items.get(key);
-        if (item != null) {
-            if (item.isExpired()) {
-                items.remove(key);
-                monitoringManager.recordCacheOperation("expire", key);
-                System.out.println("快取過期：" + key);
-                return null;
-            }
-            item.updateAccessTime();
-            monitoringManager.recordCacheOperation("get", key);
-            return item.getValue();
-        }
-        return null;
-    }
-    
-    public void removeExpired() {
-        items.entrySet().removeIf(entry -> {
-            if (entry.getValue().isExpired()) {
-                monitoringManager.recordCacheOperation("remove", entry.getKey());
+    public void checkGames() {
+        long currentTime = System.currentTimeMillis();
+        games.entrySet().removeIf(entry -> {
+            Game game = entry.getValue();
+            // 如果遊戲超過30天沒玩，就刪除
+            if (currentTime - game.getLastPlayTime() > 30 * 24 * 60 * 60 * 1000) {
+                System.out.println("刪除遊戲：" + game.getName());
                 return true;
             }
             return false;
         });
-    }
-}
-
-class ExpirationManager {
-    public void checkExpiration(Map<String, SimpleCacheItem> items) {
-        items.entrySet().removeIf(entry -> entry.getValue().isExpired());
-    }
-}
-
-class MonitoringManager {
-    private Map<String, Integer> operationCounts;
-    
-    public MonitoringManager() {
-        operationCounts = new HashMap<>();
-    }
-    
-    public void recordCacheOperation(String operation, String key) {
-        String metric = operation + ":" + key;
-        operationCounts.merge(metric, 1, Integer::sum);
     }
 }
 ```
@@ -218,132 +168,107 @@ class MonitoringManager {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 過期策略實現
-- 定期清理機制
-- 過期通知機制
-- 過期時間管理
+- 遊戲管理系統
+- 自動清理機制
+- 提醒功能
+- 時間管理
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class CacheItem {
-    - key: String
-    - value: Object
-    - expireTime: long
-    - lastAccessTime: long
-    + getKey()
-    + getValue()
-    + isExpired()
-    + updateAccessTime()
+class Game {
+    - name: String
+    - lastPlayTime: long
+    - size: int
+    + getName()
+    + getLastPlayTime()
+    + getSize()
+    + updatePlayTime()
 }
 
-class ExpirationManager {
-    - items: Map<String, CacheItem>
-    - cleanupInterval: long
-    + checkExpiration()
+class GameManager {
+    - games: Map<String, Game>
+    - checkInterval: long
+    + checkGames()
     + cleanup()
-    + notifyExpiration()
+    + sendReminder()
 }
 
-class Cache {
-    - manager: ExpirationManager
-    + put()
-    + get()
-    + remove()
+class GameSystem {
+    - manager: GameManager
+    + addGame()
+    + removeGame()
+    + checkGames()
 }
 
-Cache --> ExpirationManager
-ExpirationManager --> CacheItem
+GameSystem --> GameManager
+GameManager --> Game
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：過期管理
+#### 步驟 1：遊戲管理
 ```java
-public class AdvancedCacheItem {
-    private String key;
-    private Object value;
-    private long expireTime;
-    private long lastAccessTime;
-    private boolean isValid;
-    private List<ExpirationListener> listeners;
+public class AdvancedGame {
+    private String name;
+    private long lastPlayTime;
+    private int size;
+    private List<GameListener> listeners;
     
-    public AdvancedCacheItem(String key, Object value, long expireTime) {
-        this.key = key;
-        this.value = value;
-        this.expireTime = expireTime;
-        this.lastAccessTime = System.currentTimeMillis();
-        this.isValid = true;
+    public AdvancedGame(String name, int size) {
+        this.name = name;
+        this.lastPlayTime = System.currentTimeMillis();
+        this.size = size;
         this.listeners = new ArrayList<>();
     }
     
-    public void updateAccessTime() {
-        lastAccessTime = System.currentTimeMillis();
-    }
-    
-    public boolean isExpired() {
-        return System.currentTimeMillis() > expireTime;
-    }
-    
-    public long getLastAccessTime() {
-        return lastAccessTime;
-    }
-    
-    public boolean isValid() {
-        return isValid;
-    }
-    
-    public void invalidate() {
-        this.isValid = false;
+    public void updatePlayTime() {
+        lastPlayTime = System.currentTimeMillis();
         notifyListeners();
     }
     
-    public void addListener(ExpirationListener listener) {
+    public void addListener(GameListener listener) {
         listeners.add(listener);
     }
     
     private void notifyListeners() {
-        for (ExpirationListener listener : listeners) {
-            listener.onExpiration(this);
+        for (GameListener listener : listeners) {
+            listener.onGameUpdated(this);
         }
     }
 }
 
-interface ExpirationListener {
-    void onExpiration(AdvancedCacheItem item);
+interface GameListener {
+    void onGameUpdated(AdvancedGame game);
 }
 ```
 
-#### 步驟 2：定期清理
+#### 步驟 2：自動清理
 ```java
-public class ExpirationManager {
-    private Map<String, AdvancedCacheItem> items;
-    private long cleanupInterval;
+public class GameManager {
+    private Map<String, AdvancedGame> games;
+    private long checkInterval;
     
-    public ExpirationManager(long cleanupInterval) {
-        this.items = new HashMap<>();
-        this.cleanupInterval = cleanupInterval;
+    public GameManager(long checkInterval) {
+        this.games = new HashMap<>();
+        this.checkInterval = checkInterval;
     }
     
-    public void checkExpiration() {
-        items.entrySet().removeIf(entry -> {
-            if (entry.getValue().isExpired()) {
-                notifyExpiration(entry.getKey());
+    public void checkGames() {
+        long currentTime = System.currentTimeMillis();
+        games.entrySet().removeIf(entry -> {
+            AdvancedGame game = entry.getValue();
+            if (currentTime - game.getLastPlayTime() > 30 * 24 * 60 * 60 * 1000) {
+                sendReminder(game.getName());
                 return true;
             }
             return false;
         });
     }
     
-    public void cleanup() {
-        long currentTime = System.currentTimeMillis();
-        items.entrySet().removeIf(entry -> 
-            currentTime - entry.getValue().getLastAccessTime() > cleanupInterval);
-    }
-    
-    private void notifyExpiration(String key) {
-        System.out.println("快取過期通知：" + key);
+    private void sendReminder(String gameName) {
+        System.out.println("提醒：遊戲 " + gameName + " 已經超過30天沒玩了，將被刪除");
     }
 }
 ```
@@ -352,38 +277,38 @@ public class ExpirationManager {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式過期策略
-- 過期時間同步
-- 過期事件處理
-- 過期策略優化
+- 多手機遊戲同步
+- 遊戲時間同步
+- 遊戲事件處理
+- 遊戲管理優化
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階快取系統" {
-    class DistributedCache {
-        - nodes: List<Node>
+package "進階遊戲系統" {
+    class GameSystem {
+        - phones: List<Phone>
         - coordinator: Coordinator
-        - expirationHandler: ExpirationHandler
-        + put()
-        + get()
-        + syncExpiration()
+        - gameHandler: GameHandler
+        + addGame()
+        + removeGame()
+        + syncGames()
     }
     
     class Coordinator {
-        - expirationMap: Map
-        + scheduleExpiration()
-        + syncExpiration()
-        + handleExpiration()
+        - gameMap: Map
+        + scheduleCheck()
+        + syncGames()
+        + handleGame()
     }
     
-    class ExpirationHandler {
-        - strategies: List<ExpirationStrategy>
+    class GameHandler {
+        - strategies: List<GameStrategy>
         + handle()
         + optimize()
     }
     
-    class ExpirationStrategy {
+    class GameStrategy {
         <<interface>>
         + check()
         + handle()
@@ -391,120 +316,119 @@ package "進階快取系統" {
     }
 }
 
-DistributedCache --> Coordinator
-DistributedCache --> ExpirationHandler
-ExpirationHandler --> ExpirationStrategy
+GameSystem --> Coordinator
+GameSystem --> GameHandler
+GameHandler --> GameStrategy
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分散式過期
+#### 步驟 1：多手機同步
 ```java
-public class DistributedCache {
-    private List<Node> nodes;
+public class GameSystem {
+    private List<Phone> phones;
     private Coordinator coordinator;
-    private ExpirationHandler expirationHandler;
+    private GameHandler gameHandler;
     
-    public DistributedCache() {
-        nodes = new ArrayList<>();
+    public GameSystem() {
+        phones = new ArrayList<>();
         coordinator = new Coordinator();
-        expirationHandler = new ExpirationHandler();
+        gameHandler = new GameHandler();
     }
     
-    public void put(String key, Object value, long expireTime) {
-        // 同步到所有節點
-        for (Node node : nodes) {
-            node.put(key, value, expireTime);
+    public void addGame(String gameName, int size) {
+        // 同步到所有手機
+        for (Phone phone : phones) {
+            phone.addGame(gameName, size);
         }
         
-        // 安排過期時間
-        coordinator.scheduleExpiration(key, expireTime);
+        // 安排檢查時間
+        coordinator.scheduleCheck(gameName);
     }
     
-    public void handleExpiration(String key) {
-        expirationHandler.handle(key);
-        // 同步到其他節點
-        for (Node node : nodes) {
-            node.remove(key);
+    public void handleGame(String gameName) {
+        gameHandler.handle(gameName);
+        // 同步到其他手機
+        for (Phone phone : phones) {
+            phone.removeGame(gameName);
         }
     }
 }
 ```
 
-#### 步驟 2：過期策略
+#### 步驟 2：遊戲策略
 ```java
-public interface ExpirationStrategy {
-    boolean check(String key, long expireTime);
-    void handle(String key);
+public interface GameStrategy {
+    boolean check(String gameName, long lastPlayTime);
+    void handle(String gameName);
     void optimize();
 }
 
-public class TimeBasedStrategy implements ExpirationStrategy {
+public class TimeBasedStrategy implements GameStrategy {
     @Override
-    public boolean check(String key, long expireTime) {
-        return System.currentTimeMillis() > expireTime;
+    public boolean check(String gameName, long lastPlayTime) {
+        return System.currentTimeMillis() - lastPlayTime > 30 * 24 * 60 * 60 * 1000;
     }
     
     @Override
-    public void handle(String key) {
-        System.out.println("處理過期：" + key);
+    public void handle(String gameName) {
+        System.out.println("處理遊戲：" + gameName);
     }
     
     @Override
     public void optimize() {
-        // 優化過期策略
+        // 優化遊戲策略
     }
 }
 
-public class AccessBasedStrategy implements ExpirationStrategy {
-    private Map<String, Long> lastAccessTimes;
+public class SizeBasedStrategy implements GameStrategy {
+    private Map<String, Integer> gameSizes;
     
-    public AccessBasedStrategy() {
-        lastAccessTimes = new HashMap<>();
+    public SizeBasedStrategy() {
+        gameSizes = new HashMap<>();
     }
     
     @Override
-    public boolean check(String key, long expireTime) {
-        Long lastAccess = lastAccessTimes.get(key);
-        return lastAccess != null && 
-               System.currentTimeMillis() - lastAccess > expireTime;
+    public boolean check(String gameName, long lastPlayTime) {
+        Integer size = gameSizes.get(gameName);
+        return size != null && size > 1000; // 如果遊戲大小超過1GB
     }
     
     @Override
-    public void handle(String key) {
-        lastAccessTimes.remove(key);
-        System.out.println("處理閒置：" + key);
+    public void handle(String gameName) {
+        gameSizes.remove(gameName);
+        System.out.println("處理大遊戲：" + gameName);
     }
     
     @Override
     public void optimize() {
-        // 優化訪問策略
+        // 優化大小策略
     }
 }
 ```
 
-#### 步驟 3：過期處理器
+#### 步驟 3：遊戲處理器
 ```java
-public class ExpirationHandler {
-    private List<ExpirationStrategy> strategies;
+public class GameHandler {
+    private List<GameStrategy> strategies;
     
-    public ExpirationHandler() {
+    public GameHandler() {
         strategies = new ArrayList<>();
         strategies.add(new TimeBasedStrategy());
-        strategies.add(new AccessBasedStrategy());
+        strategies.add(new SizeBasedStrategy());
     }
     
-    public void handle(String key) {
-        for (ExpirationStrategy strategy : strategies) {
-            if (strategy.check(key, System.currentTimeMillis())) {
-                strategy.handle(key);
+    public void handle(String gameName) {
+        for (GameStrategy strategy : strategies) {
+            if (strategy.check(gameName, System.currentTimeMillis())) {
+                strategy.handle(gameName);
             }
         }
     }
     
     public void optimize() {
-        for (ExpirationStrategy strategy : strategies) {
+        for (GameStrategy strategy : strategies) {
             strategy.optimize();
         }
     }
@@ -514,50 +438,50 @@ public class ExpirationHandler {
 ### 4. 常見問題與解決方案
 
 #### 問題表象
-1. 資源問題：
-   - 記憶體使用過高
-   - 快取空間不足
-   - 系統效能下降
+1. 空間問題：
+   - 手機空間不夠
+   - 遊戲裝不下
+   - 手機變很慢
 
 2. 資料問題：
-   - 使用過期資料
-   - 資料不一致
-   - 快取擊穿
+   - 遊戲版本太舊
+   - 遊戲資料錯誤
+   - 遊戲打不開
 
 3. 管理問題：
-   - 過期策略不當
-   - 清理機制失效
-   - 監控不足
+   - 不知道哪些遊戲要刪
+   - 刪錯遊戲
+   - 忘記檢查
 
 #### 避免方法
 1. 系統設計：
-   - 實現適當的過期策略
-   - 設計有效的清理機制
-   - 建立監控系統
+   - 設定自動檢查
+   - 設計提醒功能
+   - 建立備份系統
 
-2. 資源管理：
-   - 定期清理過期快取
-   - 控制快取大小
-   - 優化資源使用
+2. 空間管理：
+   - 定期清理遊戲
+   - 控制遊戲數量
+   - 優化空間使用
 
 3. 效能優化：
-   - 合理設置過期時間
-   - 優化清理頻率
-   - 實現負載均衡
+   - 合理設定檢查時間
+   - 優化檢查頻率
+   - 保持手機順暢
 
 #### 處理方案
 1. 技術方案：
    ```java
-   public class CacheExpirationManager {
-       private CacheManager cacheManager;
-       private ExpirationManager expirationManager;
-       private MonitoringManager monitoringManager;
-       private AlertManager alertManager;
+   public class GameManager {
+       private GameSystem gameSystem;
+       private GameHandler gameHandler;
+       private Monitor monitor;
+       private Alert alert;
        
-       public void handleExpirationIssue(ExpirationIssue issue) {
+       public void handleGameIssue(GameIssue issue) {
            switch (issue.getType()) {
-               case RESOURCE:
-                   handleResourceIssue(issue);
+               case SPACE:
+                   handleSpaceIssue(issue);
                    break;
                case DATA:
                    handleDataIssue(issue);
@@ -568,133 +492,69 @@ public class ExpirationHandler {
            }
        }
        
-       private void handleResourceIssue(ExpirationIssue issue) {
-           // 檢查資源使用
-           checkResourceUsage();
-           // 清理過期快取
-           cleanupExpiredCache();
-           // 優化快取策略
-           optimizeCacheStrategy();
+       private void handleSpaceIssue(GameIssue issue) {
+           // 檢查空間使用
+           checkSpaceUsage();
+           // 清理沒在玩的遊戲
+           cleanupGames();
+           // 優化遊戲管理
+           optimizeGameManagement();
        }
        
-       private void handleDataIssue(ExpirationIssue issue) {
-           // 檢查資料時效性
-           checkDataValidity();
-           // 更新過期資料
-           updateExpiredData();
-           // 修復不一致資料
-           repairInconsistentData();
+       private void handleDataIssue(GameIssue issue) {
+           // 檢查遊戲版本
+           checkGameVersions();
+           // 更新舊遊戲
+           updateOldGames();
+           // 修復錯誤資料
+           repairGameData();
        }
        
-       private void handleManagementIssue(ExpirationIssue issue) {
-           // 檢查過期策略
-           checkExpirationStrategy();
-           // 改進清理機制
-           improveCleanupMechanism();
-           // 加強監控系統
-           enhanceMonitoring();
+       private void handleManagementIssue(GameIssue issue) {
+           // 檢查遊戲設定
+           checkGameSettings();
+           // 改進提醒功能
+           improveReminders();
+           // 加強備份系統
+           enhanceBackup();
        }
    }
    ```
 
 2. 監控方案：
    ```java
-   public class CacheExpirationMonitor {
+   public class GameMonitor {
        private MetricsCollector metricsCollector;
-       private ExpirationChecker expirationChecker;
-       private AlertManager alertManager;
+       private GameChecker gameChecker;
+       private Alert alert;
        
-       public void monitorCache() {
-           CacheMetrics metrics = metricsCollector.collectMetrics();
-           ExpirationStatus status = expirationChecker.checkExpiration();
+       public void monitorGames() {
+           GameMetrics metrics = metricsCollector.collectMetrics();
+           GameStatus status = gameChecker.checkGames();
            
-           // 檢查記憶體使用
-           if (metrics.getMemoryUsage() > MEMORY_THRESHOLD) {
-               alertManager.alert("記憶體使用警告", metrics.getDetails());
+           // 檢查空間使用
+           if (metrics.getSpaceUsage() > SPACE_THRESHOLD) {
+               alert.send("空間使用警告", metrics.getDetails());
            }
            
-           // 檢查過期快取
-           if (status.hasExpiredItems()) {
-               alertManager.alert("過期快取警告", status.getDetails());
+           // 檢查沒在玩的遊戲
+           if (status.hasUnplayedGames()) {
+               alert.send("遊戲提醒", status.getDetails());
            }
            
-           // 檢查快取命中率
-           if (metrics.getHitRate() < HIT_RATE_THRESHOLD) {
-               alertManager.alert("快取命中率警告", metrics.getDetails());
+           // 檢查遊戲數量
+           if (metrics.getGameCount() > COUNT_THRESHOLD) {
+               alert.send("遊戲數量警告", metrics.getDetails());
            }
        }
    }
    ```
 
 3. 最佳實踐：
-   - 實現自動化清理
-   - 配置智能過期
+   - 設定自動清理
+   - 配置智能提醒
    - 建立監控告警
-   - 優化過期策略
-   - 定期效能優化
-   - 保持系統文檔
-   - 建立應急流程
-
-### 5. 實戰案例
-
-#### 案例一：電商系統快取過期
-```java
-public class ECommerceCache {
-    private CacheManager cacheManager;
-    private ExpirationManager expirationManager;
-    private MonitoringManager monitoringManager;
-    
-    public void updateProduct(Product product) {
-        // 更新快取
-        cacheManager.updateProduct(product);
-        
-        // 設置過期時間
-        expirationManager.setExpiration("product", product.getId(), 
-            System.currentTimeMillis() + 3600000); // 1小時過期
-        
-        // 記錄操作
-        monitoringManager.recordCacheOperation("update", "product:" + product.getId());
-    }
-    
-    public Product getProduct(String productId) {
-        // 檢查過期
-        if (expirationManager.isExpired("product", productId)) {
-            // 重新載入
-            return reloadProduct(productId);
-        }
-        return cacheManager.getProduct(productId);
-    }
-}
-```
-
-#### 案例二：社交媒體快取過期
-```java
-public class SocialMediaCache {
-    private CacheManager cacheManager;
-    private ExpirationManager expirationManager;
-    private MonitoringManager monitoringManager;
-    
-    public void updatePost(Post post) {
-        // 更新快取
-        cacheManager.updatePost(post);
-        
-        // 設置過期時間
-        expirationManager.setExpiration("post", post.getId(), 
-            System.currentTimeMillis() + 1800000); // 30分鐘過期
-        
-        // 記錄操作
-        monitoringManager.recordCacheOperation("update", "post:" + post.getId());
-    }
-    
-    public Post getPost(String postId) {
-        // 檢查過期
-        if (expirationManager.isExpired("post", postId)) {
-            // 重新載入
-            return reloadPost(postId);
-        }
-        return cacheManager.getPost(postId);
-    }
-}
-```
-
-這個教學文件提供了從基礎到進階的快取過期策略學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的過期檢查開始，中級學習者可以學習過期管理和定期清理，而高級學習者則可以掌握分散式過期策略和優化等進階功能。 
+   - 優化遊戲管理
+   - 定期效能檢查
+   - 保持系統更新
+   - 建立應急流程 

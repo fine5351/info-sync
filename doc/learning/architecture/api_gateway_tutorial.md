@@ -3,68 +3,61 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-API 網關就像一個智能的接待大廳：
-- 所有外部請求都先到達網關
-- 網關負責路由請求到正確的服務
-- 網關可以進行身份驗證和授權
-- 網關可以進行請求轉換和響應聚合
+API 網關就像學校的警衛室：
+- 所有訪客都要先到警衛室登記
+- 警衛會檢查訪客的身份
+- 警衛會告訴訪客該去哪裡
+- 警衛會記錄訪客的進出時間
 
 初級學習者需要了解：
-- 什麼是 API 網關
-- 為什麼需要 API 網關
-- 基本的請求路由概念
+- 什麼是 API 網關（就像學校的警衛室）
+- 為什麼需要 API 網關（為了保護和引導訪客）
+- 基本的請求路由（就像警衛告訴訪客該去哪裡）
+
+可能遇到的問題：
+- 訪客找不到正確的教室（路由錯誤）
+- 訪客沒有登記就進來了（未授權訪問）
+- 太多訪客同時來訪（系統負載過高）
+
+如何避免問題：
+- 做好訪客登記（身份驗證）
+- 清楚標示教室位置（正確的路由配置）
+- 控制訪客數量（限流控制）
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class APIGateway {
-    - routes: Map
-    - services: List
-    + routeRequest()
-    + authenticate()
-    + transform()
+class 警衛室 {
+    - 訪客名單: 列表
+    - 教室位置: 地圖
+    + 檢查身份()
+    + 指引方向()
 }
 
-class Service {
-    - name: String
-    - endpoint: String
-    + handleRequest()
+class 教室 {
+    - 教室名稱: 字串
+    - 位置: 字串
+    + 接待訪客()
 }
 
-APIGateway --> Service
+警衛室 --> 教室
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：基本 API 網關實現
+#### 步驟 1：建立基本的警衛室（API 網關）
 ```java
-@RestController
-public class APIGatewayController {
-    private RouteResolver routeResolver;
-    private AuthenticationService authService;
+public class 警衛室 {
+    private Map<String, String> 教室位置;
+    private List<String> 訪客名單;
     
-    @PostMapping("/api/**")
-    public ResponseEntity<?> handleRequest(
-        @RequestBody Object request,
-        @RequestHeader HttpHeaders headers) {
-        
-        // 身份驗證
-        if (!authService.authenticate(headers)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        // 路由解析
-        ServiceEndpoint endpoint = routeResolver.resolve(request);
-        
-        // 轉發請求
-        return forwardRequest(endpoint, request);
+    public boolean 檢查身份(String 訪客) {
+        return 訪客名單.contains(訪客);
     }
     
-    private ResponseEntity<?> forwardRequest(
-        ServiceEndpoint endpoint,
-        Object request) {
-        // 實現請求轉發邏輯
+    public String 指引方向(String 目的地) {
+        return 教室位置.get(目的地);
     }
 }
 ```
@@ -73,94 +66,63 @@ public class APIGatewayController {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 請求轉換
-- 響應聚合
-- 限流控制
-- 緩存策略
+- 訪客登記表（請求轉換）
+- 訪客統計（響應聚合）
+- 訪客流量控制（限流）
+- 訪客記錄（緩存）
+
+就像學校的行政系統：
+- 需要記錄訪客的詳細資訊
+- 需要統計訪客數量
+- 需要控制訪客流量
+- 需要保存訪客記錄
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class APIGateway {
-    - transformer: RequestTransformer
-    - aggregator: ResponseAggregator
-    - rateLimiter: RateLimiter
-    - cache: Cache
-    + transformRequest()
-    + aggregateResponse()
-    + limitRate()
-    + cacheResponse()
+class 行政系統 {
+    - 訪客登記表: 表格
+    - 訪客統計: 報表
+    - 流量控制: 計數器
+    - 訪客記錄: 檔案
+    + 登記訪客()
+    + 統計訪客()
+    + 控制流量()
+    + 保存記錄()
 }
 
-class RequestTransformer {
-    - rules: List
-    + transform()
+class 訪客登記表 {
+    - 規則: 列表
+    + 登記()
 }
 
-class ResponseAggregator {
-    - services: List
-    + aggregate()
+class 訪客統計 {
+    - 資料: 列表
+    + 統計()
 }
 
-APIGateway --> RequestTransformer
-APIGateway --> ResponseAggregator
+行政系統 --> 訪客登記表
+行政系統 --> 訪客統計
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：請求轉換實現
+#### 步驟 1：建立訪客登記系統
 ```java
-public class RequestTransformer {
-    private List<TransformationRule> rules;
+public class 訪客登記系統 {
+    private List<登記規則> 規則列表;
     
-    public Request transform(Request original) {
-        Request transformed = original;
+    public 訪客資料 登記訪客(訪客資料 原始資料) {
+        訪客資料 處理後資料 = 原始資料;
         
-        for (TransformationRule rule : rules) {
-            if (rule.matches(transformed)) {
-                transformed = rule.apply(transformed);
+        for (登記規則 規則 : 規則列表) {
+            if (規則.符合條件(處理後資料)) {
+                處理後資料 = 規則.處理資料(處理後資料);
             }
         }
         
-        return transformed;
-    }
-}
-
-class TransformationRule {
-    private Predicate<Request> condition;
-    private Function<Request, Request> transformation;
-    
-    public boolean matches(Request request) {
-        return condition.test(request);
-    }
-    
-    public Request apply(Request request) {
-        return transformation.apply(request);
-    }
-}
-```
-
-#### 步驟 2：響應聚合實現
-```java
-public class ResponseAggregator {
-    private List<ServiceEndpoint> endpoints;
-    
-    public Response aggregate(Request request) {
-        List<CompletableFuture<Response>> futures = new ArrayList<>();
-        
-        for (ServiceEndpoint endpoint : endpoints) {
-            futures.add(CompletableFuture.supplyAsync(() -> 
-                callService(endpoint, request)));
-        }
-        
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-            .thenApply(v -> combineResponses(futures))
-            .join();
-    }
-    
-    private Response combineResponses(List<CompletableFuture<Response>> futures) {
-        // 實現響應合併邏輯
+        return 處理後資料;
     }
 }
 ```
@@ -169,293 +131,118 @@ public class ResponseAggregator {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 服務發現集成
-- 熔斷機制
-- 金絲雀發布
-- 監控和追蹤
+- 教室管理系統（服務發現）
+- 緊急應變機制（熔斷）
+- 新教室試用（金絲雀發布）
+- 校園監控（監控和追蹤）
+
+就像學校的進階管理系統：
+- 需要知道所有教室的位置和狀態
+- 需要處理突發狀況
+- 需要測試新教室
+- 需要監控校園安全
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階 API 網關系統" {
-    class ServiceDiscovery {
-        - services: Map
-        + discover()
-        + register()
+package "進階校園管理系統" {
+    class 教室管理 {
+        - 教室列表: 地圖
+        + 尋找教室()
+        + 登記教室()
     }
     
-    class CircuitBreaker {
-        - state: State
-        + execute()
-        + reset()
+    class 緊急應變 {
+        - 狀態: 狀態
+        + 處理緊急狀況()
+        + 恢復正常()
     }
     
-    class CanaryDeployer {
-        - versions: Map
-        + deploy()
-        + rollback()
+    class 新教室試用 {
+        - 版本: 地圖
+        + 啟用新教室()
+        + 恢復舊教室()
     }
     
-    class Monitoring {
-        - metrics: Metrics
-        - traces: Traces
-        + collect()
-        + alert()
+    class 校園監控 {
+        - 監控資料: 資料
+        - 追蹤記錄: 記錄
+        + 收集資料()
+        + 發出警報()
     }
 }
 
-ServiceDiscovery --> CircuitBreaker
-CircuitBreaker --> CanaryDeployer
-CanaryDeployer --> Monitoring
+教室管理 --> 緊急應變
+緊急應變 --> 新教室試用
+新教室試用 --> 校園監控
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：服務發現集成
+#### 步驟 1：建立教室管理系統
 ```java
-public class ServiceDiscovery {
-    private Map<String, List<ServiceInstance>> services;
+public class 教室管理系統 {
+    private Map<String, List<教室>> 教室列表;
     
-    public ServiceInstance discover(String serviceName) {
-        List<ServiceInstance> instances = services.get(serviceName);
-        if (instances == null || instances.isEmpty()) {
-            throw new ServiceNotFoundException(serviceName);
+    public 教室 尋找教室(String 教室名稱) {
+        List<教室> 可用教室 = 教室列表.get(教室名稱);
+        if (可用教室 == null || 可用教室.isEmpty()) {
+            throw new 找不到教室異常(教室名稱);
         }
         
-        // 實現負載均衡
-        return loadBalancer.select(instances);
+        // 選擇最適合的教室
+        return 選擇教室(可用教室);
     }
     
-    public void register(ServiceInstance instance) {
-        services.computeIfAbsent(instance.getServiceName(), 
-            k -> new ArrayList<>()).add(instance);
+    public void 登記教室(教室 新教室) {
+        教室列表.computeIfAbsent(新教室.取得名稱(), 
+            k -> new ArrayList<>()).add(新教室);
     }
 }
 ```
 
-#### 步驟 2：熔斷機制實現
+### 4. 實戰案例
+
+#### 案例一：圖書館訪客系統
 ```java
-public class CircuitBreaker {
-    private String serviceName;
-    private int failureThreshold;
-    private int timeout;
-    private State state;
+public class 圖書館訪客系統 {
+    private 訪客登記系統 登記系統;
+    private 教室管理系統 教室系統;
+    private 校園監控 監控系統;
     
-    public Response execute(Request request) {
-        if (state == State.OPEN) {
-            return handleOpenState(request);
-        }
+    public void 處理訪客(訪客 新訪客) {
+        // 登記訪客
+        訪客資料 處理後資料 = 登記系統.登記訪客(新訪客.取得資料());
         
+        // 尋找適合的閱覽室
+        教室 閱覽室 = 教室系統.尋找教室("閱覽室");
+        
+        // 監控訪客活動
+        監控系統.收集資料(處理後資料);
+    }
+}
+```
+
+#### 案例二：體育館預約系統
+```java
+public class 體育館預約系統 {
+    private 緊急應變 應變系統;
+    private 新教室試用 試用系統;
+    
+    public void 預約場地(預約 新預約) {
         try {
-            Response response = executeRequest(request);
-            recordSuccess();
-            return response;
-        } catch (Exception e) {
-            recordFailure();
-            return handleFailure(request, e);
+            // 檢查場地可用性
+            if (!應變系統.檢查可用性()) {
+                throw new 場地不可用異常();
+            }
+            
+            // 處理預約
+            處理預約(新預約);
+            
+        } catch (異常 e) {
+            // 啟動緊急應變
+            應變系統.處理緊急狀況();
         }
-    }
-    
-    private void recordFailure() {
-        failureCount++;
-        if (failureCount >= failureThreshold) {
-            state = State.OPEN;
-            scheduleReset();
-        }
-    }
-}
-```
-
-### 4. 常見問題與解決方案
-
-#### 問題表象
-1. 路由問題：
-   - 路由錯誤
-   - 服務不可用
-   - 版本衝突
-
-2. 性能問題：
-   - 響應延遲
-   - 並發限制
-   - 資源耗盡
-
-3. 安全問題：
-   - 未授權訪問
-   - 數據洩露
-   - 攻擊防護
-
-4. 監控問題：
-   - 指標缺失
-   - 追蹤斷裂
-   - 告警延遲
-
-#### 避免方法
-1. 路由問題防護：
-   - 服務發現
-   - 健康檢查
-   - 版本控制
-
-2. 性能問題防護：
-   - 限流控制
-   - 緩存策略
-   - 資源優化
-
-3. 安全問題防護：
-   - 身份驗證
-   - 訪問控制
-   - 安全策略
-
-4. 監控問題防護：
-   - 集中採集
-   - 鏈路追蹤
-   - 實時告警
-
-#### 處理方案
-1. 技術方案：
-   ```java
-   public class APIGatewayManager {
-       private RouteManager routeManager;
-       private SecurityManager securityManager;
-       private PerformanceManager performanceManager;
-       private MonitoringManager monitoringManager;
-       
-       public void handleGatewayIssue(GatewayIssue issue) {
-           switch (issue.getType()) {
-               case ROUTING:
-                   handleRoutingIssue(issue);
-                   break;
-               case PERFORMANCE:
-                   handlePerformanceIssue(issue);
-                   break;
-               case SECURITY:
-                   handleSecurityIssue(issue);
-                   break;
-               case MONITORING:
-                   handleMonitoringIssue(issue);
-                   break;
-           }
-       }
-       
-       private void handleRoutingIssue(GatewayIssue issue) {
-           // 檢查路由配置
-           checkRoutingConfig();
-           // 更新服務發現
-           updateServiceDiscovery();
-           // 調整路由策略
-           adjustRoutingStrategy();
-       }
-       
-       private void handlePerformanceIssue(GatewayIssue issue) {
-           // 檢查性能指標
-           checkPerformanceMetrics();
-           // 調整限流策略
-           adjustRateLimiting();
-           // 優化緩存
-           optimizeCaching();
-       }
-       
-       private void handleSecurityIssue(GatewayIssue issue) {
-           // 檢查安全配置
-           checkSecurityConfig();
-           // 更新認證機制
-           updateAuthentication();
-           // 加強訪問控制
-           strengthenAccessControl();
-       }
-       
-       private void handleMonitoringIssue(GatewayIssue issue) {
-           // 檢查監控系統
-           checkMonitoringSystem();
-           // 修復數據採集
-           fixDataCollection();
-           // 更新告警規則
-           updateAlertRules();
-       }
-   }
-   ```
-
-2. 監控方案：
-   ```java
-   public class APIGatewayMonitor {
-       private MetricsCollector metricsCollector;
-       private TraceCollector traceCollector;
-       private AlertManager alertManager;
-       
-       public void monitorGateway() {
-           GatewayMetrics metrics = metricsCollector.collectMetrics();
-           GatewayTraces traces = traceCollector.collectTraces();
-           
-           // 檢查請求成功率
-           if (metrics.getSuccessRate() < SUCCESS_RATE_THRESHOLD) {
-               alertManager.alert("請求成功率警告", metrics.getDetails());
-           }
-           
-           // 檢查響應時間
-           if (metrics.getResponseTime() > RESPONSE_TIME_THRESHOLD) {
-               alertManager.alert("響應時間警告", metrics.getDetails());
-           }
-           
-           // 檢查錯誤率
-           if (metrics.getErrorRate() > ERROR_RATE_THRESHOLD) {
-               alertManager.alert("錯誤率警告", metrics.getDetails());
-           }
-       }
-   }
-   ```
-
-3. 最佳實踐：
-   - 實現服務發現
-   - 配置限流控制
-   - 實現熔斷機制
-   - 優化緩存策略
-   - 加強安全防護
-   - 完善監控系統
-   - 支持金絲雀發布
-   - 定期性能優化
-
-### 5. 實戰案例
-
-#### 案例一：電商系統 API 網關
-```java
-@Configuration
-public class ECommerceGatewayConfig {
-    @Bean
-    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
-        return builder.routes()
-            .route("user-service", r -> r.path("/api/users/**")
-                .filters(f -> f.addRequestHeader("X-User-Service", "true"))
-                .uri("lb://user-service"))
-            .route("order-service", r -> r.path("/api/orders/**")
-                .filters(f -> f.addRequestHeader("X-Order-Service", "true"))
-                .uri("lb://order-service"))
-            .route("product-service", r -> r.path("/api/products/**")
-                .filters(f -> f.addRequestHeader("X-Product-Service", "true"))
-                .uri("lb://product-service"))
-            .build();
-    }
-}
-```
-
-#### 案例二：社交媒體 API 網關
-```java
-@Configuration
-public class SocialMediaGatewayConfig {
-    @Bean
-    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
-        return builder.routes()
-            .route("post-service", r -> r.path("/api/posts/**")
-                .filters(f -> f.addRequestHeader("X-Post-Service", "true")
-                    .circuitBreaker(config -> config
-                        .setName("post-service-circuit")
-                        .setFallbackUri("forward:/fallback/post")))
-                .uri("lb://post-service"))
-            .route("comment-service", r -> r.path("/api/comments/**")
-                .filters(f -> f.addRequestHeader("X-Comment-Service", "true")
-                    .retry(config -> config
-                        .setRetries(3)
-                        .setStatuses(HttpStatus.INTERNAL_SERVER_ERROR)))
-                .uri("lb://comment-service"))
-            .build();
     }
 } 

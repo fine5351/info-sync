@@ -3,153 +3,153 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-消息隊列順序消費就像學校的排隊系統：
-- 同學們要按順序排隊
-- 先來的同學先被服務
+消息隊列就像學校的點名系統：
+- 同學們要按順序排隊點名
+- 先來的同學先被點到
 - 不能插隊，要遵守順序
 
 初級學習者需要了解：
-- 什麼是順序消費
-- 為什麼需要按順序處理
-- 基本的排隊概念
+- 什麼是排隊系統
+- 為什麼要排隊
+- 基本的排隊規則
 
 ### 2. 使用原因
-消息隊列順序消費的主要使用原因包括：
-1. 業務邏輯需求：
-   - 確保操作順序正確
-   - 維護數據一致性
-   - 保證業務流程完整性
+為什麼需要排隊系統：
+1. 公平性：
+   - 確保先來的人先被服務
+   - 避免有人插隊
+   - 維持秩序
 
-2. 數據一致性：
-   - 避免數據衝突
-   - 確保數據更新順序
-   - 防止數據錯誤
+2. 正確性：
+   - 確保每個人都有被點到
+   - 不會漏掉任何人
+   - 不會重複點名
 
-3. 系統可靠性：
-   - 提高系統穩定性
-   - 確保處理順序
-   - 優化系統效能
+3. 效率：
+   - 讓點名過程更快速
+   - 減少混亂
+   - 節省時間
 
 ### 3. 問題表象
-常見的問題表象包括：
+可能遇到的問題：
 1. 順序問題：
-   - 消息順序錯亂
-   - 處理順序不一致
-   - 順序跳躍
+   - 有人插隊
+   - 順序混亂
+   - 點名順序錯誤
 
-2. 數據問題：
-   - 數據不一致
-   - 數據衝突
-   - 數據錯誤
+2. 遺漏問題：
+   - 有人沒被點到
+   - 重複點名
+   - 點名表遺失
 
-3. 效能問題：
-   - 處理延遲
-   - 系統阻塞
-   - 資源浪費
+3. 效率問題：
+   - 點名太慢
+   - 隊伍太長
+   - 等待太久
 
 ### 4. 避免方法
-避免問題的方法包括：
+如何避免問題：
 1. 系統設計：
-   - 實現順序保證
-   - 設計順序檢查
-   - 建立追蹤機制
+   - 使用排隊號碼
+   - 設置排隊規則
+   - 建立檢查機制
 
-2. 數據管理：
-   - 實現順序標記
-   - 設置順序檢查
-   - 定期清理數據
+2. 管理方法：
+   - 定期檢查順序
+   - 記錄已點名的人
+   - 清理過期資料
 
-3. 效能優化：
-   - 優化處理流程
-   - 實現並發控制
-   - 定期效能評估
+3. 優化方法：
+   - 加快點名速度
+   - 控制隊伍長度
+   - 定期評估效率
 
 ### 5. 問題處理
-遇到問題時的處理方法：
+遇到問題怎麼辦：
 1. 順序問題處理：
-   - 檢查順序一致性
-   - 修復順序錯誤
+   - 檢查排隊順序
+   - 修正錯誤順序
    - 恢復正確順序
 
-2. 數據問題處理：
-   - 檢查數據一致性
-   - 修復數據錯誤
-   - 恢復正確狀態
+2. 遺漏問題處理：
+   - 檢查點名表
+   - 補點漏掉的人
+   - 修正重複點名
 
-3. 效能問題處理：
-   - 優化處理流程
-   - 調整資源分配
-   - 實現動態擴展
+3. 效率問題處理：
+   - 加快處理速度
+   - 調整隊伍長度
+   - 增加點名人員
 
 ### 6. PlantUML 圖解
 ```plantuml
 @startuml
-class Message {
-    - id: String
-    - content: String
-    - order: int
-    + getId()
-    + getContent()
-    + getOrder()
+class 學生 {
+    - 學號: String
+    - 姓名: String
+    - 排隊號碼: int
+    + 取得學號()
+    + 取得姓名()
+    + 取得排隊號碼()
 }
 
-class OrderedQueue {
-    - messages: List<Message>
-    + send()
-    + receive()
+class 點名系統 {
+    - 學生列表: List<學生>
+    + 加入排隊()
+    + 點名()
 }
 
-OrderedQueue --> Message
+點名系統 --> 學生
 @enduml
 ```
 
 ### 7. 分段教學步驟
 
-#### 步驟 1：基本順序處理
+#### 步驟 1：基本排隊系統
 ```java
-public class OrderedMessage {
-    private String id;
-    private String content;
-    private int order;
+public class 學生 {
+    private String 學號;
+    private String 姓名;
+    private int 排隊號碼;
     
-    public OrderedMessage(String content, int order) {
-        this.id = UUID.randomUUID().toString();
-        this.content = content;
-        this.order = order;
+    public 學生(String 姓名, int 排隊號碼) {
+        this.學號 = UUID.randomUUID().toString();
+        this.姓名 = 姓名;
+        this.排隊號碼 = 排隊號碼;
     }
     
-    public String getId() {
-        return id;
+    public String 取得學號() {
+        return 學號;
     }
     
-    public String getContent() {
-        return content;
+    public String 取得姓名() {
+        return 姓名;
     }
     
-    public int getOrder() {
-        return order;
+    public int 取得排隊號碼() {
+        return 排隊號碼;
     }
 }
 
-public class SimpleOrderedQueue {
-    private List<OrderedMessage> messages;
+public class 簡單點名系統 {
+    private List<學生> 學生列表;
     
-    public SimpleOrderedQueue() {
-        messages = new ArrayList<>();
+    public 簡單點名系統() {
+        學生列表 = new ArrayList<>();
     }
     
-    public void send(OrderedMessage message) {
-        System.out.println("發送消息：" + message.getContent() + "，順序：" + message.getOrder());
-        messages.add(message);
-        // 按順序排序
-        messages.sort(Comparator.comparingInt(OrderedMessage::getOrder));
+    public void 加入排隊(學生 學生) {
+        System.out.println("加入排隊：" + 學生.取得姓名() + "，號碼：" + 學生.取得排隊號碼());
+        學生列表.add(學生);
+        // 按號碼排序
+        學生列表.sort(Comparator.comparingInt(學生::取得排隊號碼));
     }
     
-    public OrderedMessage receive() {
-        if (!messages.isEmpty()) {
-            OrderedMessage message = messages.remove(0);
-            System.out.println("接收消息：" + message.getContent() + "，順序：" + message.getOrder());
-            return message;
+    public 學生 點名() {
+        if (!學生列表.isEmpty()) {
+            學生 學生 = 學生列表.remove(0);
+            System.out.println("點名：" + 學生.取得姓名() + "，號碼：" + 學生.取得排隊號碼());
+            return 學生;
         }
         return null;
     }
@@ -160,100 +160,100 @@ public class SimpleOrderedQueue {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 消息順序保證
-- 順序檢查機制
-- 順序恢復機制
-- 順序追蹤
+- 排隊系統的運作原理
+- 如何追蹤排隊狀態
+- 如何處理特殊情況
+- 如何優化排隊流程
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class Message {
-    - id: String
-    - content: String
-    - order: int
-    - timestamp: long
-    + getId()
-    + getContent()
-    + getOrder()
-    + getTimestamp()
+class 學生 {
+    - 學號: String
+    - 姓名: String
+    - 排隊號碼: int
+    - 加入時間: long
+    + 取得學號()
+    + 取得姓名()
+    + 取得排隊號碼()
+    + 取得加入時間()
 }
 
-class OrderTracker {
-    - currentOrder: int
-    - processedOrders: Set<Integer>
-    + checkOrder()
-    + updateOrder()
-    + getNextOrder()
+class 排隊追蹤器 {
+    - 目前號碼: int
+    - 已處理號碼: Set<Integer>
+    + 檢查號碼()
+    + 更新號碼()
+    + 取得下一個號碼()
 }
 
-class OrderedQueue {
-    - messages: List<Message>
-    - tracker: OrderTracker
-    + send()
-    + receive()
-    + checkOrder()
+class 進階點名系統 {
+    - 學生列表: List<學生>
+    - 追蹤器: 排隊追蹤器
+    + 加入排隊()
+    + 點名()
+    + 檢查號碼()
 }
 
-OrderedQueue --> Message
-OrderedQueue --> OrderTracker
+進階點名系統 --> 學生
+進階點名系統 --> 排隊追蹤器
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：順序追蹤
+#### 步驟 1：排隊追蹤
 ```java
-public class OrderTracker {
-    private int currentOrder;
-    private Set<Integer> processedOrders;
+public class 排隊追蹤器 {
+    private int 目前號碼;
+    private Set<Integer> 已處理號碼;
     
-    public OrderTracker() {
-        currentOrder = 0;
-        processedOrders = new HashSet<>();
+    public 排隊追蹤器() {
+        目前號碼 = 0;
+        已處理號碼 = new HashSet<>();
     }
     
-    public boolean checkOrder(int order) {
-        return order == currentOrder + 1;
+    public boolean 檢查號碼(int 號碼) {
+        return 號碼 == 目前號碼 + 1;
     }
     
-    public void updateOrder(int order) {
-        processedOrders.add(order);
-        currentOrder = order;
+    public void 更新號碼(int 號碼) {
+        已處理號碼.add(號碼);
+        目前號碼 = 號碼;
     }
     
-    public int getNextOrder() {
-        return currentOrder + 1;
+    public int 取得下一個號碼() {
+        return 目前號碼 + 1;
     }
 }
 ```
 
-#### 步驟 2：順序保證
+#### 步驟 2：進階點名系統
 ```java
-public class AdvancedOrderedQueue {
-    private List<OrderedMessage> messages;
-    private OrderTracker tracker;
+public class 進階點名系統 {
+    private List<學生> 學生列表;
+    private 排隊追蹤器 追蹤器;
     
-    public AdvancedOrderedQueue() {
-        messages = new ArrayList<>();
-        tracker = new OrderTracker();
+    public 進階點名系統() {
+        學生列表 = new ArrayList<>();
+        追蹤器 = new 排隊追蹤器();
     }
     
-    public void send(OrderedMessage message) {
-        System.out.println("發送消息：" + message.getContent() + "，順序：" + message.getOrder());
-        messages.add(message);
-        // 按順序排序
-        messages.sort(Comparator.comparingInt(OrderedMessage::getOrder));
+    public void 加入排隊(學生 學生) {
+        System.out.println("加入排隊：" + 學生.取得姓名() + "，號碼：" + 學生.取得排隊號碼());
+        學生列表.add(學生);
+        // 按號碼排序
+        學生列表.sort(Comparator.comparingInt(學生::取得排隊號碼));
     }
     
-    public OrderedMessage receive() {
-        if (!messages.isEmpty()) {
-            OrderedMessage message = messages.get(0);
-            if (tracker.checkOrder(message.getOrder())) {
-                messages.remove(0);
-                tracker.updateOrder(message.getOrder());
-                System.out.println("接收消息：" + message.getContent() + "，順序：" + message.getOrder());
-                return message;
+    public 學生 點名() {
+        if (!學生列表.isEmpty()) {
+            學生 學生 = 學生列表.get(0);
+            if (追蹤器.檢查號碼(學生.取得排隊號碼())) {
+                學生列表.remove(0);
+                追蹤器.更新號碼(學生.取得排隊號碼());
+                System.out.println("點名：" + 學生.取得姓名() + "，號碼：" + 學生.取得排隊號碼());
+                return 學生;
             }
         }
         return null;
@@ -265,146 +265,146 @@ public class AdvancedOrderedQueue {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式順序保證
-- 順序同步機制
-- 順序恢復策略
-- 並發順序控制
+- 多個排隊系統的協調
+- 排隊狀態的同步
+- 特殊情況的處理策略
+- 多人同時排隊的管理
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階順序消息系統" {
-    class DistributedOrderedQueue {
-        - nodes: List<Node>
-        - coordinator: Coordinator
-        - orderManager: OrderManager
-        + send()
-        + receive()
-        + syncOrder()
+package "進階排隊系統" {
+    class 分散式排隊系統 {
+        - 排隊點: List<排隊點>
+        - 協調器: 排隊協調器
+        - 排隊管理器: 排隊管理器
+        + 加入排隊()
+        + 點名()
+        + 同步狀態()
     }
     
-    class Coordinator {
-        - orderMap: Map
-        + assignOrder()
-        + verifyOrder()
-        + syncOrder()
+    class 排隊協調器 {
+        - 號碼對照表: Map
+        + 分配號碼()
+        + 確認號碼()
+        + 同步號碼()
     }
     
-    class OrderManager {
-        - orderState: Map
-        - syncState: Map
-        + manageOrder()
-        + syncOrder()
-        + recoverOrder()
+    class 排隊管理器 {
+        - 排隊狀態: Map
+        - 同步狀態: Map
+        + 管理排隊()
+        + 同步狀態()
+        + 恢復狀態()
     }
     
-    class OrderState {
-        - currentOrder: int
-        - processedOrders: Set
-        + update()
-        + verify()
-        + recover()
+    class 排隊狀態 {
+        - 目前號碼: int
+        - 已處理號碼: Set
+        + 更新()
+        + 確認()
+        + 恢復()
     }
 }
 
-DistributedOrderedQueue --> Coordinator
-DistributedOrderedQueue --> OrderManager
-OrderManager --> OrderState
+分散式排隊系統 --> 排隊協調器
+分散式排隊系統 --> 排隊管理器
+排隊管理器 --> 排隊狀態
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分散式順序管理
+#### 步驟 1：分散式排隊管理
 ```java
-public class DistributedOrderedQueue {
-    private List<Node> nodes;
-    private Coordinator coordinator;
-    private OrderManager orderManager;
+public class 分散式排隊系統 {
+    private List<排隊點> 排隊點列表;
+    private 排隊協調器 協調器;
+    private 排隊管理器 管理器;
     
-    public DistributedOrderedQueue() {
-        nodes = new ArrayList<>();
-        coordinator = new Coordinator();
-        orderManager = new OrderManager();
+    public 分散式排隊系統() {
+        排隊點列表 = new ArrayList<>();
+        協調器 = new 排隊協調器();
+        管理器 = new 排隊管理器();
     }
     
-    public void send(Message message) {
-        // 分配順序
-        int order = coordinator.assignOrder(message);
-        message.setOrder(order);
+    public void 加入排隊(學生 學生) {
+        // 分配號碼
+        int 號碼 = 協調器.分配號碼(學生);
+        學生.設定排隊號碼(號碼);
         
-        // 同步到所有節點
-        for (Node node : nodes) {
-            node.replicate(message);
+        // 同步到所有排隊點
+        for (排隊點 點 : 排隊點列表) {
+            點.複製排隊資訊(學生);
         }
         
-        System.out.println("發送消息：" + message.getContent() + "，順序：" + order);
+        System.out.println("加入排隊：" + 學生.取得姓名() + "，號碼：" + 號碼);
     }
     
-    public Message receive() {
-        // 獲取下一個順序的消息
-        int nextOrder = orderManager.getNextOrder();
-        Message message = coordinator.verifyOrder(nextOrder);
+    public 學生 點名() {
+        // 取得下一個號碼的學生
+        int 下一個號碼 = 管理器.取得下一個號碼();
+        學生 學生 = 協調器.確認號碼(下一個號碼);
         
-        if (message != null) {
-            orderManager.updateOrder(nextOrder);
-            System.out.println("接收消息：" + message.getContent() + "，順序：" + nextOrder);
+        if (學生 != null) {
+            管理器.更新號碼(下一個號碼);
+            System.out.println("點名：" + 學生.取得姓名() + "，號碼：" + 下一個號碼);
         }
         
-        return message;
+        return 學生;
     }
 }
 ```
 
-#### 步驟 2：順序協調
+#### 步驟 2：排隊協調
 ```java
-public class Coordinator {
-    private Map<Integer, Message> orderMap;
+public class 排隊協調器 {
+    private Map<Integer, 學生> 號碼對照表;
     
-    public Coordinator() {
-        orderMap = new HashMap<>();
+    public 排隊協調器() {
+        號碼對照表 = new HashMap<>();
     }
     
-    public int assignOrder(Message message) {
-        int order = orderMap.size() + 1;
-        orderMap.put(order, message);
-        return order;
+    public int 分配號碼(學生 學生) {
+        int 號碼 = 號碼對照表.size() + 1;
+        號碼對照表.put(號碼, 學生);
+        return 號碼;
     }
     
-    public Message verifyOrder(int order) {
-        return orderMap.get(order);
+    public 學生 確認號碼(int 號碼) {
+        return 號碼對照表.get(號碼);
     }
     
-    public void syncOrder(int order, Message message) {
-        orderMap.put(order, message);
+    public void 同步號碼(int 號碼, 學生 學生) {
+        號碼對照表.put(號碼, 學生);
     }
 }
 ```
 
-#### 步驟 3：順序狀態管理
+#### 步驟 3：排隊狀態管理
 ```java
-public class OrderManager {
-    private Map<String, OrderState> orderState;
-    private Map<String, Set<Integer>> syncState;
+public class 排隊管理器 {
+    private Map<String, 排隊狀態> 排隊狀態表;
+    private Map<String, Set<Integer>> 同步狀態表;
     
-    public OrderManager() {
-        orderState = new HashMap<>();
-        syncState = new HashMap<>();
+    public 排隊管理器() {
+        排隊狀態表 = new HashMap<>();
+        同步狀態表 = new HashMap<>();
     }
     
-    public void manageOrder(String nodeId, int order) {
-        OrderState state = orderState.computeIfAbsent(nodeId, k -> new OrderState());
-        state.update(order);
+    public void 管理排隊(String 排隊點ID, int 號碼) {
+        排隊狀態 狀態 = 排隊狀態表.computeIfAbsent(排隊點ID, k -> new 排隊狀態());
+        狀態.更新(號碼);
     }
     
-    public void syncOrder(String nodeId, Set<Integer> orders) {
-        syncState.put(nodeId, orders);
+    public void 同步狀態(String 排隊點ID, Set<Integer> 號碼集合) {
+        同步狀態表.put(排隊點ID, 號碼集合);
     }
     
-    public int getNextOrder() {
-        // 計算所有節點中最小的未處理順序
-        return orderState.values().stream()
-            .mapToInt(OrderState::getCurrentOrder)
+    public int 取得下一個號碼() {
+        // 計算所有排隊點中最小的未處理號碼
+        return 排隊狀態表.values().stream()
+            .mapToInt(排隊狀態::取得目前號碼)
             .min()
             .orElse(0) + 1;
     }
@@ -413,67 +413,67 @@ public class OrderManager {
 
 ### 7. 實戰案例
 
-#### 案例一：電商訂單處理
+#### 案例一：學校點名系統
 ```java
-public class OrderProcessor {
-    private OrderedQueue queue;
-    private OrderTracker tracker;
+public class 學校點名系統 {
+    private 進階點名系統 點名系統;
+    private 排隊追蹤器 追蹤器;
     
-    public void processOrder(Order order) {
-        // 創建順序消息
-        OrderedMessage message = new OrderedMessage(
-            order.getId(),
-            order.getData(),
-            order.getSequence()
+    public void 處理點名(學生 學生) {
+        // 創建排隊資訊
+        學生 排隊學生 = new 學生(
+            學生.取得學號(),
+            學生.取得姓名(),
+            學生.取得排隊號碼()
         );
         
-        // 發送消息
-        queue.send(message);
+        // 加入排隊
+        點名系統.加入排隊(排隊學生);
         
-        // 處理消息
-        processMessages();
+        // 處理點名
+        處理點名流程();
     }
     
-    private void processMessages() {
+    private void 處理點名流程() {
         while (true) {
-            OrderedMessage message = queue.receive();
-            if (message == null) break;
+            學生 學生 = 點名系統.點名();
+            if (學生 == null) break;
             
-            // 處理訂單
-            processOrder(message);
+            // 處理點名
+            處理學生點名(學生);
         }
     }
 }
 ```
 
-#### 案例二：金融交易處理
+#### 案例二：餐廳排隊系統
 ```java
-public class TransactionProcessor {
-    private OrderedQueue queue;
-    private TransactionTracker tracker;
+public class 餐廳排隊系統 {
+    private 分散式排隊系統 排隊系統;
+    private 排隊追蹤器 追蹤器;
     
-    public void processTransaction(Transaction transaction) {
-        // 創建順序消息
-        OrderedMessage message = new OrderedMessage(
-            transaction.getId(),
-            transaction.getData(),
-            transaction.getSequence()
+    public void 處理排隊(顧客 顧客) {
+        // 創建排隊資訊
+        學生 排隊顧客 = new 學生(
+            顧客.取得顧客編號(),
+            顧客.取得姓名(),
+            顧客.取得排隊號碼()
         );
         
-        // 發送消息
-        queue.send(message);
+        // 加入排隊
+        排隊系統.加入排隊(排隊顧客);
         
-        // 處理消息
-        processMessages();
+        // 處理排隊
+        處理排隊流程();
     }
     
-    private void processMessages() {
+    private void 處理排隊流程() {
         while (true) {
-            OrderedMessage message = queue.receive();
-            if (message == null) break;
+            學生 顧客 = 排隊系統.點名();
+            if (顧客 == null) break;
             
-            // 處理交易
-            processTransaction(message);
+            // 處理顧客
+            處理顧客(顧客);
         }
     }
 }
@@ -483,42 +483,42 @@ public class TransactionProcessor {
 
 #### 1. 使用現有工具
 ```java
-// 使用 RabbitMQ 實現順序消費
-public class RabbitMQOrderedConsumer {
-    private final String queueName;
-    private final ConnectionFactory factory;
+// 使用 RabbitMQ 實現排隊系統
+public class RabbitMQ排隊系統 {
+    private final String 隊列名稱;
+    private final ConnectionFactory 工廠;
     
-    public RabbitMQOrderedConsumer(String host, String queueName) {
-        this.queueName = queueName;
-        this.factory = new ConnectionFactory();
-        this.factory.setHost(host);
+    public RabbitMQ排隊系統(String 主機, String 隊列名稱) {
+        this.隊列名稱 = 隊列名稱;
+        this.工廠 = new ConnectionFactory();
+        this.工廠.setHost(主機);
     }
     
-    public void consume() throws Exception {
-        try (Connection connection = factory.newConnection();
-             Channel channel = connection.createChannel()) {
+    public void 開始排隊() throws Exception {
+        try (Connection 連線 = 工廠.newConnection();
+             Channel 頻道 = 連線.createChannel()) {
             
-            // 設置隊列為單消費者模式
-            channel.basicQos(1);
+            // 設置隊列為單一處理模式
+            頻道.basicQos(1);
             
-            // 聲明隊列
-            channel.queueDeclare(queueName, true, false, false, null);
+            // 宣告隊列
+            頻道.queueDeclare(隊列名稱, true, false, false, null);
             
-            // 消費消息
-            channel.basicConsume(queueName, false, new DefaultConsumer(channel) {
+            // 處理排隊
+            頻道.basicConsume(隊列名稱, false, new DefaultConsumer(頻道) {
                 @Override
-                public void handleDelivery(String consumerTag,
-                                         Envelope envelope,
-                                         AMQP.BasicProperties properties,
-                                         byte[] body) throws IOException {
-                    String message = new String(body, "UTF-8");
-                    System.out.println("Received: " + message);
+                public void handleDelivery(String 消費者標籤,
+                                         Envelope 信封,
+                                         AMQP.BasicProperties 屬性,
+                                         byte[] 內容) throws IOException {
+                    String 訊息 = new String(內容, "UTF-8");
+                    System.out.println("收到：" + 訊息);
                     
-                    // 處理消息
-                    processMessage(message);
+                    // 處理訊息
+                    處理排隊訊息(訊息);
                     
-                    // 確認消息
-                    channel.basicAck(envelope.getDeliveryTag(), false);
+                    // 確認處理完成
+                    頻道.basicAck(信封.getDeliveryTag(), false);
                 }
             });
         }
@@ -528,26 +528,26 @@ public class RabbitMQOrderedConsumer {
 
 #### 2. 監控與告警
 ```java
-public class OrderMonitor {
-    private MetricsCollector metricsCollector;
-    private AlertManager alertManager;
+public class 排隊監控器 {
+    private 指標收集器 收集器;
+    private 告警管理器 告警器;
     
-    public void monitor() {
-        OrderMetrics metrics = metricsCollector.collectMetrics();
+    public void 監控() {
+        排隊指標 指標 = 收集器.收集指標();
         
-        // 檢查順序狀態
-        if (!metrics.isOrderConsistent()) {
-            alertManager.alert("順序警告", metrics.getDetails());
+        // 檢查排隊狀態
+        if (!指標.是否順序正確()) {
+            告警器.告警("順序警告", 指標.取得詳細資訊());
         }
         
         // 檢查處理狀態
-        if (metrics.getProcessingStatus() != ProcessingStatus.NORMAL) {
-            alertManager.alert("處理警告", metrics.getDetails());
+        if (指標.取得處理狀態() != 處理狀態.正常) {
+            告警器.告警("處理警告", 指標.取得詳細資訊());
         }
         
-        // 檢查效能狀態
-        if (metrics.getPerformanceStatus() != PerformanceStatus.OPTIMAL) {
-            alertManager.alert("效能警告", metrics.getDetails());
+        // 檢查效率狀態
+        if (指標.取得效率狀態() != 效率狀態.最佳) {
+            告警器.告警("效率警告", 指標.取得詳細資訊());
         }
     }
 }
@@ -555,33 +555,33 @@ public class OrderMonitor {
 
 #### 3. 錯誤處理與恢復
 ```java
-public class OrderRecovery {
-    private OrderTracker tracker;
-    private MessageStore store;
+public class 排隊恢復器 {
+    private 排隊追蹤器 追蹤器;
+    private 訊息儲存器 儲存器;
     
-    public void recover() {
-        // 檢查順序狀態
-        checkOrderState();
+    public void 恢復() {
+        // 檢查排隊狀態
+        檢查排隊狀態();
         
-        // 修復順序錯誤
-        fixOrderIssues();
+        // 修復排隊錯誤
+        修復排隊問題();
         
         // 恢復處理流程
-        restoreProcessing();
+        恢復處理流程();
     }
     
-    private void checkOrderState() {
-        // 實現順序狀態檢查邏輯
+    private void 檢查排隊狀態() {
+        // 實現排隊狀態檢查邏輯
     }
     
-    private void fixOrderIssues() {
-        // 實現順序修復邏輯
+    private void 修復排隊問題() {
+        // 實現排隊修復邏輯
     }
     
-    private void restoreProcessing() {
+    private void 恢復處理流程() {
         // 實現處理流程恢復邏輯
     }
 }
 ```
 
-這個教學文件提供了從基礎到進階的消息隊列順序消費學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的順序處理開始，中級學習者可以學習順序追蹤和保證，而高級學習者則可以掌握分散式順序管理和協調等進階功能。 
+這個教學文件提供了從基礎到進階的排隊系統學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的排隊概念開始，中級學習者可以學習排隊追蹤和狀態管理，而高級學習者則可以掌握分散式排隊系統和協調等進階功能。 

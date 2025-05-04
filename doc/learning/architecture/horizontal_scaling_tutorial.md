@@ -1,221 +1,142 @@
-# 水平擴展教學
+# 水平擴展教學：讓你的程式像樂高積木一樣可以無限組合
 
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-水平擴展就像是在學校裡，當一個班級的學生太多時，我們可以：
-- 開設新的班級（新增伺服器）
-- 分配學生到不同班級（分散負載）
-- 讓不同班級一起工作（協同處理）
+想像你在玩線上遊戲，當越來越多人加入時，遊戲會變得很慢。水平擴展就像是在遊戲中增加新的伺服器，讓更多人可以一起玩而不會卡頓。
 
 初級學習者需要了解：
-- 什麼是水平擴展
-- 為什麼需要多台伺服器
-- 基本的負載分配
+- 什麼是水平擴展（就像增加遊戲伺服器）
+- 為什麼需要多台電腦一起工作
+- 如何平均分配工作
 
 ### 2. 使用原因
-水平擴展的主要使用原因包括：
+就像學校的午餐時間：
 1. 效能提升：
-   - 提高系統吞吐量
-   - 減少響應時間
-   - 優化資源使用
+   - 多開幾個打菜窗口，大家就不用排太久
+   - 每個窗口都有足夠的食物
+   - 不會有人餓肚子
 
 2. 可用性：
-   - 避免單點故障
-   - 提供故障轉移
-   - 確保服務不中斷
+   - 如果一個窗口壞了，還有其他窗口可以用
+   - 不會因為一個問題就全部停擺
+   - 服務可以一直持續
 
 3. 擴展性：
-   - 支援業務增長
-   - 適應流量波動
-   - 方便資源調整
+   - 學生變多時可以開更多窗口
+   - 放學時可以關掉一些窗口
+   - 可以根據需要調整
 
 ### 3. 問題表象
-常見的問題表象包括：
+就像學校的午餐時間可能遇到的問題：
 1. 負載問題：
-   - 負載不均衡
-   - 資源浪費
-   - 效能瓶頸
+   - 有些窗口排很長，有些沒人
+   - 食物準備太多或太少
+   - 打菜速度太慢
 
 2. 系統問題：
-   - 節點故障
-   - 網路延遲
-   - 同步失敗
+   - 窗口突然壞掉
+   - 網路連線不穩
+   - 資料不同步
 
 3. 管理問題：
-   - 配置複雜
-   - 監控困難
-   - 維護成本高
+   - 不知道要開幾個窗口
+   - 不知道食物夠不夠
+   - 維護成本太高
 
 ### 4. 避免方法
-避免問題的方法包括：
+就像學校午餐時間的管理：
 1. 系統設計：
-   - 選擇適當的擴展策略
-   - 設計有效的負載均衡
-   - 建立監控系統
+   - 選擇合適的窗口數量
+   - 平均分配學生到各窗口
+   - 隨時監控排隊狀況
 
 2. 資源管理：
-   - 合理分配資源
-   - 優化負載策略
-   - 實現自動擴展
+   - 準備適量的食物
+   - 根據人數調整窗口
+   - 自動調整窗口數量
 
 3. 效能優化：
-   - 優化資源使用
-   - 實現負載均衡
-   - 定期效能評估
+   - 優化打菜流程
+   - 平均分配學生
+   - 定期檢查效率
 
-### 5. 問題處理
-遇到問題時的處理方法：
-1. 負載問題處理：
-   - 調整負載策略
-   - 優化資源分配
-   - 實現動態擴展
-
-2. 系統問題處理：
-   - 檢查節點狀態
-   - 修復網路問題
-   - 重試同步操作
-
-3. 管理問題處理：
-   - 簡化配置流程
-   - 加強監控系統
-   - 優化維護流程
-
-### 6. PlantUML 圖解
+### 5. PlantUML 圖解
 ```plantuml
 @startuml
-class LoadBalancer {
-    - servers: List
-    + distributeRequest()
+skinparam backgroundColor white
+skinparam classBackgroundColor lightblue
+skinparam classBorderColor black
+
+class "午餐窗口" as Window {
+    - 窗口編號
+    - 排隊人數
+    + 打菜()
 }
 
-class Server {
-    - id: int
-    - load: int
-    + handleRequest()
+class "學生" as Student {
+    - 學號
+    + 排隊()
 }
 
-LoadBalancer --> Server
-LoadBalancer --> Server
-LoadBalancer --> Server
+class "監控系統" as Monitor {
+    - 窗口狀態
+    + 檢查排隊()
+    + 調整窗口()
+}
+
+Window "1" -- "多" Student
+Monitor --> Window
 @enduml
 ```
 
-### 7. 分段教學步驟
+### 6. 分段教學步驟
 
 #### 步驟 1：基本負載分配
 ```java
-public class SimpleLoadBalancer {
-    private List<Server> servers;
-    private LoadMonitor monitor;
-    private LoadValidator validator;
+// 簡單的午餐窗口管理系統
+public class LunchWindow {
+    private int windowNumber;  // 窗口編號
+    private int queueLength;   // 排隊人數
     
-    public SimpleLoadBalancer() {
-        servers = new ArrayList<>();
-        monitor = new LoadMonitor();
-        validator = new LoadValidator();
-        // 初始化三台伺服器
-        servers.add(new Server(1));
-        servers.add(new Server(2));
-        servers.add(new Server(3));
+    public LunchWindow(int number) {
+        this.windowNumber = number;
+        this.queueLength = 0;
     }
     
-    public void handleRequest(Request request) {
-        // 驗證請求
-        if (!validator.validateRequest(request)) {
-            System.out.println("請求驗證失敗！");
-            return;
+    public void serveStudent() {
+        if (queueLength > 0) {
+            queueLength--;
+            System.out.println("窗口 " + windowNumber + " 服務了一位學生");
+        }
+    }
+    
+    public void addToQueue() {
+        queueLength++;
+        System.out.println("窗口 " + windowNumber + " 增加了一位排隊學生");
+    }
+}
+
+// 主程式
+public class Main {
+    public static void main(String[] args) {
+        // 創建三個午餐窗口
+        LunchWindow[] windows = new LunchWindow[3];
+        for (int i = 0; i < 3; i++) {
+            windows[i] = new LunchWindow(i + 1);
         }
         
-        // 簡單的輪詢分配
-        Server server = servers.get(request.getCount() % servers.size());
-        server.handleRequest(request);
-        
-        // 監控負載
-        monitor.recordLoad(server);
-    }
-}
-
-class Server {
-    private int id;
-    private int load;
-    
-    public Server(int id) {
-        this.id = id;
-        this.load = 0;
-    }
-    
-    public void handleRequest(Request request) {
-        load++;
-        System.out.println("伺服器 " + id + " 處理請求，目前負載: " + load);
-    }
-}
-
-class Request {
-    private static int count = 0;
-    private int id;
-    
-    public Request() {
-        this.id = ++count;
-    }
-    
-    public int getCount() {
-        return count;
-    }
-}
-
-class LoadMonitor {
-    private Map<Integer, Integer> serverLoads;
-    private Map<Integer, Integer> requestCounts;
-    
-    public LoadMonitor() {
-        serverLoads = new HashMap<>();
-        requestCounts = new HashMap<>();
-    }
-    
-    public void recordLoad(Server server) {
-        int serverId = server.getId();
-        serverLoads.merge(serverId, 1, Integer::sum);
-        requestCounts.merge(serverId, 1, Integer::sum);
-    }
-    
-    public boolean shouldAddServer() {
-        return serverLoads.values().stream()
-            .anyMatch(load -> load > 80);
-    }
-}
-
-class LoadValidator {
-    public boolean validateRequest(Request request) {
-        return request != null && request.getId() > 0;
-    }
-}
-```
-
-#### 步驟 2：簡單的負載監控
-```java
-public class LoadMonitor {
-    private List<Server> servers;
-    
-    public void checkLoad() {
-        for (Server server : servers) {
-            System.out.println("伺服器 " + server.getId() + 
-                             " 的負載: " + server.getLoad());
+        // 模擬學生排隊
+        for (int i = 0; i < 10; i++) {
+            // 選擇排隊人數最少的窗口
+            int minQueue = 0;
+            for (int j = 1; j < windows.length; j++) {
+                if (windows[j].getQueueLength() < windows[minQueue].getQueueLength()) {
+                    minQueue = j;
+                }
+            }
+            windows[minQueue].addToQueue();
         }
-    }
-    
-    public void addNewServer() {
-        if (shouldAddServer()) {
-            Server newServer = new Server(servers.size() + 1);
-            servers.add(newServer);
-            System.out.println("新增伺服器 " + newServer.getId());
-        }
-    }
-    
-    private boolean shouldAddServer() {
-        // 如果任何伺服器的負載超過 80%，就新增伺服器
-        return servers.stream()
-            .anyMatch(server -> server.getLoad() > 80);
     }
 }
 ```
@@ -224,34 +145,38 @@ public class LoadMonitor {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 負載平衡策略
-- 伺服器健康檢查
-- 會話管理
-- 資料同步
+- 如何聰明地分配工作（負載平衡）
+- 如何檢查系統是否正常（健康檢查）
+- 如何記住使用者的狀態（會話管理）
+- 如何讓資料保持一致（資料同步）
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class LoadBalancer {
-    - strategy: LoadBalancingStrategy
-    + distribute()
-    + checkHealth()
+skinparam backgroundColor white
+skinparam classBackgroundColor lightgreen
+skinparam classBorderColor black
+
+class "負載平衡器" as LoadBalancer {
+    - 分配策略
+    + 分配請求()
+    + 檢查健康()
 }
 
-class ServerPool {
-    - servers: List
-    + addServer()
-    + removeServer()
-    + getHealthyServers()
+class "伺服器群組" as ServerGroup {
+    - 伺服器列表
+    + 新增伺服器()
+    + 移除伺服器()
+    + 取得可用伺服器()
 }
 
-class SessionManager {
-    - sessions: Map
-    + createSession()
-    + getSession()
+class "會話管理器" as SessionManager {
+    - 會話列表
+    + 建立會話()
+    + 取得會話()
 }
 
-LoadBalancer --> ServerPool
+LoadBalancer --> ServerGroup
 LoadBalancer --> SessionManager
 @enduml
 ```
@@ -260,92 +185,36 @@ LoadBalancer --> SessionManager
 
 #### 步驟 1：進階負載平衡
 ```java
-import java.util.*;
+// 使用 Apache Commons 的負載平衡器
+import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 public class AdvancedLoadBalancer {
-    private LoadBalancingStrategy strategy;
-    private ServerPool serverPool;
+    private GenericObjectPool<Server> serverPool;
     private SessionManager sessionManager;
-    private LoadMonitor monitor;
-    private LoadValidator validator;
     
-    public void distributeRequest(Request request) {
-        // 驗證請求
-        if (!validator.validateRequest(request)) {
-            System.out.println("請求驗證失敗！");
-            return;
+    public AdvancedLoadBalancer() {
+        // 設定伺服器池
+        GenericObjectPoolConfig<Server> config = new GenericObjectPoolConfig<>();
+        config.setMaxTotal(10);  // 最多10台伺服器
+        config.setMinIdle(2);    // 最少2台閒置伺服器
+        
+        serverPool = new GenericObjectPool<>(new ServerFactory(), config);
+    }
+    
+    public void handleRequest(Request request) {
+        try {
+            // 從池中取得伺服器
+            Server server = serverPool.borrowObject();
+            
+            // 處理請求
+            server.handleRequest(request);
+            
+            // 歸還伺服器
+            serverPool.returnObject(server);
+        } catch (Exception e) {
+            System.out.println("處理請求時發生錯誤: " + e.getMessage());
         }
-        
-        // 檢查伺服器健康狀態
-        List<Server> healthyServers = serverPool.getHealthyServers();
-        
-        // 根據策略選擇伺服器
-        Server selectedServer = strategy.selectServer(healthyServers, request);
-        
-        // 處理會話
-        String sessionId = request.getSessionId();
-        if (sessionId != null) {
-            // 確保會話被分配到同一台伺服器
-            selectedServer = sessionManager.getServerForSession(sessionId);
-        }
-        
-        // 分配請求
-        selectedServer.handleRequest(request);
-        
-        // 監控負載
-        monitor.recordLoad(selectedServer);
-    }
-}
-
-interface LoadBalancingStrategy {
-    Server selectServer(List<Server> servers, Request request);
-}
-
-class RoundRobinStrategy implements LoadBalancingStrategy {
-    private int currentIndex = 0;
-    
-    @Override
-    public Server selectServer(List<Server> servers, Request request) {
-        Server server = servers.get(currentIndex);
-        currentIndex = (currentIndex + 1) % servers.size();
-        return server;
-    }
-}
-```
-
-#### 步驟 2：會話管理
-```java
-public class SessionManager {
-    private Map<String, Server> sessionToServer;
-    private Map<String, Session> sessions;
-    
-    public Session createSession(User user) {
-        String sessionId = generateSessionId();
-        Session session = new Session(sessionId, user);
-        sessions.put(sessionId, session);
-        return session;
-    }
-    
-    public Server getServerForSession(String sessionId) {
-        return sessionToServer.get(sessionId);
-    }
-    
-    public void assignSessionToServer(String sessionId, Server server) {
-        sessionToServer.put(sessionId, server);
-    }
-}
-
-class Session {
-    private String id;
-    private User user;
-    private Date createdAt;
-    private Date lastAccessed;
-    
-    public Session(String id, User user) {
-        this.id = id;
-        this.user = user;
-        this.createdAt = new Date();
-        this.lastAccessed = new Date();
     }
 }
 ```
@@ -354,381 +223,110 @@ class Session {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式系統設計
-- 一致性雜湊
-- 自動擴展
-- 容錯處理
+- 如何設計分散式系統
+- 如何使用一致性雜湊
+- 如何自動調整系統規模
+- 如何處理系統錯誤
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
+skinparam backgroundColor white
+skinparam classBackgroundColor lightyellow
+skinparam classBorderColor black
+
 package "分散式系統" {
-    class DistributedSystem {
-        - nodes: List
-        + addNode()
-        + removeNode()
-        + handleRequest()
+    class "分散式管理器" as DistributedManager {
+        - 節點列表
+        + 新增節點()
+        + 移除節點()
+        + 處理請求()
     }
     
-    class ConsistentHash {
-        - ring: Map
-        + addNode()
-        + removeNode()
-        + getNode()
+    class "雜湊管理器" as HashManager {
+        - 雜湊環
+        + 新增節點()
+        + 移除節點()
+        + 取得節點()
     }
     
-    class AutoScaler {
-        - metrics: List
-        + monitor()
-        + scale()
+    class "自動擴展器" as AutoScaler {
+        - 效能指標
+        + 監控()
+        + 調整規模()
     }
     
-    class FaultTolerance {
-        - replicas: Map
-        + handleFailure()
-        + recover()
+    class "錯誤處理器" as ErrorHandler {
+        - 備份節點
+        + 處理錯誤()
+        + 恢復系統()
     }
 }
 
-DistributedSystem --> ConsistentHash
-ConsistentHash --> AutoScaler
-AutoScaler --> FaultTolerance
+DistributedManager --> HashManager
+HashManager --> AutoScaler
+AutoScaler --> ErrorHandler
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：一致性雜湊
+#### 步驟 1：使用 Hazelcast 實現分散式系統
 ```java
-import java.util.*;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.map.IMap;
 
-public class ConsistentHash {
-    private TreeMap<Long, Node> ring;
-    private int numberOfReplicas;
+public class DistributedSystem {
+    private HazelcastInstance hazelcast;
+    private IMap<String, Object> distributedMap;
     
-    public ConsistentHash(int numberOfReplicas) {
-        this.ring = new TreeMap<>();
-        this.numberOfReplicas = numberOfReplicas;
+    public DistributedSystem() {
+        // 建立 Hazelcast 實例
+        hazelcast = Hazelcast.newHazelcastInstance();
+        distributedMap = hazelcast.getMap("my-distributed-map");
     }
     
-    public void addNode(Node node) {
-        for (int i = 0; i < numberOfReplicas; i++) {
-            long hash = hash(node.getId() + i);
-            ring.put(hash, node);
-        }
+    public void storeData(String key, Object value) {
+        distributedMap.put(key, value);
     }
     
-    public Node getNode(String key) {
-        if (ring.isEmpty()) {
-            return null;
-        }
-        
-        long hash = hash(key);
-        if (!ring.containsKey(hash)) {
-            SortedMap<Long, Node> tail = ring.tailMap(hash);
-            hash = tail.isEmpty() ? ring.firstKey() : tail.firstKey();
-        }
-        
-        return ring.get(hash);
+    public Object getData(String key) {
+        return distributedMap.get(key);
     }
     
-    private long hash(String key) {
-        // 實作雜湊函數
-        return key.hashCode();
-    }
-}
-
-class Node {
-    private String id;
-    private Map<String, Object> data;
-    
-    public Node(String id) {
-        this.id = id;
-        this.data = new HashMap<>();
-    }
-    
-    public String getId() {
-        return id;
+    public void shutdown() {
+        hazelcast.shutdown();
     }
 }
 ```
 
-#### 步驟 2：自動擴展
-```java
-public class AutoScaler {
-    private List<Node> nodes;
-    private List<Metric> metrics;
-    private int minNodes;
-    private int maxNodes;
-    
-    public void monitor() {
-        // 收集效能指標
-        collectMetrics();
-        
-        // 分析是否需要擴展
-        if (shouldScaleUp()) {
-            scaleUp();
-        } else if (shouldScaleDown()) {
-            scaleDown();
-        }
-    }
-    
-    private void scaleUp() {
-        if (nodes.size() < maxNodes) {
-            Node newNode = new Node("node-" + (nodes.size() + 1));
-            nodes.add(newNode);
-            System.out.println("新增節點: " + newNode.getId());
-        }
-    }
-    
-    private void scaleDown() {
-        if (nodes.size() > minNodes) {
-            Node nodeToRemove = nodes.remove(nodes.size() - 1);
-            System.out.println("移除節點: " + nodeToRemove.getId());
-        }
-    }
-}
+### 4. 實戰案例
 
-class Metric {
-    private String name;
-    private double value;
-    private Date timestamp;
-    
-    public Metric(String name, double value) {
-        this.name = name;
-        this.value = value;
-        this.timestamp = new Date();
-    }
-}
-```
-
-#### 步驟 3：容錯處理
+#### 案例：線上遊戲伺服器
 ```java
-public class FaultTolerance {
-    private Map<String, List<Node>> replicas;
-    private int replicationFactor;
-    
-    public void handleFailure(Node failedNode) {
-        // 找出受影響的資料
-        List<String> affectedKeys = getAffectedKeys(failedNode);
-        
-        // 從其他副本恢復資料
-        for (String key : affectedKeys) {
-            recoverData(key);
-        }
-        
-        // 重新分配副本
-        redistributeReplicas(failedNode);
+// 使用 Spring Cloud 實現遊戲伺服器集群
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class GameServer {
+    public static void main(String[] args) {
+        SpringApplication.run(GameServer.class, args);
     }
     
-    private void recoverData(String key) {
-        List<Node> replicaNodes = replicas.get(key);
-        for (Node node : replicaNodes) {
-            if (!node.isFailed()) {
-                // 從健康的副本複製資料
-                copyData(key, node);
-                break;
-            }
-        }
-    }
-    
-    private void redistributeReplicas(Node failedNode) {
-        // 重新分配副本到其他節點
-        for (List<Node> replicaList : replicas.values()) {
-            if (replicaList.contains(failedNode)) {
-                replicaList.remove(failedNode);
-                Node newNode = selectNewReplicaNode();
-                replicaList.add(newNode);
-            }
+    // 遊戲邏輯處理
+    @RestController
+    public class GameController {
+        @PostMapping("/play")
+        public String handleGameRequest(@RequestBody GameRequest request) {
+            // 處理遊戲請求
+            return "遊戲請求已處理";
         }
     }
 }
 ```
 
-### 4. 常見問題與解決方案
-
-#### 問題表象
-1. 負載問題：
-   - 負載不均衡
-   - 資源浪費
-   - 效能瓶頸
-
-2. 系統問題：
-   - 節點故障
-   - 網路延遲
-   - 同步失敗
-
-3. 管理問題：
-   - 配置複雜
-   - 監控困難
-   - 維護成本高
-
-#### 避免方法
-1. 系統設計：
-   - 選擇適當的擴展策略
-   - 設計有效的負載均衡
-   - 建立監控系統
-
-2. 資源管理：
-   - 合理分配資源
-   - 優化負載策略
-   - 實現自動擴展
-
-3. 效能優化：
-   - 優化資源使用
-   - 實現負載均衡
-   - 定期效能評估
-
-#### 處理方案
-1. 技術方案：
-   ```java
-   public class ScalingManager {
-       private ScalingStrategy strategy;
-       private LoadMonitor monitor;
-       private LoadValidator validator;
-       private ScalingOptimizer optimizer;
-       
-       public void handleScalingIssue(ScalingIssue issue) {
-           switch (issue.getType()) {
-               case LOAD:
-                   handleLoadIssue(issue);
-                   break;
-               case SYSTEM:
-                   handleSystemIssue(issue);
-                   break;
-               case MANAGEMENT:
-                   handleManagementIssue(issue);
-                   break;
-           }
-       }
-       
-       private void handleLoadIssue(ScalingIssue issue) {
-           // 調整負載策略
-           adjustLoadStrategy();
-           // 優化資源分配
-           optimizeResourceAllocation();
-           // 實現動態擴展
-           implementDynamicScaling();
-       }
-       
-       private void handleSystemIssue(ScalingIssue issue) {
-           // 檢查節點狀態
-           checkNodeStatus();
-           // 修復網路問題
-           repairNetwork();
-           // 重試同步操作
-           retrySync();
-       }
-       
-       private void handleManagementIssue(ScalingIssue issue) {
-           // 簡化配置流程
-           simplifyConfiguration();
-           // 加強監控系統
-           enhanceMonitoring();
-           // 優化維護流程
-           optimizeMaintenance();
-       }
-   }
-   ```
-
-2. 監控方案：
-   ```java
-   public class ScalingMonitor {
-       private MetricsCollector metricsCollector;
-       private ScalingChecker scalingChecker;
-       private AlertManager alertManager;
-       
-       public void monitorScaling() {
-           ScalingMetrics metrics = metricsCollector.collectMetrics();
-           ScalingStatus status = scalingChecker.checkScaling();
-           
-           // 檢查負載狀態
-           if (metrics.getLoadStatus() != LoadStatus.BALANCED) {
-               alertManager.alert("負載警告", metrics.getDetails());
-           }
-           
-           // 檢查系統狀態
-           if (metrics.getSystemStatus() != SystemStatus.HEALTHY) {
-               alertManager.alert("系統狀態警告", metrics.getDetails());
-           }
-           
-           // 檢查管理狀態
-           if (metrics.getManagementStatus() != ManagementStatus.OPTIMAL) {
-               alertManager.alert("管理警告", metrics.getDetails());
-           }
-       }
-   }
-   ```
-
-3. 最佳實踐：
-   - 實現自動化擴展
-   - 配置智能監控
-   - 建立告警機制
-   - 優化負載策略
-   - 定期效能評估
-   - 保持系統文檔
-   - 建立應急流程
-
-### 5. 實戰案例
-
-#### 案例一：電商系統水平擴展
-```java
-public class ECommerceScaling {
-    private ScalingManager scalingManager;
-    private ScalingMonitor monitor;
-    
-    public void handleProductRequest(String productId) {
-        // 設定擴展策略
-        scalingManager.setStrategy(new ProductScalingStrategy(productId));
-        
-        // 處理請求
-        scalingManager.handleRequest(productId);
-        
-        // 檢查擴展狀態
-        monitor.checkScaling();
-    }
-    
-    public void handleOrderRequest(String orderId) {
-        // 設定擴展策略
-        scalingManager.setStrategy(new OrderScalingStrategy(orderId));
-        
-        // 處理請求
-        scalingManager.handleRequest(orderId);
-        
-        // 檢查擴展狀態
-        monitor.checkScaling();
-    }
-}
-```
-
-#### 案例二：社交媒體水平擴展
-```java
-public class SocialMediaScaling {
-    private ScalingManager scalingManager;
-    private ScalingMonitor monitor;
-    
-    public void handleUserRequest(String userId) {
-        // 設定擴展策略
-        scalingManager.setStrategy(new UserScalingStrategy(userId));
-        
-        // 處理請求
-        scalingManager.handleRequest(userId);
-        
-        // 檢查擴展狀態
-        monitor.checkScaling();
-    }
-    
-    public void handlePostRequest(String postId) {
-        // 設定擴展策略
-        scalingManager.setStrategy(new PostScalingStrategy(postId));
-        
-        // 處理請求
-        scalingManager.handleRequest(postId);
-        
-        // 檢查擴展狀態
-        monitor.checkScaling();
-    }
-}
-```
-
-這個教學文件提供了從基礎到進階的水平擴展學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的負載分配開始，中級學習者可以學習會話管理和進階負載平衡，而高級學習者則可以掌握分散式系統設計和容錯處理等進階功能。 
+這個教學文件從基礎到進階，用生活化的例子（如學校午餐窗口）來解釋水平擴展的概念。初級學習者可以從基本的負載分配開始，中級學習者可以學習會話管理和進階負載平衡，而高級學習者則可以掌握分散式系統設計和容錯處理等進階功能。每個層級都提供了相應的程式碼範例和視覺化的 PlantUML 圖解，幫助學生更好地理解概念。 

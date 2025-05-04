@@ -1,104 +1,104 @@
-# 正規化-反正規化教學
+# 資料整理術：正規化與反正規化
 
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-正規化-反正規化就像是在整理學校的成績單：
-- 正規化：把重複的資料分開存放，就像把每個學生的成績分開記錄
-- 反正規化：把相關的資料放在一起，方便快速查詢，就像把一個學生的所有科目成績放在同一張成績單上
+正規化與反正規化就像是在整理你的書包：
+- 正規化：把不同科目的書本分開整理，就像把數學、國文、英文的書本分開放
+- 反正規化：把常用的東西放在一起，方便快速拿取，就像把鉛筆盒和筆記本放在同一個夾層
 
 初級學習者需要了解：
-- 什麼是正規化
-- 什麼是反正規化
-- 基本的資料組織概念
+- 什麼是正規化（把資料分開整理）
+- 什麼是反正規化（把相關資料放在一起）
+- 基本的資料整理概念
 
 ### 2. 使用原因
-正規化-反正規化的主要使用原因包括：
-1. 數據完整性：
-   - 減少數據冗餘
-   - 避免數據不一致
-   - 確保數據準確性
+為什麼要學習正規化與反正規化？
+1. 讓資料更整齊：
+   - 減少重複的資料
+   - 避免資料混亂
+   - 確保資料正確
 
-2. 查詢效能：
-   - 優化查詢速度
-   - 減少連接操作
-   - 提高系統響應
+2. 查詢更快：
+   - 找資料更快速
+   - 減少重複動作
+   - 提高系統速度
 
-3. 系統維護：
-   - 簡化數據更新
-   - 降低維護成本
-   - 提高系統可擴展性
+3. 更好維護：
+   - 更新資料更容易
+   - 管理更簡單
+   - 系統更容易擴充
 
 ### 3. 問題表象
-常見的問題表象包括：
-1. 數據問題：
-   - 數據冗餘
-   - 更新異常
-   - 插入異常
-   - 刪除異常
+常見的問題包括：
+1. 資料問題：
+   - 資料重複
+   - 更新時容易出錯
+   - 新增資料困難
+   - 刪除資料麻煩
 
-2. 效能問題：
-   - 查詢緩慢
-   - 連接開銷大
-   - 資源消耗高
+2. 速度問題：
+   - 查詢很慢
+   - 系統反應慢
+   - 電腦資源消耗大
 
 3. 維護問題：
    - 更新困難
-   - 維護成本高
-   - 擴展性差
+   - 管理麻煩
+   - 系統難以擴充
 
 ### 4. 避免方法
-避免問題的方法包括：
-1. 設計階段：
-   - 合理規劃數據結構
+如何避免這些問題：
+1. 設計時：
+   - 好好規劃資料結構
    - 適當使用正規化
-   - 適時採用反正規化
+   - 適時使用反正規化
 
-2. 實現階段：
-   - 使用索引優化
-   - 實現緩存機制
-   - 優化查詢語句
+2. 實作時：
+   - 使用索引加速
+   - 使用快取機制
+   - 優化查詢方式
 
-3. 維護階段：
-   - 定期數據清理
-   - 監控系統效能
-   - 及時調整結構
+3. 維護時：
+   - 定期整理資料
+   - 監控系統速度
+   - 適時調整結構
 
 ### 5. 問題處理
-遇到問題時的處理方法：
-1. 數據問題處理：
-   - 檢查數據完整性
-   - 修復異常數據
-   - 重建索引結構
+遇到問題怎麼辦：
+1. 資料問題：
+   - 檢查資料是否正確
+   - 修復錯誤資料
+   - 重建索引
 
-2. 效能問題處理：
-   - 優化查詢語句
-   - 調整數據結構
-   - 增加緩存機制
+2. 速度問題：
+   - 優化查詢方式
+   - 調整資料結構
+   - 增加快取
 
-3. 維護問題處理：
-   - 重構數據模型
-   - 優化維護流程
-   - 改進監控機制
+3. 維護問題：
+   - 重新整理資料模型
+   - 優化管理流程
+   - 改進監控方式
 
 ### 6. PlantUML 圖解
 ```plantuml
 @startuml
-class Student {
-    - id: int
-    - name: String
-    - grade: int
-    + getInfo()
+class 學生 {
+    - 學號: 整數
+    - 姓名: 字串
+    - 年級: 整數
+    + 取得資訊()
 }
 
-class Score {
-    - studentId: int
-    - subject: String
-    - score: int
-    + getScore()
+class 成績 {
+    - 學生學號: 整數
+    - 科目: 字串
+    - 分數: 整數
+    + 取得分數()
 }
 
-Student "1" -- "n" Score
+學生 "1" -- "n" 成績
 @enduml
 ```
 
@@ -106,65 +106,65 @@ Student "1" -- "n" Score
 
 #### 步驟 1：基本資料結構
 ```java
-public class Student {
-    private int id;
-    private String name;
-    private int grade;
+public class 學生 {
+    private int 學號;
+    private String 姓名;
+    private int 年級;
     
-    public Student(int id, String name, int grade) {
-        this.id = id;
-        this.name = name;
-        this.grade = grade;
+    public 學生(int 學號, String 姓名, int 年級) {
+        this.學號 = 學號;
+        this.姓名 = 姓名;
+        this.年級 = 年級;
     }
     
-    public String getInfo() {
-        return "學號：" + id + " 姓名：" + name + " 年級：" + grade;
+    public String 取得資訊() {
+        return "學號：" + 學號 + " 姓名：" + 姓名 + " 年級：" + 年級;
     }
 }
 
-public class Score {
-    private int studentId;
-    private String subject;
-    private int score;
+public class 成績 {
+    private int 學生學號;
+    private String 科目;
+    private int 分數;
     
-    public Score(int studentId, String subject, int score) {
-        this.studentId = studentId;
-        this.subject = subject;
-        this.score = score;
+    public 成績(int 學生學號, String 科目, int 分數) {
+        this.學生學號 = 學生學號;
+        this.科目 = 科目;
+        this.分數 = 分數;
     }
     
-    public String getScore() {
-        return "科目：" + subject + " 分數：" + score;
+    public String 取得分數() {
+        return "科目：" + 科目 + " 分數：" + 分數;
     }
 }
 ```
 
 #### 步驟 2：資料查詢
 ```java
-public class GradeSystem {
-    private List<Student> students;
-    private List<Score> scores;
+public class 成績系統 {
+    private List<學生> 學生們;
+    private List<成績> 成績們;
     
-    public GradeSystem() {
-        students = new ArrayList<>();
-        scores = new ArrayList<>();
+    public 成績系統() {
+        學生們 = new ArrayList<>();
+        成績們 = new ArrayList<>();
     }
     
-    public void addStudent(Student student) {
-        students.add(student);
+    public void 新增學生(學生 學生) {
+        學生們.add(學生);
     }
     
-    public void addScore(Score score) {
-        scores.add(score);
+    public void 新增成績(成績 成績) {
+        成績們.add(成績);
     }
     
-    public void printStudentScores(int studentId) {
-        Student student = findStudent(studentId);
-        if (student != null) {
-            System.out.println(student.getInfo());
-            for (Score score : scores) {
-                if (score.getStudentId() == studentId) {
-                    System.out.println(score.getScore());
+    public void 顯示學生成績(int 學生學號) {
+        學生 學生 = 尋找學生(學生學號);
+        if (學生 != null) {
+            System.out.println(學生.取得資訊());
+            for (成績 成績 : 成績們) {
+                if (成績.學生學號 == 學生學號) {
+                    System.out.println(成績.取得分數());
                 }
             }
         }
@@ -176,37 +176,37 @@ public class GradeSystem {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 正規化的實現方式
-- 資料關聯
-- 查詢優化
-- 資料一致性
+- 正規化的具體做法
+- 資料之間的關聯
+- 如何優化查詢
+- 如何保持資料一致
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class Student {
-    - id: int
-    - name: String
-    - grade: int
-    + getInfo()
+class 學生 {
+    - 學號: 整數
+    - 姓名: 字串
+    - 年級: 整數
+    + 取得資訊()
 }
 
-class Subject {
-    - id: int
-    - name: String
-    - teacher: String
-    + getInfo()
+class 科目 {
+    - 科目編號: 整數
+    - 科目名稱: 字串
+    - 教師: 字串
+    + 取得資訊()
 }
 
-class Score {
-    - studentId: int
-    - subjectId: int
-    - score: int
-    + getScore()
+class 成績 {
+    - 學生學號: 整數
+    - 科目編號: 整數
+    - 分數: 整數
+    + 取得分數()
 }
 
-Student "1" -- "n" Score
-Subject "1" -- "n" Score
+學生 "1" -- "n" 成績
+科目 "1" -- "n" 成績
 @enduml
 ```
 
@@ -214,72 +214,72 @@ Subject "1" -- "n" Score
 
 #### 步驟 1：正規化設計
 ```java
-public class Subject {
-    private int id;
-    private String name;
-    private String teacher;
+public class 科目 {
+    private int 科目編號;
+    private String 科目名稱;
+    private String 教師;
     
-    public Subject(int id, String name, String teacher) {
-        this.id = id;
-        this.name = name;
-        this.teacher = teacher;
+    public 科目(int 科目編號, String 科目名稱, String 教師) {
+        this.科目編號 = 科目編號;
+        this.科目名稱 = 科目名稱;
+        this.教師 = 教師;
     }
     
-    public String getInfo() {
-        return "科目：" + name + " 教師：" + teacher;
+    public String 取得資訊() {
+        return "科目：" + 科目名稱 + " 教師：" + 教師;
     }
 }
 
-public class NormalizedScore {
-    private int studentId;
-    private int subjectId;
-    private int score;
+public class 正規化成績 {
+    private int 學生學號;
+    private int 科目編號;
+    private int 分數;
     
-    public NormalizedScore(int studentId, int subjectId, int score) {
-        this.studentId = studentId;
-        this.subjectId = subjectId;
-        this.score = score;
+    public 正規化成績(int 學生學號, int 科目編號, int 分數) {
+        this.學生學號 = 學生學號;
+        this.科目編號 = 科目編號;
+        this.分數 = 分數;
     }
     
-    public String getScore(Subject subject) {
-        return subject.getInfo() + " 分數：" + score;
+    public String 取得分數(科目 科目) {
+        return 科目.取得資訊() + " 分數：" + 分數;
     }
 }
 ```
 
 #### 步驟 2：資料關聯
 ```java
-public class GradeManager {
-    private Map<Integer, Student> students;
-    private Map<Integer, Subject> subjects;
-    private List<NormalizedScore> scores;
+public class 成績管理員 {
+    private Map<Integer, 學生> 學生們;
+    private Map<Integer, 科目> 科目們;
+    private List<正規化成績> 成績們;
     
-    public GradeManager() {
-        students = new HashMap<>();
-        subjects = new HashMap<>();
-        scores = new ArrayList<>();
+    public 成績管理員() {
+        學生們 = new HashMap<>();
+        科目們 = new HashMap<>();
+        成績們 = new ArrayList<>();
     }
     
-    public void addStudent(Student student) {
-        students.put(student.getId(), student);
+    public void 新增學生(學生 學生) {
+        學生們.put(學生.取得學號(), 學生);
     }
     
-    public void addSubject(Subject subject) {
-        subjects.put(subject.getId(), subject);
+    public void 新增科目(科目 科目) {
+        科目們.put(科目.取得科目編號(), 科目);
     }
     
-    public void addScore(NormalizedScore score) {
-        scores.add(score);
+    public void 新增成績(正規化成績 成績) {
+        成績們.add(成績);
     }
     
-    public void printStudentReport(int studentId) {
-        Student student = students.get(studentId);
-        if (student != null) {
-            System.out.println(student.getInfo());
-            for (NormalizedScore score : scores) {
-                if (score.getStudentId() == studentId) {
-                    Subject subject = subjects.get(score.getSubjectId());
-                    System.out.println(score.getScore(subject));
+    public void 顯示學生報告(int 學生學號) {
+        學生 學生 = 學生們.get(學生學號);
+        if (學生 != null) {
+            System.out.println(學生.取得資訊());
+            for (正規化成績 成績 : 成績們) {
+                if (成績.學生學號 == 學生學號) {
+                    科目 科目 = 科目們.get(成績.科目編號);
+                    System.out.println(成績.取得分數(科目));
                 }
             }
         }
@@ -300,37 +300,37 @@ public class GradeManager {
 ```plantuml
 @startuml
 package "進階成績系統" {
-    class Student {
-        - id: int
-        - name: String
-        - grade: int
-        + getInfo()
+    class 學生 {
+        - 學號: 整數
+        - 姓名: 字串
+        - 年級: 整數
+        + 取得資訊()
     }
     
-    class DenormalizedScore {
-        - studentId: int
-        - studentName: String
-        - subject: String
-        - score: int
-        + getScore()
+    class 反正規化成績 {
+        - 學生學號: 整數
+        - 學生姓名: 字串
+        - 科目: 字串
+        - 分數: 整數
+        + 取得分數()
     }
     
-    class CacheManager {
-        - cache: Map
-        + get()
-        + put()
+    class 快取管理員 {
+        - 快取: Map
+        + 取得()
+        + 儲存()
     }
     
-    class SyncManager {
-        - source: DataSource
-        - target: DataSource
-        + sync()
+    class 同步管理員 {
+        - 來源: 資料來源
+        - 目標: 資料來源
+        + 同步()
     }
 }
 
-Student --> DenormalizedScore
-DenormalizedScore --> CacheManager
-CacheManager --> SyncManager
+學生 --> 反正規化成績
+反正規化成績 --> 快取管理員
+快取管理員 --> 同步管理員
 @enduml
 ```
 
@@ -338,84 +338,84 @@ CacheManager --> SyncManager
 
 #### 步驟 1：反正規化設計
 ```java
-public class DenormalizedScore {
-    private int studentId;
-    private String studentName;
-    private String subject;
-    private int score;
+public class 反正規化成績 {
+    private int 學生學號;
+    private String 學生姓名;
+    private String 科目;
+    private int 分數;
     
-    public DenormalizedScore(int studentId, String studentName, String subject, int score) {
-        this.studentId = studentId;
-        this.studentName = studentName;
-        this.subject = subject;
-        this.score = score;
+    public 反正規化成績(int 學生學號, String 學生姓名, String 科目, int 分數) {
+        this.學生學號 = 學生學號;
+        this.學生姓名 = 學生姓名;
+        this.科目 = 科目;
+        this.分數 = 分數;
     }
     
-    public String getScore() {
-        return "學生：" + studentName + " 科目：" + subject + " 分數：" + score;
+    public String 取得分數() {
+        return "學生：" + 學生姓名 + " 科目：" + 科目 + " 分數：" + 分數;
     }
 }
 ```
 
 #### 步驟 2：快取管理
 ```java
-public class CacheManager {
-    private Map<String, DenormalizedScore> cache;
+public class 快取管理員 {
+    private Map<String, 反正規化成績> 快取;
     
-    public CacheManager() {
-        cache = new HashMap<>();
+    public 快取管理員() {
+        快取 = new HashMap<>();
     }
     
-    public DenormalizedScore getScore(String key) {
-        return cache.get(key);
+    public 反正規化成績 取得成績(String 索引) {
+        return 快取.get(索引);
     }
     
-    public void putScore(String key, DenormalizedScore score) {
-        cache.put(key, score);
+    public void 儲存成績(String 索引, 反正規化成績 成績) {
+        快取.put(索引, 成績);
     }
     
-    public void clearCache() {
-        cache.clear();
+    public void 清除快取() {
+        快取.clear();
     }
 }
 ```
 
 #### 步驟 3：資料同步
 ```java
-public class SyncManager {
-    private DataSource source;
-    private DataSource target;
-    private CacheManager cache;
+public class 同步管理員 {
+    private 資料來源 來源;
+    private 資料來源 目標;
+    private 快取管理員 快取;
     
-    public SyncManager(DataSource source, DataSource target) {
-        this.source = source;
-        this.target = target;
-        this.cache = new CacheManager();
+    public 同步管理員(資料來源 來源, 資料來源 目標) {
+        this.來源 = 來源;
+        this.目標 = 目標;
+        this.快取 = new 快取管理員();
     }
     
-    public void syncData() {
-        // 從正規化資料源讀取
-        List<NormalizedScore> normalizedScores = source.getScores();
+    public void 同步資料() {
+        // 從正規化資料來源讀取
+        List<正規化成績> 正規化成績們 = 來源.取得成績們();
         
         // 轉換為反正規化格式
-        for (NormalizedScore score : normalizedScores) {
-            DenormalizedScore denormalized = convertToDenormalized(score);
+        for (正規化成績 成績 : 正規化成績們) {
+            反正規化成績 反正規化 = 轉換為反正規化(成績);
             
             // 更新快取
-            cache.putScore(generateKey(denormalized), denormalized);
+            快取.儲存成績(產生索引(反正規化), 反正規化);
             
-            // 同步到目標資料源
-            target.updateScore(denormalized);
+            // 同步到目標資料來源
+            目標.更新成績(反正規化);
         }
     }
     
-    private DenormalizedScore convertToDenormalized(NormalizedScore score) {
+    private 反正規化成績 轉換為反正規化(正規化成績 成績) {
         // 轉換邏輯
-        return new DenormalizedScore(
-            score.getStudentId(),
-            source.getStudentName(score.getStudentId()),
-            source.getSubjectName(score.getSubjectId()),
-            score.getScore()
+        return new 反正規化成績(
+            成績.取得學生學號(),
+            來源.取得學生姓名(成績.取得學生學號()),
+            來源.取得科目名稱(成績.取得科目編號()),
+            成績.取得分數()
         );
     }
 }
@@ -423,75 +423,75 @@ public class SyncManager {
 
 ### 4. 實戰案例
 
-#### 案例一：電商訂單系統
+#### 案例一：圖書館借閱系統
 ```java
 // 正規化設計
-public class Order {
-    private String orderId;
-    private String customerId;
-    private Date orderDate;
-    private List<OrderItem> items;
+public class 借閱記錄 {
+    private String 借閱編號;
+    private String 學生學號;
+    private Date 借閱日期;
+    private List<借閱項目> 項目們;
     
     // 反正規化設計
-    private String customerName;
-    private String customerAddress;
-    private BigDecimal totalAmount;
+    private String 學生姓名;
+    private String 學生班級;
+    private int 借閱總數;
 }
 
 // 使用 JPA 實現
 @Entity
-@Table(name = "orders")
-public class Order {
+@Table(name = "借閱記錄")
+public class 借閱記錄 {
     @Id
-    private String orderId;
+    private String 借閱編號;
     
     @ManyToOne
-    @JoinColumn(name = "customer_id")
-    private Customer customer;
+    @JoinColumn(name = "學生學號")
+    private 學生 學生;
     
-    @OneToMany(mappedBy = "order")
-    private List<OrderItem> items;
+    @OneToMany(mappedBy = "借閱記錄")
+    private List<借閱項目> 項目們;
     
     // 反正規化字段
-    @Column(name = "customer_name")
-    private String customerName;
+    @Column(name = "學生姓名")
+    private String 學生姓名;
     
-    @Column(name = "total_amount")
-    private BigDecimal totalAmount;
+    @Column(name = "借閱總數")
+    private int 借閱總數;
 }
 ```
 
-#### 案例二：社交媒體系統
+#### 案例二：班級點名系統
 ```java
 // 正規化設計
-public class Post {
-    private String postId;
-    private String userId;
-    private String content;
-    private List<Comment> comments;
+public class 點名記錄 {
+    private String 記錄編號;
+    private String 學生學號;
+    private String 日期;
+    private List<出席記錄> 記錄們;
     
     // 反正規化設計
-    private String userName;
-    private String userAvatar;
-    private int likeCount;
+    private String 學生姓名;
+    private String 學生照片;
+    private int 出席次數;
 }
 
 // 使用 MongoDB 實現
-@Document(collection = "posts")
-public class Post {
+@Document(collection = "點名記錄")
+public class 點名記錄 {
     @Id
-    private String postId;
+    private String 記錄編號;
     
-    private String userId;
-    private String content;
+    private String 學生學號;
+    private String 日期;
     
     // 反正規化字段
-    private String userName;
-    private String userAvatar;
-    private int likeCount;
+    private String 學生姓名;
+    private String 學生照片;
+    private int 出席次數;
     
     @DBRef
-    private List<Comment> comments;
+    private List<出席記錄> 記錄們;
 }
 ```
 
@@ -501,57 +501,57 @@ public class Post {
 ```java
 // 使用 Hibernate 實現正規化
 @Entity
-@Table(name = "students")
-public class Student {
+@Table(name = "學生")
+public class 學生 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long 學號;
     
-    private String name;
-    private int grade;
+    private String 姓名;
+    private int 年級;
     
-    @OneToMany(mappedBy = "student")
-    private List<Score> scores;
+    @OneToMany(mappedBy = "學生")
+    private List<成績> 成績們;
 }
 
 // 使用 Redis 實現反正規化
-public class StudentCache {
+public class 學生快取 {
     private final RedisTemplate<String, Object> redisTemplate;
     
-    public void cacheStudent(Student student) {
-        String key = "student:" + student.getId();
-        redisTemplate.opsForValue().set(key, student);
+    public void 快取學生(學生 學生) {
+        String 索引 = "學生:" + 學生.取得學號();
+        redisTemplate.opsForValue().set(索引, 學生);
     }
     
-    public Student getCachedStudent(Long id) {
-        String key = "student:" + id;
-        return (Student) redisTemplate.opsForValue().get(key);
+    public 學生 取得快取學生(Long 學號) {
+        String 索引 = "學生:" + 學號;
+        return (學生) redisTemplate.opsForValue().get(索引);
     }
 }
 ```
 
 #### 2. 監控與優化
 ```java
-public class DatabaseMonitor {
-    private MetricsCollector metricsCollector;
-    private AlertManager alertManager;
+public class 資料庫監控員 {
+    private 指標收集器 收集器;
+    private 警告管理員 警告管理員;
     
-    public void monitor() {
-        DatabaseMetrics metrics = metricsCollector.collectMetrics();
+    public void 監控() {
+        資料庫指標 指標 = 收集器.收集指標();
         
-        // 檢查數據完整性
-        if (!metrics.isDataConsistent()) {
-            alertManager.alert("數據警告", metrics.getDetails());
+        // 檢查資料完整性
+        if (!指標.資料是否一致()) {
+            警告管理員.警告("資料警告", 指標.取得詳細資訊());
         }
         
         // 檢查查詢效能
-        if (metrics.getQueryPerformance() < 0.8) {
-            alertManager.alert("效能警告", metrics.getDetails());
+        if (指標.取得查詢效能() < 0.8) {
+            警告管理員.警告("效能警告", 指標.取得詳細資訊());
         }
         
-        // 檢查緩存命中率
-        if (metrics.getCacheHitRate() < 0.7) {
-            alertManager.alert("緩存警告", metrics.getDetails());
+        // 檢查快取命中率
+        if (指標.取得快取命中率() < 0.7) {
+            警告管理員.警告("快取警告", 指標.取得詳細資訊());
         }
     }
 }
@@ -559,30 +559,30 @@ public class DatabaseMonitor {
 
 #### 3. 錯誤處理與恢復
 ```java
-public class DataRecovery {
-    private DataValidator validator;
-    private DataRepairer repairer;
+public class 資料恢復 {
+    private 資料驗證器 驗證器;
+    private 資料修復器 修復器;
     
-    public void recover() {
-        // 檢查數據狀態
-        checkDataState();
+    public void 恢復() {
+        // 檢查資料狀態
+        檢查資料狀態();
         
-        // 修復數據錯誤
-        fixDataIssues();
+        // 修復資料錯誤
+        修復資料問題();
         
         // 重建索引
-        rebuildIndexes();
+        重建索引();
     }
     
-    private void checkDataState() {
-        // 實現數據狀態檢查邏輯
+    private void 檢查資料狀態() {
+        // 實現資料狀態檢查邏輯
     }
     
-    private void fixDataIssues() {
-        // 實現數據修復邏輯
+    private void 修復資料問題() {
+        // 實現資料修復邏輯
     }
     
-    private void rebuildIndexes() {
+    private void 重建索引() {
         // 實現索引重建邏輯
     }
 }

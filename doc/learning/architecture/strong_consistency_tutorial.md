@@ -3,89 +3,201 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-強一致性就像是在學校裡，當老師要宣布重要事項時：
-- 必須確保所有同學都聽到並理解後，才能繼續下一個事項
-- 不允許有任何同學沒聽到或理解錯誤
-- 系統會等待所有同學都準備好，才進行下一步
+強一致性就像是在教室裡傳遞訊息：
+- 老師要確保每個同學都收到相同的訊息
+- 必須等所有同學都收到訊息後，才能進行下一步
+- 如果有同學沒收到訊息，就要重新傳送
 
-初級學習者需要了解：
-- 什麼是強一致性
-- 為什麼需要強一致性
-- 基本的資料同步方式
+@startuml
+title 強一致性基本概念
+participant "老師" as Teacher
+participant "同學A" as StudentA
+participant "同學B" as StudentB
+participant "同學C" as StudentC
+
+Teacher -> StudentA: 傳送訊息
+Teacher -> StudentB: 傳送訊息
+Teacher -> StudentC: 傳送訊息
+StudentA --> Teacher: 收到確認
+StudentB --> Teacher: 收到確認
+StudentC --> Teacher: 收到確認
+Teacher -> Teacher: 確認所有同學都收到
+@enduml
 
 ### 2. 使用原因
-強一致性的主要使用原因包括：
-1. 數據準確性：
-   - 確保數據在所有節點上完全一致
-   - 避免數據不一致導致的錯誤
-   - 保證數據的可靠性
+為什麼需要強一致性？
+1. 確保資料正確：
+   - 就像考試成績，每個同學都要有正確的分數
+   - 不能讓不同同學看到不同的成績
+   - 避免資料錯誤造成的問題
+
+2. 重要系統需要：
+   - 線上購物系統
+   - 遊戲點數系統
+   - 學校成績系統
+
+### 3. 問題表象
+可能遇到的問題：
+1. 速度變慢：
+   - 系統反應變慢
+   - 等待時間變長
+   - 電腦資源使用增加
+
+2. 系統問題：
+   - 系統卡住
+   - 無法使用
+   - 電腦當機
+
+### 4. 避免方法
+如何避免問題：
+1. 系統設計：
+   - 選擇合適的系統架構
+   - 使用正確的工具
+   - 做好錯誤處理
+
+2. 日常維護：
+   - 定期檢查系統
+   - 監控系統狀態
+   - 及時處理問題
+
+### 5. 實作範例
+```java
+// 簡單的成績系統
+public class GradeSystem {
+    private Map<String, Integer> grades = new HashMap<>();
+    
+    // 更新成績
+    public synchronized void updateGrade(String studentId, int grade) {
+        grades.put(studentId, grade);
+    }
+    
+    // 取得成績
+    public synchronized int getGrade(String studentId) {
+        return grades.getOrDefault(studentId, 0);
+    }
+}
+```
+
+## 中級（Intermediate）層級
+
+### 1. 概念說明
+中級強一致性就像班級幹部管理班級事務：
+- 班長需要協調各幹部的工作
+- 確保所有幹部都完成任務
+- 處理可能出現的問題
+
+@startuml
+title 中級強一致性架構
+class "班長" as Monitor {
+    +協調工作()
+    +檢查進度()
+    +處理問題()
+}
+
+class "風紀股長" as Discipline {
+    +管理秩序()
+    +回報狀況()
+}
+
+class "學藝股長" as Study {
+    +管理作業()
+    +回報狀況()
+}
+
+Monitor --> Discipline
+Monitor --> Study
+@enduml
+
+### 2. 使用原因
+為什麼需要進階的強一致性？
+1. 系統更複雜：
+   - 多個部分需要協調
+   - 資料需要同步更新
+   - 錯誤處理更複雜
+
+2. 業務需求：
+   - 線上購物系統的庫存管理
+   - 遊戲伺服器的玩家資料同步
+   - 學校系統的成績統計
+
+### 3. 實作範例
+```java
+// 使用 Redis 實現分布式鎖
+public class DistributedLock {
+    private final RedisTemplate<String, String> redisTemplate;
+    
+    public boolean tryLock(String key, String value, long timeout) {
+        return redisTemplate.opsForValue()
+            .setIfAbsent(key, value, Duration.ofSeconds(timeout));
+    }
+    
+    public void unlock(String key, String value) {
+        if (value.equals(redisTemplate.opsForValue().get(key))) {
+            redisTemplate.delete(key);
+        }
+    }
+}
+
+// 使用鎖來保護共享資源
+public class SharedResource {
+    private final DistributedLock lock;
+    private int count = 0;
+    
+    public void increment() {
+        String lockKey = "resource:lock";
+        String lockValue = UUID.randomUUID().toString();
+        
+        try {
+            if (lock.tryLock(lockKey, lockValue, 10)) {
+                count++;
+            }
+        } finally {
+            lock.unlock(lockKey, lockValue);
+        }
+    }
+}
+```
+
+## 高級（Advanced）層級
+
+### 1. 概念說明
+高級強一致性就像學校的行政系統：
+- 多個部門需要協同工作
+- 資料需要在不同系統間同步
+- 需要處理各種異常情況
+- 確保系統的可靠性和可用性
+
+@startuml
+title 高級強一致性架構
+participant "前端系統" as Frontend
+participant "應用服務" as App
+participant "資料庫" as DB
+participant "備份系統" as Backup
+
+Frontend -> App: 請求資料
+App -> DB: 讀取資料
+DB --> App: 返回資料
+App --> Frontend: 返回結果
+
+App -> Backup: 同步資料
+Backup --> App: 確認同步
+@enduml
+
+### 2. 使用原因
+為什麼需要高級強一致性？
+1. 系統可靠性：
+   - 確保系統24小時運作
+   - 資料不會遺失
+   - 系統故障時能快速恢復
 
 2. 業務需求：
    - 金融交易系統
-   - 庫存管理系統
-   - 訂單處理系統
+   - 大型電商平台
+   - 雲端服務系統
 
-3. 系統可靠性：
-   - 提高系統的穩定性
-   - 確保服務的可用性
-   - 維護系統的完整性
-
-### 3. 問題表象
-常見的問題表象包括：
-1. 效能問題：
-   - 系統響應延遲
-   - 吞吐量下降
-   - 資源消耗增加
-
-2. 可用性問題：
-   - 系統阻塞
-   - 服務不可用
-   - 節點故障
-
-3. 擴展性問題：
-   - 擴展困難
-   - 成本增加
-   - 維護複雜
-
-### 4. 避免方法
-避免問題的方法包括：
-1. 系統設計：
-   - 合理規劃系統架構
-   - 選擇適當的一致性級別
-   - 實現有效的同步機制
-
-2. 實現階段：
-   - 使用成熟的框架
-   - 實現錯誤處理
-   - 添加監控機制
-
-3. 維護階段：
-   - 定期系統檢查
-   - 監控系統效能
-   - 及時處理問題
-
-### 5. 問題處理
-遇到問題時的處理方法：
-1. 效能問題處理：
-   - 優化同步策略
-   - 調整系統配置
-   - 實現緩存機制
-
-2. 可用性問題處理：
-   - 實現故障轉移
-   - 添加備份機制
-   - 優化恢復流程
-
-3. 擴展性問題處理：
-   - 優化系統架構
-   - 實現動態擴展
-   - 改進維護流程
-
-### 6. 實戰案例
-
-#### 案例一：金融交易系統
+### 3. 實作範例
 ```java
-// 使用 Spring 實現強一致性
+// 使用 Spring 實現事務管理
 @Transactional
 public class TransactionService {
     private final AccountRepository accountRepository;
@@ -93,17 +205,20 @@ public class TransactionService {
     
     public void transfer(TransferRequest request) {
         // 開始事務
-        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
+        TransactionStatus status = transactionManager.getTransaction(
+            new DefaultTransactionDefinition());
         
         try {
             // 扣款
-            Account fromAccount = accountRepository.findById(request.getFromAccountId())
+            Account fromAccount = accountRepository.findById(
+                request.getFromAccountId())
                 .orElseThrow(() -> new AccountNotFoundException());
             fromAccount.debit(request.getAmount());
             accountRepository.save(fromAccount);
             
             // 存款
-            Account toAccount = accountRepository.findById(request.getToAccountId())
+            Account toAccount = accountRepository.findById(
+                request.getToAccountId())
                 .orElseThrow(() -> new AccountNotFoundException());
             toAccount.credit(request.getAmount());
             accountRepository.save(toAccount);
@@ -123,149 +238,18 @@ public class TransactionService {
 }
 ```
 
-#### 案例二：庫存管理系統
-```java
-// 使用 JPA 實現強一致性
-@Entity
-@Table(name = "inventory")
-public class Inventory {
-    @Id
-    private String productId;
-    
-    @Version
-    private Long version;
-    
-    private int quantity;
-    
-    @Transactional
-    public void updateQuantity(int delta) {
-        if (quantity + delta < 0) {
-            throw new InsufficientInventoryException();
-        }
-        quantity += delta;
-    }
-}
+### 4. 最佳實踐
+1. 使用成熟的框架：
+   - Spring Framework
+   - Hibernate
+   - Redis
 
-// 使用 Redis 實現分布式鎖
-public class InventoryService {
-    private final RedisTemplate<String, String> redisTemplate;
-    private final InventoryRepository inventoryRepository;
-    
-    public void updateInventory(String productId, int delta) {
-        String lockKey = "inventory:lock:" + productId;
-        String lockValue = UUID.randomUUID().toString();
-        
-        try {
-            // 獲取鎖
-            boolean locked = redisTemplate.opsForValue()
-                .setIfAbsent(lockKey, lockValue, Duration.ofSeconds(30));
-            
-            if (!locked) {
-                throw new LockAcquisitionException();
-            }
-            
-            // 更新庫存
-            Inventory inventory = inventoryRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException());
-            inventory.updateQuantity(delta);
-            inventoryRepository.save(inventory);
-            
-        } finally {
-            // 釋放鎖
-            if (lockValue.equals(redisTemplate.opsForValue().get(lockKey))) {
-                redisTemplate.delete(lockKey);
-            }
-        }
-    }
-}
-```
+2. 實現監控機制：
+   - 系統健康檢查
+   - 效能監控
+   - 錯誤追蹤
 
-### 7. 最佳實踐
-
-#### 1. 使用現有工具
-```java
-// 使用 ZooKeeper 實現分布式協調
-public class DistributedCoordinator {
-    private final CuratorFramework client;
-    
-    public void coordinate(String path, String data) {
-        try {
-            // 創建節點
-            client.create()
-                .creatingParentsIfNeeded()
-                .withMode(CreateMode.PERSISTENT)
-                .forPath(path, data.getBytes());
-            
-            // 等待所有節點確認
-            waitForAllNodes(path);
-            
-        } catch (Exception e) {
-            throw new CoordinationException(e);
-        }
-    }
-    
-    private void waitForAllNodes(String path) {
-        // 實現等待邏輯
-    }
-}
-```
-
-#### 2. 監控與優化
-```java
-public class ConsistencyMonitor {
-    private MetricsCollector metricsCollector;
-    private AlertManager alertManager;
-    
-    public void monitor() {
-        ConsistencyMetrics metrics = metricsCollector.collectMetrics();
-        
-        // 檢查一致性狀態
-        if (!metrics.isConsistent()) {
-            alertManager.alert("一致性警告", metrics.getDetails());
-        }
-        
-        // 檢查同步延遲
-        if (metrics.getSyncLatency() > 1000) {
-            alertManager.alert("同步延遲警告", metrics.getDetails());
-        }
-        
-        // 檢查節點狀態
-        if (!metrics.areAllNodesHealthy()) {
-            alertManager.alert("節點警告", metrics.getDetails());
-        }
-    }
-}
-```
-
-#### 3. 錯誤處理與恢復
-```java
-public class ConsistencyRecovery {
-    private DataValidator validator;
-    private DataRepairer repairer;
-    
-    public void recover() {
-        // 檢查數據狀態
-        checkDataState();
-        
-        // 修復不一致數據
-        fixInconsistencies();
-        
-        // 恢復系統狀態
-        restoreSystem();
-    }
-    
-    private void checkDataState() {
-        // 實現數據狀態檢查邏輯
-    }
-    
-    private void fixInconsistencies() {
-        // 實現數據修復邏輯
-    }
-    
-    private void restoreSystem() {
-        // 實現系統恢復邏輯
-    }
-}
-```
-
-這個教學文件提供了從基礎到進階的強一致性學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的宣布系統開始，中級學習者可以學習同步機制和錯誤處理，而高級學習者則可以掌握兩階段提交和故障恢復等進階功能。 
+3. 設計備份策略：
+   - 定期備份
+   - 異地備份
+   - 災難恢復演練 

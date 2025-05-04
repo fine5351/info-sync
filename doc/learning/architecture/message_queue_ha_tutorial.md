@@ -3,202 +3,202 @@
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-消息隊列高可用性就像學校的備用傳話筒：
-- 當主要的傳話筒壞掉時，我們還有備用的傳話筒可以用
-- 兩個傳話筒會互相備份，確保消息不會丟失
-- 如果一個傳話筒壞了，另一個可以馬上接手
+消息隊列就像學校的傳話筒遊戲：
+- 當一個同學要傳話給另一個同學時，他們之間需要一個傳話筒
+- 如果傳話筒壞掉了，我們需要有備用的傳話筒
+- 這樣即使一個傳話筒不能用，我們還可以用另一個繼續傳話
 
 初級學習者需要了解：
-- 什麼是高可用性
-- 為什麼需要備用系統
-- 基本的備份概念
+- 什麼是消息隊列（就像傳話筒）
+- 為什麼需要備用系統（防止傳話筒壞掉）
+- 基本的備份概念（準備多個傳話筒）
 
 ### 2. 使用原因
-消息隊列高可用性的主要使用原因包括：
-1. 可靠性提升：
-   - 避免單點故障
-   - 確保消息不丟失
-   - 提供故障轉移
+為什麼我們需要消息隊列高可用性：
+1. 防止系統當機：
+   - 就像傳話筒壞掉時有備用的
+   - 確保消息不會丟失
+   - 系統可以繼續運作
 
-2. 業務連續性：
-   - 維持系統運作
-   - 減少服務中斷
-   - 提高用戶體驗
+2. 維持服務不中斷：
+   - 就像上課時傳話筒壞了，馬上換新的
+   - 使用者不會感覺到問題
+   - 系統可以一直運作
 
-3. 數據安全：
-   - 防止數據丟失
-   - 確保數據一致性
-   - 提供數據備份
+3. 保護重要資料：
+   - 就像重要的訊息一定要傳到
+   - 確保資料不會消失
+   - 資料都有備份
 
 ### 3. 問題表象
-常見的問題表象包括：
+可能會遇到的問題：
 1. 系統問題：
-   - 節點故障
-   - 網路中斷
-   - 同步失敗
+   - 傳話筒壞掉了
+   - 同學之間無法傳話
+   - 訊息傳不出去
 
-2. 數據問題：
-   - 消息丟失
-   - 數據不一致
-   - 重複消息
+2. 資料問題：
+   - 訊息傳丟了
+   - 訊息傳錯了
+   - 同一個訊息傳了兩次
 
 3. 效能問題：
-   - 延遲增加
-   - 吞吐量下降
-   - 資源消耗高
+   - 傳話速度變慢
+   - 一次只能傳少量訊息
+   - 傳話筒用太多
 
 ### 4. 避免方法
-避免問題的方法包括：
+如何避免這些問題：
 1. 系統設計：
-   - 實現主從架構
-   - 設計健康檢查
-   - 建立監控系統
+   - 準備多個傳話筒
+   - 定期檢查傳話筒
+   - 監控傳話情況
 
-2. 數據管理：
-   - 實現數據同步
-   - 設置消息確認
-   - 定期備份數據
+2. 資料管理：
+   - 確認訊息有傳到
+   - 檢查訊息是否正確
+   - 定期備份訊息
 
 3. 效能優化：
-   - 優化同步策略
-   - 實現負載均衡
-   - 定期效能評估
+   - 使用更好的傳話筒
+   - 讓多個同學一起傳
+   - 定期檢查傳話速度
 
 ### 5. 問題處理
-遇到問題時的處理方法：
+遇到問題時該怎麼辦：
 1. 系統問題處理：
-   - 檢查節點狀態
-   - 修復網路問題
-   - 重試同步操作
+   - 檢查傳話筒是否正常
+   - 修復傳話筒
+   - 換用備用傳話筒
 
-2. 數據問題處理：
-   - 檢查數據一致性
-   - 修復數據錯誤
-   - 恢復丟失數據
+2. 資料問題處理：
+   - 檢查訊息是否正確
+   - 重新傳送訊息
+   - 找回丟失的訊息
 
 3. 效能問題處理：
-   - 調整同步策略
-   - 優化資源使用
-   - 實現動態擴展
+   - 調整傳話方式
+   - 使用更多傳話筒
+   - 優化傳話流程
 
 ### 6. PlantUML 圖解
 ```plantuml
 @startuml
-class PrimaryMessageQueue {
-    - messages: List
-    + sendMessage()
-    + receiveMessage()
+class 傳話筒 {
+    - 訊息列表
+    + 傳送訊息()
+    + 接收訊息()
 }
 
-class BackupMessageQueue {
-    - messages: List
-    + sendMessage()
-    + receiveMessage()
+class 備用傳話筒 {
+    - 訊息列表
+    + 傳送訊息()
+    + 接收訊息()
 }
 
-class MessageSystem {
-    - primary: PrimaryMessageQueue
-    - backup: BackupMessageQueue
-    + send()
-    + receive()
+class 傳話系統 {
+    - 主要傳話筒
+    - 備用傳話筒
+    + 傳送()
+    + 接收()
 }
 
-MessageSystem --> PrimaryMessageQueue
-MessageSystem --> BackupMessageQueue
+傳話系統 --> 傳話筒
+傳話系統 --> 備用傳話筒
 @enduml
 ```
 
 ### 7. 分段教學步驟
 
-#### 步驟 1：基本備份系統
+#### 步驟 1：基本傳話筒系統
 ```java
-public class SimpleMessageQueue {
-    private List<String> messages;
-    private boolean isHealthy;
+public class 傳話筒 {
+    private List<String> 訊息列表;
+    private boolean 是否正常;
     
-    public SimpleMessageQueue() {
-        messages = new ArrayList<>();
-        isHealthy = true;
+    public 傳話筒() {
+        訊息列表 = new ArrayList<>();
+        是否正常 = true;
     }
     
-    public void sendMessage(String message) {
-        if (!isHealthy) {
-            throw new RuntimeException("消息隊列狀態異常");
+    public void 傳送訊息(String 訊息) {
+        if (!是否正常) {
+            throw new RuntimeException("傳話筒壞掉了！");
         }
-        System.out.println("發送消息：" + message);
-        messages.add(message);
+        System.out.println("傳送訊息：" + 訊息);
+        訊息列表.add(訊息);
     }
     
-    public String receiveMessage() {
-        if (!isHealthy) {
-            throw new RuntimeException("消息隊列狀態異常");
+    public String 接收訊息() {
+        if (!是否正常) {
+            throw new RuntimeException("傳話筒壞掉了！");
         }
-        if (!messages.isEmpty()) {
-            String message = messages.remove(0);
-            System.out.println("接收消息：" + message);
-            return message;
+        if (!訊息列表.isEmpty()) {
+            String 訊息 = 訊息列表.remove(0);
+            System.out.println("接收訊息：" + 訊息);
+            return 訊息;
         }
         return null;
     }
     
-    public boolean isHealthy() {
-        return isHealthy;
+    public boolean 是否正常() {
+        return 是否正常;
     }
     
-    public void setHealthy(boolean healthy) {
-        isHealthy = healthy;
+    public void 設定狀態(boolean 狀態) {
+        是否正常 = 狀態;
     }
 }
 
-public class BackupSystem {
-    private SimpleMessageQueue primary;
-    private SimpleMessageQueue backup;
-    private HealthChecker healthChecker;
+public class 備用系統 {
+    private 傳話筒 主要傳話筒;
+    private 傳話筒 備用傳話筒;
+    private 健康檢查器 檢查器;
     
-    public BackupSystem() {
-        primary = new SimpleMessageQueue();
-        backup = new SimpleMessageQueue();
-        healthChecker = new HealthChecker();
+    public 備用系統() {
+        主要傳話筒 = new 傳話筒();
+        備用傳話筒 = new 傳話筒();
+        檢查器 = new 健康檢查器();
     }
     
-    public void send(String message) {
-        // 檢查主系統健康狀態
-        if (!healthChecker.check(primary)) {
-            primary.setHealthy(false);
-            System.out.println("主系統異常，切換到備份系統");
+    public void 傳送(String 訊息) {
+        // 檢查主要傳話筒是否正常
+        if (!檢查器.檢查(主要傳話筒)) {
+            主要傳話筒.設定狀態(false);
+            System.out.println("主要傳話筒壞了，改用備用傳話筒");
         }
         
-        // 同時發送到主系統和備份系統
-        if (primary.isHealthy()) {
-            primary.sendMessage(message);
+        // 同時傳送到主要和備用傳話筒
+        if (主要傳話筒.是否正常()) {
+            主要傳話筒.傳送訊息(訊息);
         }
-        backup.sendMessage(message);
+        備用傳話筒.傳送訊息(訊息);
     }
     
-    public String receive() {
-        // 優先從主系統接收
-        if (primary.isHealthy()) {
-            String message = primary.receiveMessage();
-            if (message != null) {
-                return message;
+    public String 接收() {
+        // 優先從主要傳話筒接收
+        if (主要傳話筒.是否正常()) {
+            String 訊息 = 主要傳話筒.接收訊息();
+            if (訊息 != null) {
+                return 訊息;
             }
         }
         
-        // 如果主系統沒有消息或異常，從備份系統接收
-        return backup.receiveMessage();
+        // 如果主要傳話筒沒有訊息或壞了，從備用傳話筒接收
+        return 備用傳話筒.接收訊息();
     }
     
-    public void checkHealth() {
-        healthChecker.check(primary);
-        healthChecker.check(backup);
+    public void 檢查健康狀態() {
+        檢查器.檢查(主要傳話筒);
+        檢查器.檢查(備用傳話筒);
     }
 }
 
-class HealthChecker {
-    public boolean check(SimpleMessageQueue queue) {
+class 健康檢查器 {
+    public boolean 檢查(傳話筒 傳話筒) {
         try {
             // 模擬健康檢查
-            queue.receiveMessage();
+            傳話筒.接收訊息();
             return true;
         } catch (Exception e) {
             System.out.println("健康檢查失敗：" + e.getMessage());
@@ -212,109 +212,109 @@ class HealthChecker {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 主從架構
-- 故障檢測
-- 自動切換
-- 數據同步
+- 主從架構：就像班級有班長和副班長，班長負責主要工作，副班長協助
+- 故障檢測：定期檢查班長和副班長是否正常工作
+- 自動切換：如果班長請假，副班長自動接手
+- 資料同步：確保班長和副班長知道相同的事情
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class MasterQueue {
-    - messages: List
-    - status: Status
-    + send()
-    + receive()
-    + checkStatus()
+class 班長 {
+    - 工作清單
+    - 狀態
+    + 分配工作()
+    + 接收工作()
+    + 檢查狀態()
 }
 
-class SlaveQueue {
-    - messages: List
-    - status: Status
-    + send()
-    + receive()
-    + sync()
+class 副班長 {
+    - 工作清單
+    - 狀態
+    + 分配工作()
+    + 接收工作()
+    + 同步工作()
 }
 
-class HealthChecker {
-    + check()
-    + report()
+class 健康檢查員 {
+    + 檢查()
+    + 報告()
 }
 
-class SyncManager {
-    + sync()
-    + verify()
+class 工作同步員 {
+    + 同步()
+    + 確認()
 }
 
-MasterQueue --> HealthChecker
-SlaveQueue --> HealthChecker
-MasterQueue --> SyncManager
-SlaveQueue --> SyncManager
+班長 --> 健康檢查員
+副班長 --> 健康檢查員
+班長 --> 工作同步員
+副班長 --> 工作同步員
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：主從架構
+#### 步驟 1：班級工作系統
 ```java
-public class MasterSlaveSystem {
-    private MasterQueue master;
-    private SlaveQueue slave;
-    private HealthChecker healthChecker;
-    private SyncManager syncManager;
-    private MessageValidator validator;
+public class 班級工作系統 {
+    private 班長 主要班長;
+    private 副班長 副班長;
+    private 健康檢查員 檢查員;
+    private 工作同步員 同步員;
+    private 工作檢查員 檢查員;
     
-    public MasterSlaveSystem() {
-        master = new MasterQueue();
-        slave = new SlaveQueue();
-        healthChecker = new HealthChecker();
-        syncManager = new SyncManager();
-        validator = new MessageValidator();
+    public 班級工作系統() {
+        主要班長 = new 班長();
+        副班長 = new 副班長();
+        檢查員 = new 健康檢查員();
+        同步員 = new 工作同步員();
+        檢查員 = new 工作檢查員();
     }
     
-    public void send(String message) {
-        // 驗證消息
-        if (!validator.validate(message)) {
-            System.out.println("消息驗證失敗！");
+    public void 分配工作(String 工作) {
+        // 檢查工作是否有效
+        if (!檢查員.檢查(工作)) {
+            System.out.println("工作無效！");
             return;
         }
         
-        if (master.isHealthy()) {
-            master.send(message);
-            syncManager.sync(master, slave);
+        if (主要班長.是否正常()) {
+            主要班長.分配工作(工作);
+            同步員.同步(主要班長, 副班長);
         } else {
-            slave.send(message);
+            副班長.分配工作(工作);
         }
     }
     
-    public String receive() {
-        if (master.isHealthy()) {
-            return master.receive();
+    public String 接收工作() {
+        if (主要班長.是否正常()) {
+            return 主要班長.接收工作();
         } else {
-            return slave.receive();
+            return 副班長.接收工作();
         }
     }
     
-    public void checkHealth() {
-        healthChecker.check(master);
-        healthChecker.check(slave);
+    public void 檢查健康狀態() {
+        檢查員.檢查(主要班長);
+        檢查員.檢查(副班長);
     }
 }
 
-class MessageValidator {
-    public boolean validate(String message) {
-        return message != null && !message.isEmpty();
+class 工作檢查員 {
+    public boolean 檢查(String 工作) {
+        return 工作 != null && !工作.isEmpty();
     }
 }
 ```
 
 #### 步驟 2：健康檢查
 ```java
-public class HealthChecker {
-    public boolean check(MessageQueue queue) {
+public class 健康檢查員 {
+    public boolean 檢查(班級幹部 幹部) {
         try {
             // 模擬健康檢查
-            queue.checkStatus();
+            幹部.檢查狀態();
             return true;
         } catch (Exception e) {
             System.out.println("健康檢查失敗：" + e.getMessage());
@@ -322,9 +322,9 @@ public class HealthChecker {
         }
     }
     
-    public void report(MessageQueue queue, boolean isHealthy) {
-        if (!isHealthy) {
-            System.out.println("警告：" + queue.getName() + " 狀態異常");
+    public void 報告(班級幹部 幹部, boolean 是否正常) {
+        if (!是否正常) {
+            System.out.println("警告：" + 幹部.取得名稱() + " 狀態異常");
         }
     }
 }
@@ -334,142 +334,142 @@ public class HealthChecker {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 集群架構
-- 一致性協議
-- 故障轉移
-- 負載均衡
+- 班級管理系統：就像學校有多個班級，每個班級都有自己的班長和副班長
+- 投票選舉：當需要選出新的班長時，所有同學一起投票決定
+- 自動接手：如果班長請假，系統會自動選出新的班長
+- 工作分配：系統會自動把工作平均分配給所有班級
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "高可用消息隊列系統" {
-    class ClusterManager {
-        - nodes: List<Node>
-        - leader: Node
-        + electLeader()
-        + handleFailure()
+package "班級管理系統" {
+    class 班級管理員 {
+        - 班級列表
+        - 主要班長
+        + 選舉班長()
+        + 處理問題()
     }
     
-    class Node {
-        - id: String
-        - status: Status
-        - messages: List
-        + send()
-        + receive()
-        + sync()
+    class 班級 {
+        - 班級編號
+        - 狀態
+        - 工作清單
+        + 分配工作()
+        + 接收工作()
+        + 同步工作()
     }
     
-    class ConsensusProtocol {
-        - quorum: int
-        + propose()
-        + accept()
+    class 投票系統 {
+        - 投票人數
+        + 提名()
+        + 投票()
     }
     
-    class LoadBalancer {
-        - nodes: List<Node>
-        + distribute()
-        + balance()
+    class 工作分配員 {
+        - 班級列表
+        + 分配工作()
+        + 平衡工作()
     }
 }
 
-ClusterManager --> Node
-Node --> ConsensusProtocol
-Node --> LoadBalancer
+班級管理員 --> 班級
+班級 --> 投票系統
+班級 --> 工作分配員
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：集群管理
+#### 步驟 1：班級管理
 ```java
-public class ClusterManager {
-    private List<Node> nodes;
-    private Node leader;
-    private ConsensusProtocol protocol;
+public class 班級管理員 {
+    private List<班級> 班級列表;
+    private 班級 主要班長;
+    private 投票系統 投票系統;
     
-    public ClusterManager() {
-        nodes = new ArrayList<>();
-        protocol = new ConsensusProtocol(nodes.size() / 2 + 1);
+    public 班級管理員() {
+        班級列表 = new ArrayList<>();
+        投票系統 = new 投票系統(班級列表.size() / 2 + 1);
     }
     
-    public void addNode(Node node) {
-        nodes.add(node);
-        if (leader == null) {
-            electLeader();
+    public void 新增班級(班級 新班級) {
+        班級列表.add(新班級);
+        if (主要班長 == null) {
+            選舉班長();
         }
     }
     
-    public void electLeader() {
-        // 使用一致性協議選舉領導者
-        leader = protocol.electLeader(nodes);
-        System.out.println("選舉新的領導者：" + leader.getId());
+    public void 選舉班長() {
+        // 使用投票系統選出主要班長
+        主要班長 = 投票系統.選舉班長(班級列表);
+        System.out.println("選出新的主要班長：" + 主要班長.取得班級編號());
     }
     
-    public void handleFailure(Node failedNode) {
-        nodes.remove(failedNode);
-        if (failedNode == leader) {
-            electLeader();
+    public void 處理問題(班級 問題班級) {
+        班級列表.remove(問題班級);
+        if (問題班級 == 主要班長) {
+            選舉班長();
         }
     }
 }
 ```
 
-#### 步驟 2：一致性協議
+#### 步驟 2：投票系統
 ```java
-public class ConsensusProtocol {
-    private int quorum;
+public class 投票系統 {
+    private int 投票人數;
     
-    public ConsensusProtocol(int quorum) {
-        this.quorum = quorum;
+    public 投票系統(int 投票人數) {
+        this.投票人數 = 投票人數;
     }
     
-    public Node electLeader(List<Node> nodes) {
+    public 班級 選舉班長(List<班級> 班級列表) {
         // 簡單的多數決選舉
-        Map<Node, Integer> votes = new HashMap<>();
-        for (Node node : nodes) {
-            Node candidate = node.proposeLeader();
-            votes.put(candidate, votes.getOrDefault(candidate, 0) + 1);
+        Map<班級, Integer> 票數 = new HashMap<>();
+        for (班級 班級 : 班級列表) {
+            班級 候選人 = 班級.提名班長();
+            票數.put(候選人, 票數.getOrDefault(候選人, 0) + 1);
         }
         
-        return votes.entrySet().stream()
+        return 票數.entrySet().stream()
             .max(Map.Entry.comparingByValue())
             .map(Map.Entry::getKey)
             .orElse(null);
     }
     
-    public boolean acceptProposal(Object proposal) {
-        // 檢查是否達到法定人數
+    public boolean 確認提名(Object 提名) {
+        // 檢查是否達到投票人數
         return true;
     }
 }
 ```
 
-#### 步驟 3：負載均衡
+#### 步驟 3：工作分配
 ```java
-public class LoadBalancer {
-    private List<Node> nodes;
-    private Map<Node, Integer> load;
+public class 工作分配員 {
+    private List<班級> 班級列表;
+    private Map<班級, Integer> 工作量;
     
-    public LoadBalancer() {
-        nodes = new ArrayList<>();
-        load = new HashMap<>();
+    public 工作分配員() {
+        班級列表 = new ArrayList<>();
+        工作量 = new HashMap<>();
     }
     
-    public void distribute(Message message) {
-        Node node = selectNode();
-        node.send(message);
-        updateLoad(node);
+    public void 分配工作(String 工作) {
+        班級 班級 = 選擇班級();
+        班級.分配工作(工作);
+        更新工作量(班級);
     }
     
-    private Node selectNode() {
-        // 選擇負載最輕的節點
-        return nodes.stream()
-            .min(Comparator.comparingInt(node -> load.getOrDefault(node, 0)))
+    private 班級 選擇班級() {
+        // 選擇工作量最少的班級
+        return 班級列表.stream()
+            .min(Comparator.comparingInt(班級 -> 工作量.getOrDefault(班級, 0)))
             .orElse(null);
     }
     
-    private void updateLoad(Node node) {
-        load.put(node, load.getOrDefault(node, 0) + 1);
+    private void 更新工作量(班級 班級) {
+        工作量.put(班級, 工作量.getOrDefault(班級, 0) + 1);
     }
 }
 ```
@@ -478,113 +478,113 @@ public class LoadBalancer {
 
 #### 問題表象
 1. 系統問題：
-   - 節點故障
-   - 網路中斷
-   - 同步失敗
+   - 班級無法運作
+   - 班級之間無法溝通
+   - 工作無法同步
 
-2. 數據問題：
-   - 消息丟失
-   - 數據不一致
-   - 重複消息
+2. 資料問題：
+   - 工作內容遺失
+   - 工作內容不一致
+   - 重複分配工作
 
 3. 效能問題：
-   - 延遲增加
-   - 吞吐量下降
-   - 資源消耗高
+   - 工作分配太慢
+   - 班級負擔太重
+   - 系統資源不足
 
 #### 避免方法
 1. 系統設計：
-   - 實現主從架構
-   - 設計健康檢查
-   - 建立監控系統
+   - 建立備用班級
+   - 定期檢查班級
+   - 監控工作分配
 
-2. 數據管理：
-   - 實現數據同步
-   - 設置消息確認
-   - 定期備份數據
+2. 資料管理：
+   - 確認工作完成
+   - 檢查工作內容
+   - 定期備份工作
 
 3. 效能優化：
-   - 優化同步策略
-   - 實現負載均衡
-   - 定期效能評估
+   - 優化工作分配
+   - 平衡班級負擔
+   - 定期檢查效能
 
 #### 處理方案
 1. 技術方案：
    ```java
-   public class MessageQueueManager {
-       private MessageQueue primary;
-       private MessageQueue backup;
-       private HealthChecker healthChecker;
-       private SyncManager syncManager;
-       private MessageValidator validator;
+   public class 班級管理系統 {
+       private 班級 主要班級;
+       private 班級 備用班級;
+       private 健康檢查員 檢查員;
+       private 工作同步員 同步員;
+       private 工作檢查員 檢查員;
        
-       public void handleIssue(MessageQueueIssue issue) {
-           switch (issue.getType()) {
-               case SYSTEM:
-                   handleSystemIssue(issue);
+       public void 處理問題(班級問題 問題) {
+           switch (問題.取得類型()) {
+               case 系統:
+                   處理系統問題(問題);
                    break;
-               case DATA:
-                   handleDataIssue(issue);
+               case 資料:
+                   處理資料問題(問題);
                    break;
-               case PERFORMANCE:
-                   handlePerformanceIssue(issue);
+               case 效能:
+                   處理效能問題(問題);
                    break;
            }
        }
        
-       private void handleSystemIssue(MessageQueueIssue issue) {
-           // 檢查節點狀態
-           checkNodeStatus();
-           // 修復網路問題
-           repairNetwork();
-           // 重試同步操作
-           retrySync();
+       private void 處理系統問題(班級問題 問題) {
+           // 檢查班級狀態
+           檢查班級狀態();
+           // 修復溝通問題
+           修復溝通問題();
+           // 重試同步工作
+           重試同步工作();
        }
        
-       private void handleDataIssue(MessageQueueIssue issue) {
-           // 檢查數據一致性
-           checkDataConsistency();
-           // 修復數據錯誤
-           repairData();
-           // 恢復丟失數據
-           recoverData();
+       private void 處理資料問題(班級問題 問題) {
+           // 檢查工作一致性
+           檢查工作一致性();
+           // 修復工作錯誤
+           修復工作錯誤();
+           // 恢復遺失工作
+           恢復遺失工作();
        }
        
-       private void handlePerformanceIssue(MessageQueueIssue issue) {
-           // 調整同步策略
-           adjustSyncStrategy();
+       private void 處理效能問題(班級問題 問題) {
+           // 調整工作分配
+           調整工作分配();
            // 優化資源使用
-           optimizeResources();
-           // 實現動態擴展
-           implementScaling();
+           優化資源使用();
+           // 實現動態擴充
+           實現動態擴充();
        }
    }
    ```
 
 2. 監控方案：
    ```java
-   public class MessageQueueMonitor {
-       private MetricsCollector metricsCollector;
-       private HealthChecker healthChecker;
-       private AlertManager alertManager;
+   public class 班級監控系統 {
+       private 資料收集員 收集員;
+       private 健康檢查員 檢查員;
+       private 警告管理員 管理員;
        
-       public void monitor() {
-           MessageQueueMetrics metrics = metricsCollector.collectMetrics();
-           boolean isHealthy = healthChecker.checkHealth();
+       public void 監控() {
+           班級資料 資料 = 收集員.收集資料();
+           boolean 是否正常 = 檢查員.檢查健康狀態();
            
            // 檢查系統狀態
-           if (!isHealthy) {
-               alertManager.alert("系統狀態警告", metrics.getDetails());
+           if (!是否正常) {
+               管理員.警告("系統狀態警告", 資料.取得詳細資料());
            }
            
-           // 檢查數據狀態
-           if (metrics.getDataStatus() != DataStatus.CONSISTENT) {
-               alertManager.alert("數據狀態警告", metrics.getDetails());
+           // 檢查資料狀態
+           if (資料.取得資料狀態() != 資料狀態.一致) {
+               管理員.警告("資料狀態警告", 資料.取得詳細資料());
            }
            
            // 檢查效能狀態
-           if (metrics.getPerformanceStatus() != PerformanceStatus.OPTIMAL) {
-               alertManager.alert("效能警告", metrics.getDetails());
+           if (資料.取得效能狀態() != 效能狀態.最佳) {
+               管理員.警告("效能警告", 資料.取得詳細資料());
            }
        }
    }
@@ -592,73 +592,73 @@ public class LoadBalancer {
 
 3. 最佳實踐：
    - 實現自動化監控
-   - 配置智能告警
+   - 設定智慧警告
    - 建立應急流程
-   - 優化同步策略
+   - 優化工作分配
    - 定期效能評估
-   - 保持系統文檔
+   - 保持系統文件
    - 實現自動恢復
 
 ### 5. 實戰案例
 
-#### 案例一：電商系統消息隊列
+#### 案例一：學校工作分配系統
 ```java
-public class ECommerceMessageQueue {
-    private MessageQueueManager manager;
-    private MessageQueueMonitor monitor;
+public class 學校工作系統 {
+    private 班級管理員 管理員;
+    private 班級監控系統 監控系統;
     
-    public void handleOrderMessage(String orderId) {
-        // 設定消息隊列策略
-        manager.setStrategy(new OrderMessageStrategy(orderId));
+    public void 處理班級工作(String 班級編號) {
+        // 設定工作分配策略
+        管理員.設定策略(new 班級工作策略(班級編號));
         
-        // 處理消息
-        manager.handleMessage(orderId);
+        // 處理工作
+        管理員.處理工作(班級編號);
         
-        // 檢查消息隊列狀態
-        monitor.checkStatus();
+        // 檢查班級狀態
+        監控系統.檢查狀態();
     }
     
-    public void handlePaymentMessage(String paymentId) {
-        // 設定消息隊列策略
-        manager.setStrategy(new PaymentMessageStrategy(paymentId));
+    public void 處理學校工作(String 工作編號) {
+        // 設定工作分配策略
+        管理員.設定策略(new 學校工作策略(工作編號));
         
-        // 處理消息
-        manager.handleMessage(paymentId);
+        // 處理工作
+        管理員.處理工作(工作編號);
         
-        // 檢查消息隊列狀態
-        monitor.checkStatus();
+        // 檢查班級狀態
+        監控系統.檢查狀態();
     }
 }
 ```
 
-#### 案例二：社交媒體消息隊列
+#### 案例二：社團活動系統
 ```java
-public class SocialMediaMessageQueue {
-    private MessageQueueManager manager;
-    private MessageQueueMonitor monitor;
+public class 社團活動系統 {
+    private 班級管理員 管理員;
+    private 班級監控系統 監控系統;
     
-    public void handleUserMessage(String userId) {
-        // 設定消息隊列策略
-        manager.setStrategy(new UserMessageStrategy(userId));
+    public void 處理社員活動(String 社員編號) {
+        // 設定活動分配策略
+        管理員.設定策略(new 社員活動策略(社員編號));
         
-        // 處理消息
-        manager.handleMessage(userId);
+        // 處理活動
+        管理員.處理活動(社員編號);
         
-        // 檢查消息隊列狀態
-        monitor.checkStatus();
+        // 檢查社團狀態
+        監控系統.檢查狀態();
     }
     
-    public void handlePostMessage(String postId) {
-        // 設定消息隊列策略
-        manager.setStrategy(new PostMessageStrategy(postId));
+    public void 處理社團活動(String 活動編號) {
+        // 設定活動分配策略
+        管理員.設定策略(new 社團活動策略(活動編號));
         
-        // 處理消息
-        manager.handleMessage(postId);
+        // 處理活動
+        管理員.處理活動(活動編號);
         
-        // 檢查消息隊列狀態
-        monitor.checkStatus();
+        // 檢查社團狀態
+        監控系統.檢查狀態();
     }
 }
 ```
 
-這個教學文件提供了從基礎到進階的消息隊列高可用性學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的備份系統開始，中級學習者可以學習主從架構和健康檢查，而高級學習者則可以掌握集群管理和一致性協議等進階功能。 
+這個教學文件提供了從基礎到進階的班級管理系統學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的傳話筒系統開始，中級學習者可以學習班級工作系統和健康檢查，而高級學習者則可以掌握班級管理和投票系統等進階功能。 

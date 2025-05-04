@@ -1,75 +1,77 @@
-# 微服務架構教學
+# 程式設計入門教學
 
 ## 初級（Beginner）層級
 
 ### 1. 概念說明
-微服務架構就像一個大型商場：
-- 每個商店（微服務）都是獨立的
-- 商店之間可以互相合作
-- 每個商店都有自己的管理方式
-- 商場提供基礎設施（服務網格）
+程式設計就像寫食譜：
+- 每個步驟都要清楚
+- 要按照順序執行
+- 要考慮各種情況
+- 要能重複使用
 
 初級學習者需要了解：
-- 什麼是微服務
-- 為什麼需要微服務
-- 基本的服務拆分原則
+- 什麼是程式
+- 為什麼要寫程式
+- 基本的程式結構
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class Microservice {
-    - name: String
-    - database: Database
-    + handleRequest()
-    + communicate()
+class 程式 {
+    - 變數
+    - 條件判斷
+    - 迴圈
+    + 執行()
+    + 顯示結果()
 }
 
-class ServiceMesh {
-    - services: List
-    + routeTraffic()
-    + monitorServices()
+class 使用者 {
+    - 輸入
+    - 輸出
+    + 輸入資料()
+    + 查看結果()
 }
 
-Microservice --> ServiceMesh
+程式 --> 使用者
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：基本微服務實現
+#### 步驟 1：基本程式結構
 ```java
-// 用戶服務
-@RestController
-public class UserService {
-    private UserRepository userRepository;
-    
-    @PostMapping("/users")
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
-    }
-    
-    @GetMapping("/users/{id}")
-    public User getUser(@PathVariable Long id) {
-        return userRepository.findById(id)
-            .orElseThrow(() -> new UserNotFoundException(id));
+// 簡單的計算機程式
+public class 計算機 {
+    public static void main(String[] args) {
+        // 宣告變數
+        int 數字1 = 10;
+        int 數字2 = 5;
+        
+        // 計算
+        int 結果 = 數字1 + 數字2;
+        
+        // 顯示結果
+        System.out.println("答案是：" + 結果);
     }
 }
+```
 
-// 訂單服務
-@RestController
-public class OrderService {
-    private OrderRepository orderRepository;
-    private UserServiceClient userService;
-    
-    @PostMapping("/orders")
-    public Order createOrder(@RequestBody Order order) {
-        // 驗證用戶
-        User user = userService.getUser(order.getUserId());
-        if (user == null) {
-            throw new UserNotFoundException(order.getUserId());
-        }
+#### 步驟 2：條件判斷
+```java
+// 判斷成績等級
+public class 成績判斷 {
+    public static void main(String[] args) {
+        int 分數 = 85;
         
-        return orderRepository.save(order);
+        if (分數 >= 90) {
+            System.out.println("A");
+        } else if (分數 >= 80) {
+            System.out.println("B");
+        } else if (分數 >= 70) {
+            System.out.println("C");
+        } else {
+            System.out.println("D");
+        }
     }
 }
 ```
@@ -78,90 +80,79 @@ public class OrderService {
 
 ### 1. 概念說明
 中級學習者需要理解：
-- 服務註冊與發現
-- 負載均衡
-- 熔斷機制
-- 配置管理
+- 如何把程式分成小部分
+- 如何重複使用程式碼
+- 如何組織資料
+- 如何讓程式更容易維護
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-class Microservice {
-    - serviceRegistry: ServiceRegistry
-    - loadBalancer: LoadBalancer
-    - circuitBreaker: CircuitBreaker
-    + register()
-    + discover()
-    + handleRequest()
+class 學生 {
+    - 姓名
+    - 學號
+    - 成績
+    + 計算平均()
+    + 顯示資訊()
 }
 
-class ServiceRegistry {
-    - services: Map
-    + register()
-    + discover()
+class 班級 {
+    - 學生列表
+    + 加入學生()
+    + 計算全班平均()
 }
 
-class ConfigServer {
-    - configurations: Map
-    + getConfig()
-    + updateConfig()
-}
-
-Microservice --> ServiceRegistry
-Microservice --> ConfigServer
+學生 --> 班級
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：服務註冊與發現
+#### 步驟 1：使用函式
 ```java
-@Configuration
-public class ServiceDiscoveryConfig {
-    @Bean
-    public ServiceRegistry serviceRegistry() {
-        return new ServiceRegistry();
+// 計算成績的程式
+public class 成績計算 {
+    // 計算平均分數的函式
+    public static double 計算平均(int[] 分數) {
+        int 總分 = 0;
+        for (int 分 : 分數) {
+            總分 += 分;
+        }
+        return (double)總分 / 分數.length;
     }
     
-    @Bean
-    public ServiceDiscovery serviceDiscovery(ServiceRegistry registry) {
-        return new ServiceDiscovery(registry);
-    }
-}
-
-@Service
-public class ServiceDiscovery {
-    private ServiceRegistry registry;
-    private LoadBalancer loadBalancer;
-    
-    public ServiceInstance discoverService(String serviceName) {
-        List<ServiceInstance> instances = registry.getInstances(serviceName);
-        return loadBalancer.selectInstance(instances);
+    public static void main(String[] args) {
+        int[] 分數 = {85, 90, 75, 88, 92};
+        double 平均 = 計算平均(分數);
+        System.out.println("平均分數是：" + 平均);
     }
 }
 ```
 
-#### 步驟 2：配置管理
+#### 步驟 2：使用類別
 ```java
-@Configuration
-@EnableConfigServer
-public class ConfigServer {
-    private Map<String, Object> configurations;
+// 學生類別
+public class 學生 {
+    private String 姓名;
+    private int 學號;
+    private int[] 成績;
     
-    @GetMapping("/{service}/{profile}")
-    public Map<String, Object> getConfig(
-        @PathVariable String service,
-        @PathVariable String profile) {
-        return configurations.get(service + "-" + profile);
+    public 學生(String 姓名, int 學號) {
+        this.姓名 = 姓名;
+        this.學號 = 學號;
+        this.成績 = new int[3];
     }
     
-    @PostMapping("/{service}/{profile}")
-    public void updateConfig(
-        @PathVariable String service,
-        @PathVariable String profile,
-        @RequestBody Map<String, Object> config) {
-        configurations.put(service + "-" + profile, config);
-        notifyServices(service, profile);
+    public void 設定成績(int 科目, int 分數) {
+        成績[科目] = 分數;
+    }
+    
+    public double 計算平均() {
+        int 總分 = 0;
+        for (int 分 : 成績) {
+            總分 += 分;
+        }
+        return (double)總分 / 成績.length;
     }
 }
 ```
@@ -170,121 +161,85 @@ public class ConfigServer {
 
 ### 1. 概念說明
 高級學習者需要掌握：
-- 分散式事務
-- 事件溯源
-- 服務網格
-- 混沌工程
+- 如何設計完整的系統
+- 如何讓不同部分互相配合
+- 如何處理多個任務
+- 如何讓系統容易擴充
 
 ### 2. PlantUML 圖解
 ```plantuml
 @startuml
-package "進階微服務系統" {
-    class DistributedTransaction {
-        - coordinator: Coordinator
-        + begin()
-        + commit()
-        + rollback()
-    }
-    
-    class EventSourcing {
-        - eventStore: EventStore
-        + append()
-        + replay()
-    }
-    
-    class ServiceMesh {
-        - sidecars: List
-        + routeTraffic()
-        + monitorServices()
-    }
-    
-    class ChaosEngine {
-        - experiments: List
-        + injectFault()
-        + monitorImpact()
-    }
+class 遊戲系統 {
+    - 玩家管理
+    - 關卡管理
+    - 分數管理
+    + 開始遊戲()
+    + 結束遊戲()
 }
 
-DistributedTransaction --> EventSourcing
-EventSourcing --> ServiceMesh
-ServiceMesh --> ChaosEngine
+class 玩家 {
+    - 名稱
+    - 分數
+    + 移動()
+    + 得分()
+}
+
+class 關卡 {
+    - 難度
+    - 目標
+    + 檢查過關()
+    + 更新狀態()
+}
+
+遊戲系統 --> 玩家
+遊戲系統 --> 關卡
 @enduml
 ```
 
 ### 3. 分段教學步驟
 
-#### 步驟 1：分散式事務實現
+#### 步驟 1：設計遊戲系統
 ```java
-@Service
-public class DistributedTransactionService {
-    private TransactionCoordinator coordinator;
+// 簡單的遊戲系統
+public class 遊戲系統 {
+    private 玩家 當前玩家;
+    private 關卡 當前關卡;
+    private 分數系統 分數系統;
     
-    @Transactional
-    public void executeDistributedTransaction(TransactionContext context) {
-        try {
-            // 開始事務
-            coordinator.begin(context);
-            
-            // 執行參與者操作
-            for (TransactionParticipant participant : context.getParticipants()) {
-                participant.prepare();
-            }
-            
-            // 提交事務
-            coordinator.commit(context);
-        } catch (Exception e) {
-            // 回滾事務
-            coordinator.rollback(context);
-            throw e;
+    public void 開始遊戲(String 玩家名稱) {
+        當前玩家 = new 玩家(玩家名稱);
+        當前關卡 = new 關卡(1);
+        分數系統 = new 分數系統();
+    }
+    
+    public void 更新遊戲() {
+        // 更新玩家狀態
+        當前玩家.移動();
+        
+        // 檢查是否過關
+        if (當前關卡.檢查過關()) {
+            分數系統.增加分數(100);
+            當前關卡 = new 關卡(當前關卡.取得難度() + 1);
         }
     }
 }
 
-class TransactionParticipant {
-    public void prepare() {
-        // 準備階段
-    }
+class 玩家 {
+    private String 名稱;
+    private int 位置;
     
-    public void commit() {
-        // 提交階段
-    }
-    
-    public void rollback() {
-        // 回滾階段
-    }
-}
-```
-
-#### 步驟 2：事件溯源實現
-```java
-@Service
-public class EventSourcingService {
-    private EventStore eventStore;
-    
-    public void appendEvent(String aggregateId, Event event) {
-        eventStore.append(aggregateId, event);
-        notifySubscribers(aggregateId, event);
-    }
-    
-    public Aggregate replayEvents(String aggregateId) {
-        List<Event> events = eventStore.getEvents(aggregateId);
-        return events.stream()
-            .reduce(new Aggregate(aggregateId),
-                (agg, event) -> agg.apply(event),
-                (agg1, agg2) -> agg1);
+    public void 移動() {
+        // 處理玩家移動
     }
 }
 
-class EventStore {
-    private Map<String, List<Event>> events;
+class 關卡 {
+    private int 難度;
+    private int 目標;
     
-    public void append(String aggregateId, Event event) {
-        events.computeIfAbsent(aggregateId, k -> new ArrayList<>())
-            .add(event);
-    }
-    
-    public List<Event> getEvents(String aggregateId) {
-        return events.getOrDefault(aggregateId, new ArrayList<>());
+    public boolean 檢查過關() {
+        // 檢查是否達成目標
+        return true;
     }
 }
 ```
@@ -292,213 +247,92 @@ class EventStore {
 ### 4. 常見問題與解決方案
 
 #### 問題表象
-1. 服務拆分問題：
-   - 服務邊界不清
-   - 數據一致性難保證
-   - 服務間依賴複雜
+1. 程式碼混亂：
+   - 不知道從哪裡開始
+   - 程式碼重複
+   - 修改困難
 
-2. 通信問題：
-   - 網絡延遲
-   - 服務不可用
-   - 消息丟失
+2. 錯誤處理：
+   - 程式當機
+   - 結果不正確
+   - 使用者輸入錯誤
 
-3. 部署問題：
-   - 版本管理困難
-   - 配置複雜
-   - 監控困難
-
-4. 數據問題：
-   - 數據一致性
-   - 事務處理
-   - 數據遷移
+3. 效能問題：
+   - 程式跑太慢
+   - 記憶體不足
+   - 反應遲鈍
 
 #### 避免方法
-1. 服務拆分優化：
-   - 遵循單一職責
-   - 定義清晰邊界
-   - 控制服務粒度
+1. 程式碼整理：
+   - 使用有意義的變數名稱
+   - 把程式分成小部分
+   - 寫註解說明
 
-2. 通信問題防護：
-   - 使用熔斷器
-   - 實現重試機制
-   - 設置超時控制
+2. 錯誤處理：
+   - 檢查使用者輸入
+   - 使用 try-catch
+   - 提供錯誤訊息
 
-3. 部署問題解決：
-   - 使用容器化
-   - 實現CI/CD
-   - 集中配置管理
-
-4. 數據問題處理：
-   - 使用事件溯源
-   - 實現最終一致性
-   - 規劃數據遷移
+3. 效能優化：
+   - 避免重複計算
+   - 使用適當的資料結構
+   - 減少不必要的操作
 
 #### 處理方案
-1. 技術方案：
-   ```java
-   public class MicroservicesManager {
-       private ServiceRegistry registry;
-       private ConfigServer configServer;
-       private EventStore eventStore;
-       private ChaosEngine chaosEngine;
-       
-       public void handleMicroservicesIssue(MicroservicesIssue issue) {
-           switch (issue.getType()) {
-               case SERVICE_SPLIT:
-                   handleServiceSplitIssue(issue);
-                   break;
-               case COMMUNICATION:
-                   handleCommunicationIssue(issue);
-                   break;
-               case DEPLOYMENT:
-                   handleDeploymentIssue(issue);
-                   break;
-               case DATA:
-                   handleDataIssue(issue);
-                   break;
-           }
-       }
-       
-       private void handleServiceSplitIssue(MicroservicesIssue issue) {
-           // 分析服務邊界
-           analyzeServiceBoundaries();
-           // 重構服務
-           refactorServices();
-           // 更新依賴關係
-           updateDependencies();
-       }
-       
-       private void handleCommunicationIssue(MicroservicesIssue issue) {
-           // 檢查通信狀態
-           checkCommunicationStatus();
-           // 調整通信策略
-           adjustCommunicationStrategy();
-           // 實現熔斷機制
-           implementCircuitBreaker();
-       }
-       
-       private void handleDeploymentIssue(MicroservicesIssue issue) {
-           // 檢查部署配置
-           checkDeploymentConfig();
-           // 更新版本
-           updateVersions();
-           // 執行部署
-           executeDeployment();
-       }
-       
-       private void handleDataIssue(MicroservicesIssue issue) {
-           // 檢查數據一致性
-           checkDataConsistency();
-           // 執行數據遷移
-           migrateData();
-           // 更新數據模型
-           updateDataModel();
-       }
-   }
-   ```
-
-2. 監控方案：
-   ```java
-   public class MicroservicesMonitor {
-       private MetricsCollector metricsCollector;
-       private AlertManager alertManager;
-       
-       public void monitorMicroservices() {
-           MicroservicesMetrics metrics = metricsCollector.collectMetrics();
-           
-           // 檢查服務健康狀態
-           if (metrics.getServiceHealth() < HEALTH_THRESHOLD) {
-               alertManager.alert("服務健康警告", metrics.getDetails());
-           }
-           
-           // 檢查響應時間
-           if (metrics.getResponseTime() > RESPONSE_TIME_THRESHOLD) {
-               alertManager.alert("響應時間警告", metrics.getDetails());
-           }
-           
-           // 檢查錯誤率
-           if (metrics.getErrorRate() > ERROR_RATE_THRESHOLD) {
-               alertManager.alert("錯誤率警告", metrics.getDetails());
-           }
-       }
-   }
-   ```
-
-3. 最佳實踐：
-   - 合理拆分服務
-   - 實現服務發現
-   - 使用熔斷機制
-   - 集中配置管理
-   - 實現事件溯源
-   - 使用服務網格
-   - 進行混沌測試
-   - 監控系統健康
-
-### 5. 實戰案例
-
-#### 案例一：電商系統微服務
+1. 程式碼重構：
 ```java
-public class ECommerceMicroservices {
-    private UserService userService;
-    private OrderService orderService;
-    private PaymentService paymentService;
-    private InventoryService inventoryService;
+public class 程式優化 {
+    // 原本的程式
+    public void 舊方法() {
+        // 很多重複的程式碼
+    }
     
-    public void processOrder(OrderRequest request) {
-        // 開始分散式事務
-        TransactionContext context = new TransactionContext();
-        
+    // 優化後的程式
+    public void 新方法() {
+        // 把重複的程式碼變成函式
+        共用函式();
+    }
+    
+    private void 共用函式() {
+        // 共用的程式碼
+    }
+}
+```
+
+2. 錯誤處理：
+```java
+public class 錯誤處理 {
+    public void 處理輸入() {
         try {
-            // 創建訂單
-            Order order = orderService.createOrder(request);
-            
-            // 扣減庫存
-            inventoryService.decreaseStock(order.getItems());
-            
-            // 處理支付
-            paymentService.processPayment(order);
-            
-            // 更新用戶積分
-            userService.updatePoints(order.getUserId(), order.getAmount());
-            
-            // 提交事務
-            context.commit();
+            // 嘗試執行程式
+            int 輸入 = 讀取使用者輸入();
+            檢查輸入是否正確(輸入);
         } catch (Exception e) {
-            // 回滾事務
-            context.rollback();
-            throw e;
+            // 處理錯誤
+            System.out.println("發生錯誤：" + e.getMessage());
         }
     }
 }
 ```
 
-#### 案例二：社交媒體微服務
+3. 效能優化：
 ```java
-public class SocialMediaMicroservices {
-    private UserService userService;
-    private PostService postService;
-    private CommentService commentService;
-    private NotificationService notificationService;
-    
-    public void createPost(PostRequest request) {
-        // 開始事件溯源
-        Event event = new PostCreatedEvent(request);
-        
-        try {
-            // 創建帖子
-            Post post = postService.createPost(request);
-            
-            // 更新用戶統計
-            userService.updatePostCount(request.getUserId());
-            
-            // 發送通知
-            notificationService.sendPostNotification(post);
-            
-            // 記錄事件
-            eventStore.append(request.getUserId(), event);
-        } catch (Exception e) {
-            // 處理錯誤
-            handleError(e);
+public class 效能優化 {
+    // 優化前
+    public void 慢方法() {
+        for (int i = 0; i < 1000; i++) {
+            // 重複計算
         }
     }
-} 
+    
+    // 優化後
+    public void 快方法() {
+        // 先計算好
+        int 結果 = 計算一次();
+        // 重複使用結果
+        for (int i = 0; i < 1000; i++) {
+            使用結果(結果);
+        }
+    }
+}
+``` 
