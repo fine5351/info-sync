@@ -1,371 +1,297 @@
-# 程式設計入門教學
+# CAP 定理教學指南
 
 ## 初級（Beginner）層級
 
-### 1. 概念說明
-想像你在玩一個簡單的猜數字遊戲：
-- 變數：用來儲存數字
-- 條件：判斷猜的數字是太大還是太小
-- 迴圈：讓玩家可以一直猜，直到猜對為止
+### 概念說明
+CAP 定理是分散式系統中的一個重要概念，它告訴我們在設計分散式系統時，我們必須在三個特性中做出取捨：
+- **一致性（Consistency）**：所有節點看到的資料都是一樣的
+- **可用性（Availability）**：系統總是能夠回應請求
+- **分區容錯性（Partition Tolerance）**：即使網路發生故障，系統仍然可以運作
 
-初級學習者需要了解：
-- 為什麼需要寫程式
-- 程式的基本組成
-- 如何讓程式動起來
+想像一下，這就像是一個班級群組：
+- 一致性就像是確保每個同學都收到相同的訊息
+- 可用性就像是確保任何時候都能發送訊息
+- 分區容錯性就像是即使某些同學的網路斷線，群組仍然可以運作
 
-### 2. PlantUML 圖解
+### 圖解說明
 ```plantuml
 @startuml
-class GuessNumberGame {
-    - secretNumber: int
-    + startGame()
-    + checkGuess()
+!theme plain
+skinparam backgroundColor white
+skinparam handwritten false
+
+rectangle "分散式系統" {
+    node "節點 A" as A
+    node "節點 B" as B
+    node "節點 C" as C
 }
 
-class Player {
-    - name: String
-    + makeGuess()
-}
+A -down-> B : 網路連線
+B -down-> C : 網路連線
+C -up-> A : 網路連線
 
-GuessNumberGame --> Player : 檢查猜測
+note right of A
+  一致性：所有節點
+  看到的資料都一樣
+end note
+
+note bottom of B
+  可用性：系統總是
+  能夠回應請求
+end note
+
+note left of C
+  分區容錯性：即使
+  網路故障也能運作
+end note
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 教學步驟
+1. **認識分散式系統**
+   - 什麼是分散式系統？
+   - 為什麼需要分散式系統？
+   - 分散式系統的優點和缺點
 
-#### 步驟 1：基本遊戲設定
+2. **理解 CAP 三個特性**
+   - 一致性：確保資料同步
+   - 可用性：確保系統可用
+   - 分區容錯性：處理網路問題
+
+3. **實際案例說明**
+   - 以即時通訊軟體為例
+   - 以線上遊戲為例
+   - 以社群媒體為例
+
+### 實作範例
 ```java
-public class GuessNumberGame {
-    private int secretNumber;
+// 簡單的分散式系統節點模擬
+public class SimpleNode {
+    private String data;
+    private boolean isAvailable;
     
-    public GuessNumberGame() {
-        // 產生一個 1-100 的隨機數字
-        secretNumber = (int)(Math.random() * 100) + 1;
+    public SimpleNode() {
+        this.data = "";
+        this.isAvailable = true;
     }
     
-    public void startGame() {
-        System.out.println("歡迎來到猜數字遊戲！");
-        System.out.println("我已經想好了一個 1-100 之間的數字");
-    }
-}
-```
-
-#### 步驟 2：遊戲邏輯
-```java
-public class GuessNumberGame {
-    // ... 前面的程式碼 ...
-    
-    public void checkGuess(int guess) {
-        if (guess < secretNumber) {
-            System.out.println("太小了！再試一次");
-        } else if (guess > secretNumber) {
-            System.out.println("太大了！再試一次");
+    // 模擬資料同步
+    public void syncData(String newData) {
+        if (isAvailable) {
+            this.data = newData;
+            System.out.println("資料已同步：" + newData);
         } else {
-            System.out.println("恭喜你猜對了！");
+            System.out.println("節點目前無法使用");
         }
+    }
+    
+    // 模擬網路故障
+    public void setAvailable(boolean available) {
+        this.isAvailable = available;
+        System.out.println("節點狀態：" + (available ? "可用" : "不可用"));
     }
 }
 ```
 
 ## 中級（Intermediate）層級
 
-### 1. 概念說明
-中級學習者需要理解：
-- 如何把程式分成不同部分
-- 如何讓程式更容易維護
-- 如何處理不同的遊戲狀態
-- 如何讓程式更有彈性
+### 概念說明
+在中級層級，我們需要更深入理解 CAP 定理的實際應用。我們將探討：
+- 如何在不同場景下選擇適當的 CAP 組合
+- 常見的分散式系統架構模式
+- 資料同步策略和衝突解決方案
 
-### 2. PlantUML 圖解
+### 圖解說明
 ```plantuml
 @startuml
-class GameManager {
-    - gameState: GameState
-    + startGame()
-    + handleGuess()
+!theme plain
+skinparam backgroundColor white
+skinparam handwritten false
+
+package "分散式系統架構" {
+    [主節點] as Master
+    [備份節點 1] as Slave1
+    [備份節點 2] as Slave2
+    [備份節點 3] as Slave3
 }
 
-class GameState {
-    - secretNumber: int
-    - attempts: int
-    + checkGuess()
-    + getAttempts()
-}
+Master --> Slave1 : 同步
+Master --> Slave2 : 同步
+Master --> Slave3 : 同步
 
-class Player {
-    - name: String
-    - score: int
-    + makeGuess()
-}
+note right of Master
+  CP 系統：
+  優先保證一致性
+  和分區容錯性
+end note
 
-GameManager --> GameState
-GameManager --> Player
+note bottom of Slave1
+  AP 系統：
+  優先保證可用性
+  和分區容錯性
+end note
+
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 教學步驟
+1. **CAP 組合分析**
+   - CP 系統：優先保證一致性和分區容錯性
+   - AP 系統：優先保證可用性和分區容錯性
+   - CA 系統：優先保證一致性和可用性
 
-#### 步驟 1：遊戲狀態管理
+2. **分散式系統設計模式**
+   - 主從架構（Master-Slave）
+   - 對等架構（Peer-to-Peer）
+   - 分片架構（Sharding）
+
+3. **資料同步策略**
+   - 同步複製
+   - 非同步複製
+   - 最終一致性
+
+### 實作範例
 ```java
-public class GameState {
-    private int secretNumber;
-    private int attempts;
+// 主從架構的簡單實現
+public class MasterNode {
+    private List<SlaveNode> slaves;
+    private String data;
     
-    public GameState() {
-        secretNumber = (int)(Math.random() * 100) + 1;
-        attempts = 0;
+    public MasterNode() {
+        this.slaves = new ArrayList<>();
+        this.data = "";
     }
     
-    public String checkGuess(int guess) {
-        attempts++;
-        if (guess < secretNumber) {
-            return "太小了！";
-        } else if (guess > secretNumber) {
-            return "太大了！";
-        } else {
-            return "恭喜你猜對了！總共猜了 " + attempts + " 次";
+    public void addSlave(SlaveNode slave) {
+        slaves.add(slave);
+    }
+    
+    public void updateData(String newData) {
+        this.data = newData;
+        // 同步到所有從節點
+        for (SlaveNode slave : slaves) {
+            slave.syncData(newData);
         }
     }
 }
-```
 
-#### 步驟 2：玩家管理
-```java
-public class Player {
-    private String name;
-    private int score;
+public class SlaveNode {
+    private String data;
+    private boolean isAvailable;
     
-    public Player(String name) {
-        this.name = name;
-        this.score = 0;
-    }
-    
-    public void updateScore(int points) {
-        score += points;
-    }
-    
-    public String getName() {
-        return name;
-    }
-    
-    public int getScore() {
-        return score;
+    public void syncData(String newData) {
+        if (isAvailable) {
+            this.data = newData;
+            System.out.println("從節點資料已更新：" + newData);
+        }
     }
 }
 ```
 
 ## 高級（Advanced）層級
 
-### 1. 概念說明
-高級學習者需要掌握：
-- 如何設計完整的遊戲系統
-- 如何讓系統容易擴充
-- 如何處理多人遊戲
-- 如何讓遊戲更有趣
+### 概念說明
+在高級層級，我們將探討：
+- 分散式系統的進階架構設計
+- 複雜的資料一致性模型
+- 分散式系統的效能優化
+- 實際應用中的取捨策略
 
-### 2. PlantUML 圖解
+### 圖解說明
 ```plantuml
 @startuml
-package "進階遊戲系統" {
-    class GameSystem {
-        - players: List
-        - gameMode: GameMode
-        + startGame()
-        + handlePlayerAction()
-    }
-    
-    class GameMode {
-        - difficulty: int
-        + getRules()
-        + calculateScore()
-    }
-    
-    class PlayerManager {
-        - players: List
-        + addPlayer()
-        + removePlayer()
-        + updateScores()
-    }
-    
-    class ScoreSystem {
-        - scores: Map
-        + calculateScore()
-        + updateLeaderboard()
-    }
+!theme plain
+skinparam backgroundColor white
+skinparam handwritten false
+
+package "進階分散式系統" {
+    [負載平衡器] as LB
+    [服務節點 1] as S1
+    [服務節點 2] as S2
+    [服務節點 3] as S3
+    [資料庫叢集] as DB
 }
 
-GameSystem --> GameMode
-GameSystem --> PlayerManager
-PlayerManager --> ScoreSystem
+LB --> S1 : 請求分配
+LB --> S2 : 請求分配
+LB --> S3 : 請求分配
+
+S1 --> DB : 讀寫操作
+S2 --> DB : 讀寫操作
+S3 --> DB : 讀寫操作
+
+note right of LB
+  進階架構：
+  - 負載平衡
+  - 服務發現
+  - 故障轉移
+end note
+
+note bottom of DB
+  資料一致性：
+  - 強一致性
+  - 最終一致性
+  - 因果一致性
+end note
 @enduml
 ```
 
-### 3. 分段教學步驟
+### 教學步驟
+1. **進階架構設計**
+   - 微服務架構
+   - 服務網格（Service Mesh）
+   - 事件驅動架構
 
-#### 步驟 1：遊戲系統設計
+2. **一致性模型**
+   - 強一致性（Strong Consistency）
+   - 最終一致性（Eventual Consistency）
+   - 因果一致性（Causal Consistency）
+
+3. **效能優化策略**
+   - 快取策略
+   - 資料分片
+   - 非同步處理
+
+### 實作範例
 ```java
-public class GameSystem {
-    private List<Player> players;
-    private GameMode gameMode;
-    private ScoreSystem scoreSystem;
+// 使用 Spring Cloud 實現的分散式系統
+@SpringBootApplication
+@EnableDiscoveryClient
+public class DistributedSystemApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(DistributedSystemApplication.class, args);
+    }
+}
+
+@Service
+public class DistributedService {
+    @Autowired
+    private DiscoveryClient discoveryClient;
     
-    public GameSystem() {
-        players = new ArrayList<>();
-        gameMode = new GameMode();
-        scoreSystem = new ScoreSystem();
+    @Autowired
+    private RestTemplate restTemplate;
+    
+    @HystrixCommand(fallbackMethod = "fallbackMethod")
+    public String processRequest(String data) {
+        // 實現分散式處理邏輯
+        return restTemplate.postForObject(
+            "http://service-instance/process",
+            data,
+            String.class
+        );
     }
     
-    public void startGame() {
-        // 初始化遊戲
-        gameMode.initialize();
-        scoreSystem.reset();
-    }
-    
-    public void handlePlayerAction(Player player, String action) {
-        // 處理玩家動作
-        int score = gameMode.calculateScore(action);
-        scoreSystem.updateScore(player, score);
+    public String fallbackMethod(String data) {
+        // 實現故障轉移邏輯
+        return "服務暫時不可用，請稍後重試";
     }
 }
 ```
 
-#### 步驟 2：分數系統
-```java
-public class ScoreSystem {
-    private Map<Player, Integer> scores;
-    private List<Player> leaderboard;
-    
-    public ScoreSystem() {
-        scores = new HashMap<>();
-        leaderboard = new ArrayList<>();
-    }
-    
-    public void updateScore(Player player, int points) {
-        int currentScore = scores.getOrDefault(player, 0);
-        scores.put(player, currentScore + points);
-        updateLeaderboard();
-    }
-    
-    private void updateLeaderboard() {
-        leaderboard.clear();
-        leaderboard.addAll(scores.keySet());
-        leaderboard.sort((p1, p2) -> 
-            scores.get(p2) - scores.get(p1));
-    }
-}
-```
+## 總結
+CAP 定理是分散式系統設計中的重要指導原則。通過這三個難度層級的學習，我們可以：
+1. 理解基本的分散式系統概念
+2. 掌握不同場景下的架構選擇
+3. 設計可擴展且可靠的分散式系統
 
-### 4. 常見問題與解決方案
-
-#### 問題表象
-1. 程式問題：
-   - 程式跑不動
-   - 結果不對
-   - 程式當掉
-
-2. 遊戲問題：
-   - 遊戲太難
-   - 遊戲太簡單
-   - 遊戲不好玩
-
-3. 系統問題：
-   - 遊戲變慢
-   - 多人遊戲不同步
-   - 分數計算錯誤
-
-#### 避免方法
-1. 程式設計：
-   - 寫程式前先想清楚
-   - 把程式分成小部分
-   - 多測試程式
-
-2. 遊戲設計：
-   - 調整遊戲難度
-   - 加入有趣的功能
-   - 讓遊戲有挑戰性
-
-3. 系統設計：
-   - 使用好的資料結構
-   - 優化程式碼
-   - 加入錯誤處理
-
-#### 處理方案
-1. 程式問題：
-   ```java
-   public class GameSystem {
-       private ErrorHandler errorHandler;
-       
-       public void handleError(String error) {
-           errorHandler.logError(error);
-           System.out.println("發生錯誤：" + error);
-       }
-   }
-   ```
-
-2. 遊戲問題：
-   ```java
-   public class GameMode {
-       private int difficulty;
-       
-       public void adjustDifficulty() {
-           // 根據玩家表現調整難度
-           if (playerIsDoingWell()) {
-               difficulty++;
-           } else {
-               difficulty--;
-           }
-       }
-   }
-   ```
-
-3. 系統問題：
-   ```java
-   public class GameMonitor {
-       private PerformanceTracker tracker;
-       
-       public void checkPerformance() {
-           if (tracker.isGameSlow()) {
-               System.out.println("遊戲變慢了，正在優化...");
-               optimizeGame();
-           }
-       }
-   }
-   ```
-
-### 5. 實戰案例
-
-#### 案例一：多人猜數字遊戲
-```java
-public class MultiplayerGame {
-    private List<Player> players;
-    private GameState gameState;
-    
-    public void handlePlayerGuess(Player player, int guess) {
-        String result = gameState.checkGuess(guess);
-        System.out.println(player.getName() + "：" + result);
-        
-        if (result.contains("猜對了")) {
-            endRound(player);
-        }
-    }
-}
-```
-
-#### 案例二：計分版遊戲
-```java
-public class ScoreboardGame {
-    private ScoreSystem scoreSystem;
-    private List<Player> players;
-    
-    public void updateGame() {
-        for (Player player : players) {
-            int score = calculatePlayerScore(player);
-            scoreSystem.updateScore(player, score);
-        }
-        
-        displayLeaderboard();
-    }
-}
-```
-
-這個教學文件提供了從基礎到進階的程式設計學習路徑，每個層級都包含了相應的概念說明、圖解、教學步驟和實作範例。初級學習者可以從基本的猜數字遊戲開始，中級學習者可以學習如何組織程式碼，而高級學習者則可以掌握完整的遊戲系統設計。 
+記住，在實際應用中，我們需要根據具體需求來選擇適當的 CAP 組合，並在系統設計中做出合理的取捨。
